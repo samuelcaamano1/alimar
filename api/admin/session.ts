@@ -1,4 +1,4 @@
-import { isAdminAuthenticated, isAdminConfigured } from '../_lib/admin-auth'
+import { isAdminAuthenticated, isAdminConfigured } from '../_lib/admin-auth.js'
 
 export async function GET(request: Request) {
   return Response.json(

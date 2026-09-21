@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless'
-import { requireAdmin } from '../_lib/admin-auth'
+import { requireAdmin } from '../_lib/admin-auth.js'
 
 type CategoryRow = {
   id: string

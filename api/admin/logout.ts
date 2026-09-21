@@ -1,4 +1,4 @@
-import { clearAdminSessionCookie, requireSameOrigin } from '../_lib/admin-auth'
+import { clearAdminSessionCookie, requireSameOrigin } from '../_lib/admin-auth.js'
 
 export async function POST(request: Request) {
   const originError = requireSameOrigin(request)

@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless'
-import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth'
+import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 
 function text(value: unknown, max: number) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''

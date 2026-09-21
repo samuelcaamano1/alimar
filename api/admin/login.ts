@@ -3,7 +3,7 @@ import {
   isAdminConfigured,
   requireSameOrigin,
   verifyAdminPassword,
-} from '../_lib/admin-auth'
+} from '../_lib/admin-auth.js'
 
 export async function POST(request: Request) {
   const originError = requireSameOrigin(request)
