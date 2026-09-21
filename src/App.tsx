@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { alimarLogoDataUrl } from './brand'
+import { site } from './site'
 import './App.css'
 
 type CatalogProduct = {
@@ -107,9 +108,22 @@ function App() {
           <a href="#como-trabajamos">Cómo trabajamos</a>
         </nav>
 
+        
+        <details className="mobile-menu">
+          <summary>Menú</summary>
+          <div className="mobile-menu-panel">
+            <a href="#servicios">Qué hacemos</a>
+            <a href="#catalogo">Catálogo</a>
+            <a href="#como-trabajamos">Cómo trabajamos</a>
+            <a href={site.instagramUrl} target="_blank" rel="noreferrer">
+              Instagram ↗
+            </a>
+          </div>
+        </details>
+
         <a
           className="header-cta"
-          href="https://www.instagram.com/alimar.imp"
+          href={site.instagramUrl}
           target="_blank"
           rel="noreferrer"
         >
@@ -138,11 +152,12 @@ function App() {
               </a>
               <a
                 className="button button-secondary"
-                href="https://www.instagram.com/alimar.imp"
+                href={site.whatsappUrl}
                 target="_blank"
                 rel="noreferrer"
               >
-                Ver trabajos
+                Consultar por WhatsApp
+                <span aria-hidden="true">↗</span>
               </a>
             </div>
 
@@ -241,7 +256,7 @@ function App() {
               </p>
               <a
                 className="button button-secondary"
-                href="https://www.instagram.com/alimar.imp"
+                href={site.instagramUrl}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -322,8 +337,9 @@ function App() {
         <div className="footer-links">
           <a href="#servicios">Servicios</a>
           <a href="#catalogo">Catálogo</a>
+          <a href={site.whatsappUrl} target="_blank" rel="noreferrer">WhatsApp ↗</a>
           <a
-            href="https://www.instagram.com/alimar.imp"
+            href={site.instagramUrl}
             target="_blank"
             rel="noreferrer"
           >
