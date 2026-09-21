@@ -108,7 +108,7 @@ export async function GET() {
       { categories: Array.from(categories.values()) },
       {
         headers: {
-          'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=300',
+          'Cache-Control': 'public, max-age=0, s-maxage=10, stale-while-revalidate=30',
         },
       },
     )

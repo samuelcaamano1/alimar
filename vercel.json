@@ -1,1 +1,15 @@
-{"regions":["gru1"]}
+{
+  "regions": [
+    "gru1"
+  ],
+  "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "/"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/"
+    }
+  ]
+}
