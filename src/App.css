@@ -1044,3 +1044,204 @@
     display: block;
   }
 }
+
+
+/* ALIMAR INTERACTIVE CATALOG 1A.5 */
+.catalog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -22px 0 30px;
+}
+
+.catalog-filters button {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  color: rgba(255, 253, 248, 0.76);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+  transition: 160ms ease;
+}
+
+.catalog-filters button:hover,
+.catalog-filters button:focus-visible,
+.catalog-filters button.is-active {
+  color: var(--charcoal);
+  border-color: var(--cream);
+  background: var(--cream);
+}
+
+.product-card-button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.product-card-button:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+}
+
+.product-card-button:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 4px;
+}
+
+.product-dialog-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgba(7, 11, 14, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.product-dialog {
+  position: relative;
+  width: min(880px, 100%);
+  max-height: min(760px, calc(100dvh - 48px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.85fr);
+  overflow: auto;
+  border-radius: 24px;
+  background: var(--paper);
+  box-shadow: 0 34px 100px rgba(0, 0, 0, 0.34);
+}
+
+.product-dialog-close {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--charcoal);
+  background: rgba(248, 238, 216, 0.94);
+  cursor: pointer;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.product-dialog-image {
+  min-height: 430px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: rgba(12, 16, 20, 0.45);
+  background:
+    radial-gradient(circle at 70% 30%, rgba(100, 175, 198, 0.32) 0 18%, transparent 19%),
+    radial-gradient(circle at 34% 68%, rgba(243, 232, 207, 0.78) 0 20%, transparent 21%),
+    #d9c3ad;
+  font-family: var(--display);
+  font-size: 3rem;
+  font-style: italic;
+}
+
+.product-dialog-image img {
+  width: 100%;
+  height: 100%;
+  min-height: 430px;
+  object-fit: cover;
+}
+
+.product-dialog-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: clamp(34px, 6vw, 64px);
+}
+
+.product-dialog-kind {
+  margin-bottom: 14px;
+  color: var(--blue-dark);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.product-dialog-content h3 {
+  margin: 0;
+  color: var(--charcoal);
+  font-family: var(--display);
+  font-size: clamp(2.3rem, 5vw, 4rem);
+  font-weight: 620;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.product-dialog-content p {
+  margin: 20px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.product-dialog-price {
+  margin-top: 26px;
+  color: var(--charcoal);
+  font-size: 1.1rem;
+}
+
+.product-dialog-cta {
+  margin-top: 28px;
+}
+
+@media (max-width: 700px) {
+  .catalog-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .catalog-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .catalog-filters button {
+    flex: 0 0 auto;
+  }
+
+  .product-dialog-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .product-dialog {
+    width: 100%;
+    max-height: 92dvh;
+    grid-template-columns: 1fr;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .product-dialog-image,
+  .product-dialog-image img {
+    min-height: 260px;
+    max-height: 38dvh;
+  }
+
+  .product-dialog-content {
+    padding: 30px 22px calc(30px + env(safe-area-inset-bottom));
+  }
+
+  .product-dialog-cta {
+    width: 100%;
+  }
+}

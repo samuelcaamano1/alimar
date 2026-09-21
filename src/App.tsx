@@ -64,9 +64,18 @@ function formatPrice(product: CatalogProduct) {
   return product.pricingMode === 'from' ? `Desde ${value}` : value
 }
 
+function productWhatsappUrl(product: CatalogProduct) {
+  const price = formatPrice(product)
+  return site.whatsappUrlFor(
+    `Hola, quiero consultar por "${product.name}" (${price}).`,
+  )
+}
+
 function App() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>([])
   const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [activeCategory, setActiveCategory] = useState<string>('all')
+  const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -89,10 +98,14 @@ function App() {
     return () => controller.abort()
   }, [])
 
-  const featuredProducts = useMemo(
-    () => catalog.flatMap((category) => category.products).slice(0, 6),
-    [catalog],
-  )
+  const featuredProducts = useMemo(() => {
+    const source =
+      activeCategory === 'all'
+        ? catalog
+        : catalog.filter((category) => category.slug === activeCategory)
+
+    return source.flatMap((category) => category.products).slice(0, 9)
+  }, [catalog, activeCategory])
 
   return (
     <div className="site-shell">
@@ -229,6 +242,30 @@ function App() {
             </p>
           </div>
 
+          {catalogState === 'ready' && catalog.length > 0 && (
+            <div className="catalog-filters" aria-label="Filtrar por categoría">
+              <button
+                type="button"
+                className={activeCategory === 'all' ? 'is-active' : ''}
+                aria-pressed={activeCategory === 'all'}
+                onClick={() => setActiveCategory('all')}
+              >
+                Todos
+              </button>
+              {catalog.map((category) => (
+                <button
+                  type="button"
+                  key={category.id}
+                  className={activeCategory === category.slug ? 'is-active' : ''}
+                  aria-pressed={activeCategory === category.slug}
+                  onClick={() => setActiveCategory(category.slug)}
+                >
+                  {category.name}
+                </button>
+              ))}
+            </div>
+          )}
+
           {catalogState === 'loading' && (
             <div className="product-grid" aria-label="Cargando catálogo">
               {[1, 2, 3].map((item) => (
@@ -268,7 +305,13 @@ function App() {
           {catalogState === 'ready' && featuredProducts.length > 0 && (
             <div className="product-grid">
               {featuredProducts.map((product) => (
-                <article className="product-card" key={product.id}>
+                <button
+                  type="button"
+                  className="product-card product-card-button"
+                  key={product.id}
+                  onClick={() => setSelectedProduct(product)}
+                  aria-label={`Ver detalles de ${product.name}`}
+                >
                   <div className="product-image">
                     {product.imageUrl ? (
                       <img src={product.imageUrl} alt="" loading="lazy" />
@@ -284,10 +327,10 @@ function App() {
                     {product.shortDescription && <p>{product.shortDescription}</p>}
                     <div className="product-meta">
                       <strong>{formatPrice(product)}</strong>
-                      <span aria-hidden="true">↗</span>
+                      <span aria-hidden="true">Ver ↗</span>
                     </div>
                   </div>
-                </article>
+                </button>
               ))}
             </div>
           )}
@@ -323,6 +366,63 @@ function App() {
             </li>
           </ol>
         </section>
+
+        {selectedProduct && (
+          <div
+            className="product-dialog-backdrop"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setSelectedProduct(null)
+            }}
+          >
+            <section
+              className="product-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="product-dialog-title"
+            >
+              <button
+                type="button"
+                className="product-dialog-close"
+                aria-label="Cerrar detalle"
+                onClick={() => setSelectedProduct(null)}
+              >
+                ×
+              </button>
+
+              <div className="product-dialog-image">
+                {selectedProduct.imageUrl ? (
+                  <img src={selectedProduct.imageUrl} alt="" />
+                ) : (
+                  <span>Alimar</span>
+                )}
+              </div>
+
+              <div className="product-dialog-content">
+                <span className="product-dialog-kind">
+                  {selectedProduct.kind === 'service' ? 'Servicio personalizado' : 'Producto'}
+                </span>
+                <h3 id="product-dialog-title">{selectedProduct.name}</h3>
+                {selectedProduct.shortDescription && (
+                  <p>{selectedProduct.shortDescription}</p>
+                )}
+                <strong className="product-dialog-price">
+                  {formatPrice(selectedProduct)}
+                </strong>
+
+                <a
+                  className="button button-primary product-dialog-cta"
+                  href={productWhatsappUrl(selectedProduct)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Consultar por WhatsApp
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </section>
+          </div>
+        )}
       </main>
 
       <footer className="site-footer">

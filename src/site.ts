@@ -1,8 +1,15 @@
 const whatsappNumber = '5491135682635'
-const whatsappMessage = 'Hola, quiero consultar por un producto o servicio de Alimar.'
+const defaultWhatsappMessage = 'Hola, quiero consultar por un producto o servicio de Alimar.'
+
+function buildWhatsappUrl(message: string) {
+  return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
+}
 
 export const site = {
   instagramUrl: 'https://www.instagram.com/alimar.imp',
   whatsappNumber,
-  whatsappUrl: `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`,
+  whatsappUrl: buildWhatsappUrl(defaultWhatsappMessage),
+  whatsappUrlFor(message: string) {
+    return buildWhatsappUrl(message)
+  },
 } as const
