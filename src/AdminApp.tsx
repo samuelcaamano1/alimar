@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from 'react'
 import { alimarLogoDataUrl } from './brand'
+import { compressAdminImage } from './adminImage'
 import './admin.css'
 
 type AdminCategory = {
@@ -33,6 +41,11 @@ type SessionResponse = {
   authenticated: boolean
 }
 
+type ImageState = {
+  dataUrl: string
+  label: string
+}
+
 const emptyCatalog: AdminCatalog = {
   categories: [],
   products: [],
@@ -49,8 +62,8 @@ async function responseMessage(response: Response) {
 
 function money(value: string | null) {
   if (!value) return 'Consultar'
-  const amount = Number(value)
 
+  const amount = Number(value)
   if (!Number.isFinite(amount)) return 'Consultar'
 
   return new Intl.NumberFormat('es-AR', {
@@ -60,12 +73,30 @@ function money(value: string | null) {
   }).format(amount)
 }
 
+function formatBytes(value: number) {
+  if (value < 1024) return `${value} B`
+  return `${Math.round(value / 1024)} KB`
+}
+
 export default function AdminApp() {
   const [session, setSession] = useState<SessionResponse | null>(null)
   const [catalog, setCatalog] = useState<AdminCatalog>(emptyCatalog)
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const [createPricingMode, setCreatePricingMode] =
+    useState<'fixed' | 'from' | 'quote'>('fixed')
+  const [createImage, setCreateImage] = useState<ImageState | null>(null)
+  const [createImageBusy, setCreateImageBusy] = useState(false)
+
+  const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null)
+  const [editPricingMode, setEditPricingMode] =
+    useState<'fixed' | 'from' | 'quote'>('fixed')
+  const [editImage, setEditImage] = useState<ImageState | null>(null)
+  const [editImageAction, setEditImageAction] =
+    useState<'keep' | 'replace' | 'remove'>('keep')
+  const [editImageBusy, setEditImageBusy] = useState(false)
 
   const loadCatalog = useCallback(async () => {
     const response = await fetch('/api/admin/catalog', {
@@ -121,6 +152,38 @@ export default function AdminApp() {
       products: catalog.products.filter((product) => product.category_id === category.id),
     }))
   }, [catalog])
+
+  async function compressSelectedImage(
+    event: ChangeEvent<HTMLInputElement>,
+    target: 'create' | 'edit',
+  ) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const setImageBusy = target === 'create' ? setCreateImageBusy : setEditImageBusy
+    setImageBusy(true)
+    setMessage('')
+
+    try {
+      const result = await compressAdminImage(file)
+      const nextImage = {
+        dataUrl: result.dataUrl,
+        label: `${result.width}×${result.height} · ${formatBytes(result.outputBytes)}`,
+      }
+
+      if (target === 'create') {
+        setCreateImage(nextImage)
+      } else {
+        setEditImage(nextImage)
+        setEditImageAction('replace')
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo procesar la imagen.')
+    } finally {
+      setImageBusy(false)
+      event.target.value = ''
+    }
+  }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -195,8 +258,10 @@ export default function AdminApp() {
     setBusy(true)
     setMessage('')
 
-    const form = new FormData(event.currentTarget)
-    const pricingMode = String(form.get('pricingMode') ?? 'fixed')
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+    const pastedImage = String(form.get('imageUrl') ?? '').trim()
+    const imageUrl = createImage?.dataUrl || pastedImage || null
 
     try {
       const response = await fetch('/api/admin/products', {
@@ -207,9 +272,9 @@ export default function AdminApp() {
           name: form.get('name'),
           shortDescription: form.get('shortDescription'),
           kind: form.get('kind'),
-          pricingMode,
-          basePrice: pricingMode === 'quote' ? null : form.get('basePrice'),
-          imageUrl: form.get('imageUrl'),
+          pricingMode: createPricingMode,
+          basePrice: createPricingMode === 'quote' ? null : form.get('basePrice'),
+          imageUrl,
           customizationAllowed: form.get('customizationAllowed') === 'on',
           featured: form.get('featured') === 'on',
         }),
@@ -217,11 +282,72 @@ export default function AdminApp() {
 
       if (!response.ok) throw new Error(await responseMessage(response))
 
-      event.currentTarget.reset()
+      formElement.reset()
+      setCreatePricingMode('fixed')
+      setCreateImage(null)
       setMessage('Producto agregado al catálogo.')
       await loadCatalog()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo crear el producto.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function openEdit(product: AdminProduct) {
+    setEditingProduct(product)
+    setEditPricingMode(product.pricing_mode)
+    setEditImage(null)
+    setEditImageAction('keep')
+    setMessage('')
+  }
+
+  function closeEdit() {
+    if (busy || editImageBusy) return
+    setEditingProduct(null)
+    setEditImage(null)
+    setEditImageAction('keep')
+  }
+
+  async function handleEditProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!editingProduct) return
+
+    setBusy(true)
+    setMessage('')
+
+    const form = new FormData(event.currentTarget)
+
+    try {
+      const response = await fetch(
+        `/api/admin/products?id=${encodeURIComponent(editingProduct.id)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            categoryId: form.get('categoryId'),
+            name: form.get('name'),
+            shortDescription: form.get('shortDescription'),
+            kind: form.get('kind'),
+            pricingMode: editPricingMode,
+            basePrice: editPricingMode === 'quote' ? null : form.get('basePrice'),
+            imageAction: editImageAction,
+            imageUrl: editImageAction === 'replace' ? editImage?.dataUrl : null,
+            customizationAllowed: form.get('customizationAllowed') === 'on',
+            featured: form.get('featured') === 'on',
+          }),
+        },
+      )
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      setEditingProduct(null)
+      setEditImage(null)
+      setEditImageAction('keep')
+      setMessage('Producto actualizado.')
+      await loadCatalog()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo actualizar el producto.')
     } finally {
       setBusy(false)
     }
@@ -326,8 +452,8 @@ export default function AdminApp() {
             <h1>Productos y servicios</h1>
           </div>
           <p>
-            Los cambios se guardan directamente en Neon. Quitar un producto lo oculta de la tienda
-            sin destruir su registro.
+            Cargá fotos desde tu dispositivo, editá productos y mantené el catálogo actualizado
+            sin tocar código.
           </p>
         </section>
 
@@ -370,25 +496,30 @@ export default function AdminApp() {
               <span>02</span>
               <div>
                 <h2>Nuevo producto</h2>
-                <p>Agregalo al catálogo público sin tocar código.</p>
+                <p>Agregalo al catálogo público y subí su foto desde el dispositivo.</p>
               </div>
             </div>
 
             {catalog.categories.length === 0 ? (
-              <div className="admin-empty">
-                Primero creá al menos una categoría.
-              </div>
+              <div className="admin-empty">Primero creá al menos una categoría.</div>
             ) : (
               <form className="admin-form admin-product-form" onSubmit={handleAddProduct}>
                 <label>
                   Nombre
-                  <input name="name" placeholder="Ej. Invitación personalizada" maxLength={120} required />
+                  <input
+                    name="name"
+                    placeholder="Ej. Invitación personalizada"
+                    maxLength={120}
+                    required
+                  />
                 </label>
 
                 <label>
                   Categoría
                   <select name="categoryId" required defaultValue="">
-                    <option value="" disabled>Elegir categoría</option>
+                    <option value="" disabled>
+                      Elegir categoría
+                    </option>
                     {catalog.categories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
@@ -407,7 +538,13 @@ export default function AdminApp() {
 
                 <label>
                   Precio
-                  <select name="pricingMode" defaultValue="fixed">
+                  <select
+                    name="pricingMode"
+                    value={createPricingMode}
+                    onChange={(event) =>
+                      setCreatePricingMode(event.target.value as 'fixed' | 'from' | 'quote')
+                    }
+                  >
                     <option value="fixed">Precio fijo</option>
                     <option value="from">Desde</option>
                     <option value="quote">A consultar</option>
@@ -420,6 +557,8 @@ export default function AdminApp() {
                     name="basePrice"
                     inputMode="decimal"
                     placeholder="Ej. 15000"
+                    disabled={createPricingMode === 'quote'}
+                    required={createPricingMode !== 'quote'}
                   />
                 </label>
 
@@ -433,15 +572,43 @@ export default function AdminApp() {
                   />
                 </label>
 
-                <label className="admin-span-2">
-                  Imagen
-                  <textarea
-                    name="imageUrl"
-                    placeholder="https://... o data:image/...;base64,..."
-                    rows={3}
-                  />
-                  <small>En la próxima update agregamos carga de archivo con conversión automática.</small>
-                </label>
+                <div className="admin-span-2 admin-image-field">
+                  <span className="admin-field-label">Imagen</span>
+
+                  <label className="admin-file-picker">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(event) => void compressSelectedImage(event, 'create')}
+                      disabled={createImageBusy}
+                    />
+                    <span>{createImageBusy ? 'Procesando…' : 'Elegir foto del dispositivo'}</span>
+                  </label>
+
+                  <span className="admin-image-or">o</span>
+
+                  <label>
+                    URL HTTPS opcional
+                    <input name="imageUrl" placeholder="https://..." disabled={Boolean(createImage)} />
+                  </label>
+
+                  {createImage && (
+                    <div className="admin-image-preview">
+                      <img src={createImage.dataUrl} alt="Vista previa" />
+                      <div>
+                        <strong>Foto optimizada</strong>
+                        <small>{createImage.label}</small>
+                        <button type="button" onClick={() => setCreateImage(null)}>
+                          Quitar foto
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <small>
+                    La foto se reduce automáticamente a WebP antes de enviarse.
+                  </small>
+                </div>
 
                 <label className="admin-check">
                   <input type="checkbox" name="customizationAllowed" />
@@ -453,7 +620,11 @@ export default function AdminApp() {
                   <span>Destacar producto</span>
                 </label>
 
-                <button className="admin-primary admin-span-2" type="submit" disabled={busy}>
+                <button
+                  className="admin-primary admin-span-2"
+                  type="submit"
+                  disabled={busy || createImageBusy}
+                >
                   Agregar al catálogo
                 </button>
               </form>
@@ -471,15 +642,14 @@ export default function AdminApp() {
           </div>
 
           {catalog.products.length === 0 ? (
-            <div className="admin-empty">
-              Todavía no hay productos cargados.
-            </div>
+            <div className="admin-empty">Todavía no hay productos cargados.</div>
           ) : (
             <div className="admin-category-list">
               {productsByCategory.map(({ category, products }) =>
                 products.length > 0 ? (
                   <section key={category.id} className="admin-category-group">
                     <h3>{category.name}</h3>
+
                     <div className="admin-product-list">
                       {products.map((product) => (
                         <article className="admin-product-row" key={product.id}>
@@ -503,14 +673,25 @@ export default function AdminApp() {
                             </small>
                           </div>
 
-                          <button
-                            className="admin-danger"
-                            type="button"
-                            onClick={() => handleRemoveProduct(product)}
-                            disabled={busy}
-                          >
-                            Quitar
-                          </button>
+                          <div className="admin-row-actions">
+                            <button
+                              className="admin-edit"
+                              type="button"
+                              onClick={() => openEdit(product)}
+                              disabled={busy}
+                            >
+                              Editar
+                            </button>
+
+                            <button
+                              className="admin-danger"
+                              type="button"
+                              onClick={() => handleRemoveProduct(product)}
+                              disabled={busy}
+                            >
+                              Quitar
+                            </button>
+                          </div>
                         </article>
                       ))}
                     </div>
@@ -521,6 +702,196 @@ export default function AdminApp() {
           )}
         </section>
       </main>
+
+      {editingProduct && (
+        <div
+          className="admin-dialog-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeEdit()
+          }}
+        >
+          <section
+            className="admin-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-edit-title"
+          >
+            <button
+              className="admin-dialog-close"
+              type="button"
+              aria-label="Cerrar edición"
+              onClick={closeEdit}
+              disabled={busy || editImageBusy}
+            >
+              ×
+            </button>
+
+            <div className="admin-dialog-heading">
+              <p className="admin-kicker">Editar producto</p>
+              <h2 id="admin-edit-title">{editingProduct.name}</h2>
+            </div>
+
+            <form className="admin-form admin-product-form" onSubmit={handleEditProduct}>
+              <label>
+                Nombre
+                <input name="name" defaultValue={editingProduct.name} maxLength={120} required />
+              </label>
+
+              <label>
+                Categoría
+                <select
+                  name="categoryId"
+                  defaultValue={editingProduct.category_id ?? ''}
+                  required
+                >
+                  {catalog.categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Tipo
+                <select name="kind" defaultValue={editingProduct.kind}>
+                  <option value="service">Servicio</option>
+                  <option value="product">Producto</option>
+                </select>
+              </label>
+
+              <label>
+                Precio
+                <select
+                  name="pricingMode"
+                  value={editPricingMode}
+                  onChange={(event) =>
+                    setEditPricingMode(event.target.value as 'fixed' | 'from' | 'quote')
+                  }
+                >
+                  <option value="fixed">Precio fijo</option>
+                  <option value="from">Desde</option>
+                  <option value="quote">A consultar</option>
+                </select>
+              </label>
+
+              <label>
+                Importe
+                <input
+                  name="basePrice"
+                  inputMode="decimal"
+                  defaultValue={editingProduct.base_price ?? ''}
+                  disabled={editPricingMode === 'quote'}
+                  required={editPricingMode !== 'quote'}
+                />
+              </label>
+
+              <label className="admin-span-2">
+                Descripción breve
+                <textarea
+                  name="shortDescription"
+                  defaultValue={editingProduct.short_description ?? ''}
+                  maxLength={280}
+                  rows={3}
+                />
+              </label>
+
+              <div className="admin-span-2 admin-image-field">
+                <span className="admin-field-label">Imagen</span>
+
+                <div className="admin-edit-image-current">
+                  {editImageAction === 'replace' && editImage ? (
+                    <img src={editImage.dataUrl} alt="Nueva vista previa" />
+                  ) : editImageAction === 'remove' ? (
+                    <div className="admin-no-image">Sin imagen</div>
+                  ) : editingProduct.image_url ? (
+                    <img src={editingProduct.image_url} alt="Imagen actual" />
+                  ) : (
+                    <div className="admin-no-image">Sin imagen</div>
+                  )}
+                </div>
+
+                <div className="admin-image-actions">
+                  <label className="admin-file-picker">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(event) => void compressSelectedImage(event, 'edit')}
+                      disabled={editImageBusy}
+                    />
+                    <span>{editImageBusy ? 'Procesando…' : 'Reemplazar foto'}</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    className="admin-secondary"
+                    onClick={() => {
+                      setEditImage(null)
+                      setEditImageAction('remove')
+                    }}
+                    disabled={editImageBusy}
+                  >
+                    Quitar imagen
+                  </button>
+
+                  {editImageAction !== 'keep' && (
+                    <button
+                      type="button"
+                      className="admin-text-button"
+                      onClick={() => {
+                        setEditImage(null)
+                        setEditImageAction('keep')
+                      }}
+                    >
+                      Conservar original
+                    </button>
+                  )}
+                </div>
+
+                {editImage && <small>Nueva foto: {editImage.label}</small>}
+              </div>
+
+              <label className="admin-check">
+                <input
+                  type="checkbox"
+                  name="customizationAllowed"
+                  defaultChecked={editingProduct.customization_allowed}
+                />
+                <span>Permite personalización</span>
+              </label>
+
+              <label className="admin-check">
+                <input
+                  type="checkbox"
+                  name="featured"
+                  defaultChecked={editingProduct.featured}
+                />
+                <span>Destacar producto</span>
+              </label>
+
+              <div className="admin-dialog-actions admin-span-2">
+                <button
+                  className="admin-secondary"
+                  type="button"
+                  onClick={closeEdit}
+                  disabled={busy || editImageBusy}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  className="admin-primary"
+                  type="submit"
+                  disabled={busy || editImageBusy}
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
