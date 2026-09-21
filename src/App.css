@@ -1,4 +1,4 @@
-.site-shell {
+﻿.site-shell {
   min-height: 100dvh;
   overflow: hidden;
 }
@@ -871,5 +871,97 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ALIMAR REAL BRAND 1A.3 */
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px rgba(20, 27, 31, 0.12);
+}
+
+.hero-brand-logo {
+  position: absolute;
+  z-index: 8;
+  width: clamp(112px, 13vw, 164px);
+  aspect-ratio: 1;
+  right: 16px;
+  bottom: 12px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 24px 50px rgba(11, 16, 20, 0.22);
+  transform: rotate(4deg);
+}
+
+.hero-copy h1 span,
+.eyebrow,
+.service-number,
+.manifesto-strip i,
+.process-list li > span {
+  color: var(--blue-dark);
+}
+
+.hero-note-dot {
+  background: var(--blue);
+  box-shadow: 0 0 0 4px rgba(100, 175, 198, 0.16);
+}
+
+.paper-back {
+  color: #174b5b;
+  background:
+    linear-gradient(rgba(255,255,255,.24), rgba(255,255,255,.24)),
+    repeating-linear-gradient(0deg, transparent 0 25px, rgba(20,72,87,.07) 25px 26px),
+    #9bcbd8;
+}
+
+.paper-main {
+  background:
+    radial-gradient(circle at 22% 22%, rgba(255,255,255,.75) 0 2px, transparent 3px),
+    linear-gradient(145deg, #fffaf0, #f3e8cf);
+}
+
+.paper-signature,
+.catalog-section .eyebrow,
+.catalog-message span,
+.catalog-empty-label {
+  color: #8ed0e2;
+}
+
+.paper-sticker {
+  background: var(--cream);
+}
+
+.manifesto-strip {
+  background: var(--cream);
+}
+
+.catalog-section {
+  background: var(--charcoal);
+}
+
+.button-primary {
+  color: var(--cream);
+  background: var(--charcoal);
+}
+
+.button-secondary:hover {
+  color: var(--cream);
+  background: var(--charcoal);
+}
+
+@media (max-width: 620px) {
+  .brand-logo {
+    width: 38px;
+    height: 38px;
+  }
+
+  .hero-brand-logo {
+    width: 100px;
+    right: 0;
+    bottom: 16px;
   }
 }
