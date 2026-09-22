@@ -55,6 +55,8 @@ type AdminOrder = {
 
 type OrdersResponse = { orders: AdminOrder[] }
 
+type DateFilter = 'all' | 'today' | '7d' | '30d'
+
 const statusLabels: Record<OrderStatus, string> = {
   new: 'Nuevo',
   contacted: 'Contactado',
@@ -89,6 +91,62 @@ function dateTime(value: string) {
   }).format(date)
 }
 
+function dateFilterStart(filter: DateFilter) {
+  if (filter === 'all') return null
+
+  const now = new Date()
+
+  if (filter === 'today') {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  }
+
+  const days = filter === '7d' ? 7 : 30
+  return now.getTime() - days * 24 * 60 * 60 * 1000
+}
+
+function whatsappContactUrl(order: AdminOrder) {
+  const phone = order.customer_phone.replace(/\D/g, '')
+  const message = `Hola ${order.customer_name}, te escribo de Alimar por tu pedido ${order.public_code}.`
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+}
+
+function orderSummary(order: AdminOrder) {
+  const lines = [
+    `Pedido ${order.public_code}`,
+    `Cliente: ${order.customer_name}`,
+    `Teléfono: ${order.customer_phone}`,
+    `Estado: ${statusLabels[order.status]}`,
+    '',
+    'Productos:',
+  ]
+
+  for (const item of order.items) {
+    const variant = item.variant_name ? ` · ${item.variant_name}` : ''
+    const total = item.line_total ? money(item.line_total) : 'A consultar'
+    lines.push(`- ${item.quantity}× ${item.product_name}${variant} — ${total}`)
+
+    for (const customization of item.customization_values) {
+      lines.push(`  ${customization.label}: ${customization.value}`)
+    }
+
+    if (item.customization_note) {
+      lines.push(`  Nota: ${item.customization_note}`)
+    }
+  }
+
+  lines.push('', `Subtotal conocido: ${money(order.known_total)}`)
+
+  if (order.has_quote) {
+    lines.push('Incluye ítems que requieren cotización.')
+  }
+
+  if (order.customer_notes) {
+    lines.push(`Nota general: ${order.customer_notes}`)
+  }
+
+  return lines.join('\n')
+}
+
 async function responseMessage(response: Response) {
   try {
     const data = (await response.json()) as { error?: string }
@@ -104,6 +162,7 @@ export default function AdminOrdersPanel() {
   const [message, setMessage] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | OrderStatus>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null)
   const [draftStatus, setDraftStatus] = useState<Record<string, OrderStatus>>({})
   const [draftNote, setDraftNote] = useState<Record<string, string>>({})
@@ -172,6 +231,7 @@ export default function AdminOrdersPanel() {
 
   const visibleOrders = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase('es-AR')
+    const dateStart = dateFilterStart(dateFilter)
 
     return orders.filter((order) => {
       const matchesStatus =
@@ -181,6 +241,12 @@ export default function AdminOrdersPanel() {
           : order.status === statusFilter)
 
       if (!matchesStatus) return false
+
+      if (dateStart !== null) {
+        const createdAt = new Date(order.created_at).getTime()
+        if (!Number.isFinite(createdAt) || createdAt < dateStart) return false
+      }
+
       if (!query) return true
 
       const haystack = [
@@ -189,14 +255,37 @@ export default function AdminOrdersPanel() {
         order.customer_phone,
         order.customer_email ?? '',
         order.customer_notes ?? '',
-        ...order.items.flatMap((item) => [item.product_name, item.variant_name ?? '']),
+        ...order.items.flatMap((item) => [
+          item.product_name,
+          item.variant_name ?? '',
+          item.customization_note ?? '',
+          ...item.customization_values.flatMap((customization) => [
+            customization.label,
+            customization.value,
+          ]),
+        ]),
       ]
         .join(' ')
         .toLocaleLowerCase('es-AR')
 
       return haystack.includes(query)
     })
-  }, [orders, searchQuery, statusFilter])
+  }, [dateFilter, orders, searchQuery, statusFilter])
+
+  async function copyText(value: string, successMessage: string) {
+    setMessage('')
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error('Clipboard unavailable')
+      }
+
+      await navigator.clipboard.writeText(value)
+      setMessage(successMessage)
+    } catch {
+      setMessage('No se pudo copiar automáticamente. Seleccioná el dato y copialo manualmente.')
+    }
+  }
 
   async function saveStatus(order: AdminOrder) {
     const nextStatus = draftStatus[order.id] ?? order.status
@@ -315,6 +404,19 @@ export default function AdminOrdersPanel() {
           </select>
         </label>
 
+        <label>
+          Fecha
+          <select
+            value={dateFilter}
+            onChange={(event) => setDateFilter(event.target.value as DateFilter)}
+          >
+            <option value="all">Todas</option>
+            <option value="today">Hoy</option>
+            <option value="7d">Últimos 7 días</option>
+            <option value="30d">Últimos 30 días</option>
+          </select>
+        </label>
+
         <span>{visibleOrders.length} pedidos visibles</span>
       </div>
 
@@ -348,13 +450,37 @@ export default function AdminOrdersPanel() {
 
                 <div className="admin-order-contact">
                   <a
-                    href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`}
+                    href={whatsappContactUrl(order)}
                     target="_blank"
                     rel="noreferrer"
                   >
                     WhatsApp: {order.customer_phone} ↗
                   </a>
                   {order.customer_email && <span>{order.customer_email}</span>}
+                </div>
+
+                <div className="admin-order-quick-actions">
+                  <button
+                    type="button"
+                    className="admin-secondary"
+                    onClick={() => void copyText(order.public_code, 'Código de pedido copiado.')}
+                  >
+                    Copiar código
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-secondary"
+                    onClick={() => void copyText(order.customer_phone, 'Teléfono copiado.')}
+                  >
+                    Copiar teléfono
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-secondary"
+                    onClick={() => void copyText(orderSummary(order), 'Resumen del pedido copiado.')}
+                  >
+                    Copiar resumen
+                  </button>
                 </div>
 
                 {order.customer_notes && (
