@@ -1842,3 +1842,49 @@
   font-size: 0.7rem;
   font-weight: 650;
 }
+
+
+/* ALIMAR VARIANT UX 1A.14 */
+.product-options-count {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: var(--charcoal);
+  background: rgba(248, 238, 216, 0.94);
+  font-size: 0.64rem;
+  font-weight: 850;
+  box-shadow: 0 6px 18px rgba(12, 16, 20, 0.1);
+}
+
+.product-variant-selection {
+  color: var(--blue-dark);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.cart-item-price {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.cart-item-price small {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 650;
+}
+
+.cart-item-price strong {
+  font-size: 0.82rem;
+}
+
+@media (max-width: 700px) {
+  .product-options-count {
+    right: 10px;
+    bottom: 10px;
+  }
+}

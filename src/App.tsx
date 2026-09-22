@@ -127,6 +127,15 @@ function formatCartItemPrice(item: CartItem) {
   return item.pricingMode === 'from' ? `Desde ${value}` : value
 }
 
+function formatCartLinePrice(item: CartItem) {
+  if (!item.unitPrice) return 'Consultar'
+
+  const unitPrice = Number(item.unitPrice)
+  if (!Number.isFinite(unitPrice)) return 'Consultar'
+
+  return formatAmount(unitPrice * item.quantity)
+}
+
 function cartItemKey(item: Pick<CartItem, 'id' | 'variantId'>) {
   return `${item.id}:${item.variantId ?? 'base'}`
 }
@@ -155,18 +164,31 @@ const serviceLines = [
 ]
 
 function formatPrice(product: CatalogProduct) {
-  if (product.pricingMode === 'quote' || !product.basePrice) return 'Consultar'
+  if (product.pricingMode === 'quote') return 'Consultar'
 
-  const amount = Number(product.basePrice)
-  if (!Number.isFinite(amount)) return 'Consultar'
+  const priceSources =
+    product.variants.length > 0
+      ? product.variants.map((variant) => variant.priceOverride ?? product.basePrice)
+      : [product.basePrice]
 
-  const value = new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0,
-  }).format(amount)
+  const amounts = priceSources
+    .map((value) => (value === null ? Number.NaN : Number(value)))
+    .filter((value) => Number.isFinite(value) && value >= 0)
 
-  return product.pricingMode === 'from' ? `Desde ${value}` : value
+  if (amounts.length === 0) return 'Consultar'
+
+  const minimum = Math.min(...amounts)
+  const formatted = formatAmount(minimum)
+  const hasOptions = product.variants.length > 0
+
+  return product.pricingMode === 'from' || hasOptions ? `Desde ${formatted}` : formatted
+}
+
+function catalogPriceLabel(product: CatalogProduct) {
+  if (product.variants.length === 0) return formatPrice(product)
+
+  const label = product.variants.length === 1 ? '1 opción' : `${product.variants.length} opciones`
+  return `${formatPrice(product)} · ${label}`
 }
 
 function productWhatsappUrl(product: CatalogProduct, variant: CatalogVariant | null = null) {
@@ -525,12 +547,19 @@ function App() {
                     <span className="product-kind">
                       {product.kind === 'service' ? 'Servicio' : 'Producto'}
                     </span>
+                    {product.variants.length > 0 && (
+                      <span className="product-options-count">
+                        {product.variants.length === 1
+                          ? '1 opción'
+                          : `${product.variants.length} opciones`}
+                      </span>
+                    )}
                   </div>
                   <div className="product-content">
                     <h3>{product.name}</h3>
                     {product.shortDescription && <p>{product.shortDescription}</p>}
                     <div className="product-meta">
-                      <strong>{formatPrice(product)}</strong>
+                      <strong>{catalogPriceLabel(product)}</strong>
                       <span aria-hidden="true">Ver ↗</span>
                     </div>
                   </div>
@@ -626,10 +655,16 @@ function App() {
                         </option>
                       ))}
                     </select>
+
+                    <span className="product-variant-selection">
+                      {selectedVariant
+                        ? `Elegiste: ${selectedVariant.name}`
+                        : `Este producto tiene ${selectedProduct.variants.length} opciones.`}
+                    </span>
                   </label>
                 )}
 
-                <strong className="product-dialog-price">
+                <strong className="product-dialog-price" aria-live="polite">
                   {formatSelectionPrice(selectedProduct, selectedVariant)}
                 </strong>
 
@@ -799,7 +834,12 @@ function App() {
                             </button>
                           </div>
 
-                          <strong>{formatCartItemPrice(item)}</strong>
+                          <div className="cart-item-price">
+                            {item.quantity > 1 && item.unitPrice && (
+                              <small>{formatCartItemPrice(item)} c/u</small>
+                            )}
+                            <strong>{formatCartLinePrice(item)}</strong>
+                          </div>
                         </div>
 
                         <label className="cart-note">

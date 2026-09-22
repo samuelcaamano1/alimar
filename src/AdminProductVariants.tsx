@@ -198,6 +198,9 @@ export default function AdminProductVariants({ product }: Props) {
           <strong>Tamaños, formatos u opciones</strong>
         </div>
         <small>
+          {variants.length > 0 && (
+            <strong>{variants.length} variantes · </strong>
+          )}
           {product.pricing_mode === 'quote'
             ? 'Este producto cotiza todas sus variantes.'
             : `Sin precio propio, usa ${money(product.base_price)}.`}
