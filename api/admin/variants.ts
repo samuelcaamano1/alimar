@@ -1,5 +1,6 @@
-import { neon } from '@neondatabase/serverless'
+import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
+import { parseAdminMoney } from '../_lib/money.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -12,19 +13,7 @@ function text(value: unknown, max: number) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
 }
 
-function parsePrice(value: unknown) {
-  if (value === null || value === undefined || value === '') return null
-
-  const price = Number(String(value).replace(',', '.'))
-
-  if (!Number.isFinite(price) || price < 0) {
-    return Number.NaN
-  }
-
-  return price
-}
-
-async function productInfo(sql: ReturnType<typeof neon>, productId: string) {
+async function productInfo(sql: NeonQueryFunction<false, false>, productId: string) {
   const rows = await sql`
     SELECT id::text, pricing_mode
     FROM products
@@ -125,7 +114,7 @@ export async function POST(request: Request) {
 
   const productId = text(body.productId, 40)
   const name = text(body.name, 80)
-  const priceOverride = parsePrice(body.priceOverride)
+  const priceOverride = parseAdminMoney(body.priceOverride)
 
   if (!UUID_RE.test(productId)) {
     return Response.json({ error: 'Producto inválido.' }, { status: 400 })
@@ -141,6 +130,22 @@ export async function POST(request: Request) {
 
     const validationError = validateVariantForProduct(product, name, priceOverride)
     if (validationError) return validationError
+
+    const duplicateRows = await sql`
+      SELECT 1
+      FROM product_variants
+      WHERE product_id = ${productId}::uuid
+        AND name = ${name}
+        AND active = true
+      LIMIT 1
+    `
+
+    if (duplicateRows.length > 0) {
+      return Response.json(
+        { error: 'Ya existe una variante activa con ese nombre.' },
+        { status: 409 },
+      )
+    }
 
     const sortRows = await sql`
       SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_sort
@@ -211,7 +216,7 @@ export async function PATCH(request: Request) {
   }
 
   const name = text(body.name, 80)
-  const priceOverride = parsePrice(body.priceOverride)
+  const priceOverride = parseAdminMoney(body.priceOverride)
 
   try {
     const sql = neon(databaseUrl)
@@ -237,6 +242,23 @@ export async function PATCH(request: Request) {
 
     const validationError = validateVariantForProduct(product, name, priceOverride)
     if (validationError) return validationError
+
+    const duplicateRows = await sql`
+      SELECT 1
+      FROM product_variants
+      WHERE product_id = ${productId}::uuid
+        AND name = ${name}
+        AND id <> ${id}::uuid
+        AND active = true
+      LIMIT 1
+    `
+
+    if (duplicateRows.length > 0) {
+      return Response.json(
+        { error: 'Ya existe otra variante activa con ese nombre.' },
+        { status: 409 },
+      )
+    }
 
     const rows = await sql`
       UPDATE product_variants

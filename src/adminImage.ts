@@ -1,5 +1,5 @@
 const MAX_SOURCE_BYTES = 12 * 1024 * 1024
-const MAX_OUTPUT_BYTES = 1_300_000
+const MAX_OUTPUT_BYTES = 1_050_000
 const MAX_DIMENSION = 1400
 
 function blobToDataUrl(blob: Blob) {

@@ -110,7 +110,7 @@ export default function AdminApp() {
         configured: current?.configured ?? true,
         authenticated: false,
       }))
-      return
+      throw new Error('Tu sesión venció. Volvé a iniciar sesión.')
     }
 
     if (!response.ok) throw new Error(await responseMessage(response))
@@ -122,22 +122,34 @@ export default function AdminApp() {
     let active = true
 
     async function loadSession() {
+      let data: SessionResponse
+
       try {
         const response = await fetch('/api/admin/session', { cache: 'no-store' })
         if (!response.ok) throw new Error('No se pudo comprobar la sesión.')
 
-        const data = (await response.json()) as SessionResponse
-        if (!active) return
-
-        setSession(data)
-
-        if (data.authenticated) {
-          await loadCatalog()
-        }
+        data = (await response.json()) as SessionResponse
       } catch (error) {
         if (!active) return
         setMessage(error instanceof Error ? error.message : 'Error de sesión.')
         setSession({ configured: false, authenticated: false })
+        return
+      }
+
+      if (!active) return
+      setSession(data)
+
+      if (data.authenticated) {
+        try {
+          await loadCatalog()
+        } catch (error) {
+          if (!active) return
+          setMessage(
+            error instanceof Error
+              ? error.message
+              : 'La sesión está activa, pero no se pudo cargar el catálogo.',
+          )
+        }
       }
     }
 
@@ -147,6 +159,17 @@ export default function AdminApp() {
       active = false
     }
   }, [loadCatalog])
+
+  async function refreshCatalogAfterMutation(successMessage: string) {
+    try {
+      await loadCatalog()
+      setMessage(successMessage)
+    } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : 'No se pudo actualizar la vista del catálogo.'
+      setMessage(`${successMessage} ${detail}`)
+    }
+  }
 
   const productsByCategory = useMemo(() => {
     return catalog.categories.map((category) => ({
@@ -203,7 +226,16 @@ export default function AdminApp() {
 
       setPassword('')
       setSession({ configured: true, authenticated: true })
-      await loadCatalog()
+
+      try {
+        await loadCatalog()
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : 'La sesión se inició, pero no se pudo cargar el catálogo.',
+        )
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo iniciar sesión.')
     } finally {
@@ -213,15 +245,20 @@ export default function AdminApp() {
 
   async function handleLogout() {
     setBusy(true)
+    setMessage('')
 
     try {
-      await fetch('/api/admin/logout', { method: 'POST' })
-    } finally {
+      const response = await fetch('/api/admin/logout', { method: 'POST' })
+      if (!response.ok) throw new Error(await responseMessage(response))
+
       setCatalog(emptyCatalog)
       setSession((current) => ({
         configured: current?.configured ?? true,
         authenticated: false,
       }))
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo cerrar la sesión.')
+    } finally {
       setBusy(false)
     }
   }
@@ -247,8 +284,7 @@ export default function AdminApp() {
       if (!response.ok) throw new Error(await responseMessage(response))
 
       formElement.reset()
-      setMessage('Categoría creada.')
-      await loadCatalog()
+      await refreshCatalogAfterMutation('Categoría creada.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo crear la categoría.')
     } finally {
@@ -288,8 +324,7 @@ export default function AdminApp() {
       formElement.reset()
       setCreatePricingMode('fixed')
       setCreateImage(null)
-      setMessage('Producto agregado al catálogo.')
-      await loadCatalog()
+      await refreshCatalogAfterMutation('Producto agregado al catálogo.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo crear el producto.')
     } finally {
@@ -347,8 +382,7 @@ export default function AdminApp() {
       setEditingProduct(null)
       setEditImage(null)
       setEditImageAction('keep')
-      setMessage('Producto actualizado.')
-      await loadCatalog()
+      await refreshCatalogAfterMutation('Producto actualizado.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo actualizar el producto.')
     } finally {
@@ -370,8 +404,7 @@ export default function AdminApp() {
 
       if (!response.ok) throw new Error(await responseMessage(response))
 
-      setMessage('Producto quitado del catálogo.')
-      await loadCatalog()
+      await refreshCatalogAfterMutation('Producto quitado del catálogo.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo quitar el producto.')
     } finally {

@@ -1,5 +1,6 @@
-import { neon } from '@neondatabase/serverless'
+import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
+import { parseAdminMoney } from '../_lib/money.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const MAX_IMAGE_LENGTH = 1_500_000
@@ -42,7 +43,8 @@ function parseProductInput(body: Record<string, unknown>): ProductInput | Respon
   const name = text(body.name, 120)
   const categoryId = text(body.categoryId, 40)
   const shortDescription = text(body.shortDescription, 280) || null
-  const imageUrl = text(body.imageUrl, MAX_IMAGE_LENGTH) || null
+  const rawImageUrl = typeof body.imageUrl === 'string' ? body.imageUrl.trim() : ''
+  const imageUrl = rawImageUrl || null
   const kind = body.kind === 'product' ? 'product' : 'service'
   const pricingMode =
     body.pricingMode === 'from' || body.pricingMode === 'quote'
@@ -51,7 +53,7 @@ function parseProductInput(body: Record<string, unknown>): ProductInput | Respon
   const customizationAllowed = body.customizationAllowed === true
   const featured = body.featured === true
   const priceNumber =
-    pricingMode === 'quote' ? null : Number(String(body.basePrice ?? '').replace(',', '.'))
+    pricingMode === 'quote' ? null : parseAdminMoney(body.basePrice)
 
   if (name.length < 2) {
     return Response.json({ error: 'Product name is required' }, { status: 400 })
@@ -88,7 +90,7 @@ function parseProductInput(body: Record<string, unknown>): ProductInput | Respon
   }
 }
 
-async function categoryExists(sql: ReturnType<typeof neon>, categoryId: string) {
+async function categoryExists(sql: NeonQueryFunction<false, false>, categoryId: string) {
   const rows = await sql`
     SELECT 1
     FROM categories
@@ -100,8 +102,23 @@ async function categoryExists(sql: ReturnType<typeof neon>, categoryId: string) 
   return rows.length > 0
 }
 
+async function productExists(
+  sql: NeonQueryFunction<false, false>,
+  productId: string,
+) {
+  const rows = await sql`
+    SELECT 1
+    FROM products
+    WHERE id = ${productId}::uuid
+      AND active = true
+    LIMIT 1
+  `
+
+  return rows.length > 0
+}
+
 async function uniqueSlug(
-  sql: ReturnType<typeof neon>,
+  sql: NeonQueryFunction<false, false>,
   name: string,
   excludedId?: string,
 ) {
@@ -294,6 +311,10 @@ export async function PATCH(request: Request) {
 
     if (!(await categoryExists(sql, parsed.categoryId))) {
       return Response.json({ error: 'Category not found' }, { status: 400 })
+    }
+
+    if (!(await productExists(sql, id))) {
+      return Response.json({ error: 'Product not found' }, { status: 404 })
     }
 
     const slug = await uniqueSlug(sql, parsed.name, id)

@@ -234,7 +234,17 @@ function App() {
   }, [])
 
   useEffect(() => {
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))
+    try {
+      const persistedCart = cart.map((item) => ({
+        ...item,
+        imageUrl: item.imageUrl?.startsWith('data:') ? null : item.imageUrl,
+        variants: [],
+      }))
+
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(persistedCart))
+    } catch {
+      // Cart persistence is best-effort. The in-memory cart remains usable.
+    }
   }, [cart])
 
   const cartCount = useMemo(
@@ -327,7 +337,7 @@ function App() {
         ? catalog
         : catalog.filter((category) => category.slug === activeCategory)
 
-    return source.flatMap((category) => category.products).slice(0, 9)
+    return source.flatMap((category) => category.products)
   }, [catalog, activeCategory])
 
   const selectedVariant =

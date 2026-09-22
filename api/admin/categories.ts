@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless'
+import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 
 function text(value: unknown, max: number) {
@@ -16,7 +16,7 @@ function slugify(value: string) {
 }
 
 async function uniqueSlug(
-  sql: ReturnType<typeof neon>,
+  sql: NeonQueryFunction<false, false>,
   name: string,
 ) {
   const base = slugify(name) || 'categoria'
