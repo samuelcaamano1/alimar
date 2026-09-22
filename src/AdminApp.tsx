@@ -11,6 +11,7 @@ import { compressAdminImage } from './adminImage'
 import AdminOrdersPanel from './AdminOrdersPanel'
 import AdminCategoriesPanel from './AdminCategoriesPanel'
 import AdminProductVariants from './AdminProductVariants'
+import AdminProductGallery from './AdminProductGallery'
 import './admin.css'
 
 type AdminCategory = {
@@ -1017,6 +1018,12 @@ export default function AdminApp() {
                 </button>
               </div>
             </form>
+
+            <AdminProductGallery
+              key={`gallery-${editingProduct.id}`}
+              product={editingProduct}
+              onChanged={loadCatalog}
+            />
 
             <AdminProductVariants
               key={editingProduct.id}

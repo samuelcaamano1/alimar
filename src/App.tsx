@@ -16,6 +16,13 @@ type CatalogVariant = {
   priceOverride: string | null
 }
 
+type CatalogImage = {
+  id: string
+  url: string
+  alt_text: string | null
+  is_primary: boolean
+}
+
 type CatalogProduct = {
   id: string
   name: string
@@ -206,6 +213,8 @@ function App() {
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState('')
+  const [productImages, setProductImages] = useState<CatalogImage[]>([])
+  const [selectedProductImageUrl, setSelectedProductImageUrl] = useState('')
   const [cart, setCart] = useState<CartItem[]>(() => loadStoredCart())
   const [cartOpen, setCartOpen] = useState(false)
   const [recoveredOrder, setRecoveredOrder] = useState<RecoveredOrder | null>(() =>
@@ -246,6 +255,40 @@ function App() {
       // Cart persistence is best-effort. The in-memory cart remains usable.
     }
   }, [cart])
+
+  useEffect(() => {
+    if (!selectedProduct) {
+      setProductImages([])
+      setSelectedProductImageUrl('')
+      return
+    }
+
+    const controller = new AbortController()
+    setProductImages([])
+    setSelectedProductImageUrl(selectedProduct.imageUrl ?? '')
+
+    fetch(`/api/product-images?productId=${encodeURIComponent(selectedProduct.id)}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Gallery request failed')
+        return (await response.json()) as { images: CatalogImage[] }
+      })
+      .then((data) => {
+        if (controller.signal.aborted) return
+
+        setProductImages(data.images)
+        const cover = data.images.find((image) => image.is_primary) ?? data.images[0]
+        setSelectedProductImageUrl(cover?.url ?? selectedProduct.imageUrl ?? '')
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setProductImages([])
+      })
+
+    return () => controller.abort()
+  }, [selectedProduct])
 
   const cartCount = useMemo(
     () => cart.reduce((total, item) => total + item.quantity, 0),
@@ -643,11 +686,32 @@ function App() {
                 ×
               </button>
 
-              <div className="product-dialog-image">
-                {selectedProduct.imageUrl ? (
-                  <img src={selectedProduct.imageUrl} alt="" />
-                ) : (
-                  <span>Alimar</span>
+              <div className="product-dialog-gallery">
+                <div className="product-dialog-image">
+                  {selectedProductImageUrl ? (
+                    <img src={selectedProductImageUrl} alt={selectedProduct.name} />
+                  ) : (
+                    <span>Alimar</span>
+                  )}
+                </div>
+
+                {productImages.length > 1 && (
+                  <div className="product-dialog-thumbnails" aria-label="Galería del producto">
+                    {productImages.map((image, index) => (
+                      <button
+                        key={image.id}
+                        type="button"
+                        className={selectedProductImageUrl === image.url ? 'is-active' : ''}
+                        onClick={() => setSelectedProductImageUrl(image.url)}
+                        aria-label={`Ver imagen ${index + 1} de ${selectedProduct.name}`}
+                      >
+                        <img
+                          src={image.url}
+                          alt={image.alt_text ?? `${selectedProduct.name}, imagen ${index + 1}`}
+                        />
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 

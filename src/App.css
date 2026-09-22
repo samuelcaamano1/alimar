@@ -1929,3 +1929,55 @@
     display: none;
   }
 }
+
+
+/* ALIMAR PUBLIC PRODUCT GALLERY 1A.19 */
+.product-dialog-gallery {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  background: #d9c3ad;
+}
+
+.product-dialog-gallery .product-dialog-image {
+  min-height: 380px;
+}
+
+.product-dialog-thumbnails {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  overflow-x: auto;
+  background: rgba(248, 238, 216, 0.94);
+  scrollbar-width: thin;
+}
+
+.product-dialog-thumbnails button {
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.product-dialog-thumbnails button.is-active {
+  border-color: var(--blue-dark);
+}
+
+.product-dialog-thumbnails img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 700px) {
+  .product-dialog-gallery .product-dialog-image,
+  .product-dialog-gallery .product-dialog-image img {
+    min-height: 240px;
+    max-height: 34dvh;
+  }
+}

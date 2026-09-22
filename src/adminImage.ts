@@ -2,6 +2,11 @@ const MAX_SOURCE_BYTES = 12 * 1024 * 1024
 const MAX_OUTPUT_BYTES = 1_050_000
 const MAX_DIMENSION = 1400
 
+type CompressAdminImageOptions = {
+  maxOutputBytes?: number
+  maxDimension?: number
+}
+
 function blobToDataUrl(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -57,7 +62,10 @@ function canvasToBlob(canvas: HTMLCanvasElement, quality: number) {
   })
 }
 
-export async function compressAdminImage(file: File) {
+export async function compressAdminImage(
+  file: File,
+  options: CompressAdminImageOptions = {},
+) {
   if (!file.type.startsWith('image/')) {
     throw new Error('Elegí un archivo de imagen.')
   }
@@ -66,9 +74,12 @@ export async function compressAdminImage(file: File) {
     throw new Error('La imagen original no puede superar 12 MB.')
   }
 
+  const maxOutputBytes = options.maxOutputBytes ?? MAX_OUTPUT_BYTES
+  const maxDimension = options.maxDimension ?? MAX_DIMENSION
+
   const image = await loadImage(file)
   const longestSide = Math.max(image.naturalWidth, image.naturalHeight)
-  const scale = longestSide > MAX_DIMENSION ? MAX_DIMENSION / longestSide : 1
+  const scale = longestSide > maxDimension ? maxDimension / longestSide : 1
 
   const canvas = document.createElement('canvas')
   canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
@@ -81,12 +92,12 @@ export async function compressAdminImage(file: File) {
 
   let blob: Blob | null = null
 
-  for (const quality of [0.84, 0.76, 0.68, 0.58]) {
+  for (const quality of [0.84, 0.76, 0.68, 0.58, 0.5, 0.44]) {
     blob = await canvasToBlob(canvas, quality)
-    if (blob.size <= MAX_OUTPUT_BYTES) break
+    if (blob.size <= maxOutputBytes) break
   }
 
-  if (!blob || blob.size > MAX_OUTPUT_BYTES) {
+  if (!blob || blob.size > maxOutputBytes) {
     throw new Error('La imagen sigue siendo demasiado pesada. Probá con una foto más chica.')
   }
 
