@@ -364,21 +364,31 @@ function App() {
             <a href="#servicios">Qué hacemos</a>
             <a href="#catalogo">Catálogo</a>
             <a href="#como-trabajamos">Cómo trabajamos</a>
+            <a href="/admin">
+              Repositorio
+            </a>
             <a href={site.instagramUrl} target="_blank" rel="noreferrer">
               Instagram ↗
             </a>
           </div>
         </details>
 
-        <a
-          className="header-cta"
-          href={site.instagramUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Instagram
-          <span aria-hidden="true">↗</span>
-        </a>
+        <div className="header-actions">
+          <a className="repository-cta" href="/admin">
+            Repositorio
+            <span aria-hidden="true">→</span>
+          </a>
+
+          <a
+            className="header-cta"
+            href={site.instagramUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Instagram
+            <span aria-hidden="true">↗</span>
+          </a>
+        </div>
       </header>
 
       <main>
