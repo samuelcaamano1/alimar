@@ -1,10 +1,30 @@
 import { neon } from '@neondatabase/serverless'
-import { requireAdmin } from '../_lib/admin-auth.js'
+import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const ORDER_STATUSES = new Set([
+  'new',
+  'contacted',
+  'confirmed',
+  'in_progress',
+  'ready',
+  'completed',
+  'cancelled',
+])
+
+type OrderStatus =
+  | 'new'
+  | 'contacted'
+  | 'confirmed'
+  | 'in_progress'
+  | 'ready'
+  | 'completed'
+  | 'cancelled'
 
 type OrderRow = {
   id: string
   public_code: string
-  status: 'new' | 'contacted' | 'confirmed' | 'in_progress' | 'ready' | 'completed' | 'cancelled'
+  status: OrderStatus
   customer_name: string
   customer_phone: string
   customer_email: string | null
@@ -22,6 +42,20 @@ type OrderRow = {
   customization_note: string | null
 }
 
+type EventRow = {
+  id: string
+  order_id: string
+  event_type: string
+  from_status: OrderStatus | null
+  to_status: OrderStatus | null
+  note: string | null
+  created_at: string
+}
+
+function text(value: unknown, max: number) {
+  return typeof value === 'string' ? value.trim().slice(0, max) : ''
+}
+
 export async function GET(request: Request) {
   const authError = requireAdmin(request)
   if (authError) return authError
@@ -36,6 +70,7 @@ export async function GET(request: Request) {
 
   try {
     const sql = neon(databaseUrl)
+
     const rows = (await sql`
       WITH recent_orders AS (
         SELECT
@@ -77,28 +112,51 @@ export async function GET(request: Request) {
       ORDER BY o.created_at DESC, i.created_at ASC
     `) as OrderRow[]
 
-    const orders = new Map<string, {
-      id: string
-      public_code: string
-      status: OrderRow['status']
-      customer_name: string
-      customer_phone: string
-      customer_email: string | null
-      customer_notes: string | null
-      known_total: string
-      has_quote: boolean
-      created_at: string
-      items: Array<{
+    const events = (await sql`
+      SELECT
+        e.id::text,
+        e.order_id::text,
+        e.event_type,
+        e.from_status,
+        e.to_status,
+        e.note,
+        e.created_at::text
+      FROM order_events e
+      WHERE e.order_id IN (
+        SELECT id
+        FROM orders
+        ORDER BY created_at DESC
+        LIMIT 50
+      )
+      ORDER BY e.created_at DESC
+    `) as EventRow[]
+
+    const orders = new Map<
+      string,
+      {
         id: string
-        product_name: string
-        kind: 'service' | 'product'
-        pricing_mode: 'fixed' | 'from' | 'quote'
-        unit_price: string | null
-        quantity: number
-        line_total: string | null
-        customization_note: string | null
-      }>
-    }>()
+        public_code: string
+        status: OrderStatus
+        customer_name: string
+        customer_phone: string
+        customer_email: string | null
+        customer_notes: string | null
+        known_total: string
+        has_quote: boolean
+        created_at: string
+        items: Array<{
+          id: string
+          product_name: string
+          kind: 'service' | 'product'
+          pricing_mode: 'fixed' | 'from' | 'quote'
+          unit_price: string | null
+          quantity: number
+          line_total: string | null
+          customization_note: string | null
+        }>
+        events: EventRow[]
+      }
+    >()
 
     for (const row of rows) {
       if (!orders.has(row.id)) {
@@ -114,6 +172,7 @@ export async function GET(request: Request) {
           has_quote: row.has_quote,
           created_at: row.created_at,
           items: [],
+          events: [],
         })
       }
 
@@ -131,6 +190,10 @@ export async function GET(request: Request) {
       }
     }
 
+    for (const event of events) {
+      orders.get(event.order_id)?.events.push(event)
+    }
+
     return Response.json(
       { orders: Array.from(orders.values()) },
       { headers: { 'Cache-Control': 'no-store' } },
@@ -138,6 +201,108 @@ export async function GET(request: Request) {
   } catch {
     return Response.json(
       { error: 'No se pudieron cargar los pedidos.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+export async function PATCH(request: Request) {
+  const originError = requireSameOrigin(request)
+  if (originError) return originError
+
+  const authError = requireAdmin(request)
+  if (authError) return authError
+
+  const databaseUrl = process.env.DATABASE_URL
+  if (!databaseUrl) {
+    return Response.json(
+      { error: 'Database not configured' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  let body: Record<string, unknown>
+
+  try {
+    body = (await request.json()) as Record<string, unknown>
+  } catch {
+    return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  }
+
+  const id = text(body.id, 40)
+  const status = text(body.status, 24) as OrderStatus
+  const note = text(body.note, 300)
+
+  if (!UUID_RE.test(id)) {
+    return Response.json({ error: 'Pedido inválido.' }, { status: 400 })
+  }
+
+  if (!ORDER_STATUSES.has(status)) {
+    return Response.json({ error: 'Estado inválido.' }, { status: 400 })
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+
+    const currentRows = await sql`
+      SELECT status
+      FROM orders
+      WHERE id = ${id}::uuid
+      LIMIT 1
+    `
+
+    if (currentRows.length === 0) {
+      return Response.json({ error: 'Pedido no encontrado.' }, { status: 404 })
+    }
+
+    const currentStatus = String(currentRows[0].status) as OrderStatus
+
+    if (currentStatus === status && !note) {
+      return Response.json(
+        { ok: true, unchanged: true },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const eventType = currentStatus === status ? 'note' : 'status_changed'
+    const queries = []
+
+    if (currentStatus !== status) {
+      queries.push(sql`
+        UPDATE orders
+        SET
+          status = ${status},
+          updated_at = now()
+        WHERE id = ${id}::uuid
+      `)
+    }
+
+    queries.push(sql`
+      INSERT INTO order_events (
+        order_id,
+        event_type,
+        from_status,
+        to_status,
+        note
+      )
+      VALUES (
+        ${id}::uuid,
+        ${eventType},
+        ${currentStatus},
+        ${status},
+        ${note || null}
+      )
+    `)
+
+    await sql.transaction(queries)
+
+    return Response.json(
+      { ok: true, status },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudo actualizar el pedido.' },
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }

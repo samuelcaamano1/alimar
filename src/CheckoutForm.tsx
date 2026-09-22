@@ -22,7 +22,6 @@ export default function CheckoutForm({ items, onCreated }: CheckoutFormProps) {
 
   useEffect(() => {
     requestId.current = crypto.randomUUID()
-    setMessage('')
   }, [cartSignature])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
