@@ -2768,3 +2768,700 @@
   background: rgba(100, 175, 198, 0.08);
   font-weight: 800;
 }
+
+
+/* ALIMAR GUIDED CALCULATOR UX 1A.25 */
+.admin-guided-calculator {
+  display: grid;
+  gap: 18px;
+  padding: 24px 28px 30px;
+}
+
+.admin-guided-intro {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.admin-guided-intro > div {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-guided-intro h3 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.55rem;
+  letter-spacing: -0.035em;
+}
+
+.admin-guided-intro p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.73rem;
+  line-height: 1.5;
+}
+
+.admin-guided-job-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-guided-job-card {
+  min-width: 0;
+  min-height: 210px;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  padding: 19px;
+  border: 1px solid rgba(12, 16, 20, 0.09);
+  border-radius: 17px;
+  color: var(--admin-ink);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(100, 175, 198, 0.055));
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.admin-guided-job-card:hover,
+.admin-guided-job-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(63, 120, 138, 0.35);
+  box-shadow: 0 14px 35px rgba(12, 16, 20, 0.055);
+  outline: none;
+}
+
+.admin-guided-job-icon {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.14);
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.admin-guided-job-card > strong {
+  margin-top: 4px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.1rem;
+}
+
+.admin-guided-job-card > p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.admin-guided-job-card > small {
+  margin-top: auto;
+  color: var(--admin-muted);
+  font-size: 0.61rem;
+}
+
+.admin-guided-job-action {
+  color: var(--admin-blue-dark);
+  font-size: 0.69rem;
+  font-weight: 900;
+}
+
+.admin-guided-how {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid rgba(12, 16, 20, 0.075);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.admin-guided-how > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  align-items: center;
+  padding: 8px;
+}
+
+.admin-guided-how span {
+  grid-row: 1 / span 2;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.12);
+  font-size: 0.61rem;
+  font-weight: 900;
+}
+
+.admin-guided-how strong {
+  font-size: 0.67rem;
+}
+
+.admin-guided-how small {
+  color: var(--admin-muted);
+  font-size: 0.59rem;
+}
+
+/* Popup wizard */
+.admin-quote-overlay {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(12, 16, 20, 0.58);
+  backdrop-filter: blur(5px);
+}
+
+.admin-quote-modal {
+  width: min(1080px, 100%);
+  max-height: min(88vh, 820px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 22px;
+  background: #fff9eb;
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.28);
+}
+
+.admin-quote-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 19px 22px 15px;
+}
+
+.admin-quote-header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-quote-header span {
+  color: var(--admin-blue-dark);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-quote-header h3 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.55rem;
+  letter-spacing: -0.035em;
+}
+
+.admin-quote-close {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(12, 16, 20, 0.1);
+  border-radius: 50%;
+  color: var(--admin-ink);
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.admin-quote-progress {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  padding: 0 22px 15px;
+}
+
+.admin-quote-progress span {
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(12, 16, 20, 0.09);
+}
+
+.admin-quote-progress span.is-active {
+  background: var(--admin-blue);
+}
+
+.admin-quote-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 22px 22px;
+}
+
+.admin-quote-step {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-quote-step-start {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.55fr);
+  align-items: center;
+  gap: 24px;
+  min-height: 330px;
+}
+
+.admin-quote-step-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-quote-step-copy h4 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.admin-quote-step-copy p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.admin-quote-quantity {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  border: 1px solid rgba(63, 120, 138, 0.18);
+  border-radius: 16px;
+  background: rgba(100, 175, 198, 0.08);
+  color: var(--admin-ink);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.admin-quote-quantity input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 72px;
+  padding: 0 16px;
+  border: 1px solid rgba(12, 16, 20, 0.12);
+  border-radius: 13px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.8rem;
+}
+
+.admin-quote-quantity small,
+.admin-quote-example span {
+  color: var(--admin-muted);
+  font-size: 0.63rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.admin-quote-example {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 11px;
+  background: rgba(12, 16, 20, 0.035);
+}
+
+.admin-quote-example strong {
+  flex: 0 0 auto;
+  font-size: 0.65rem;
+}
+
+.admin-quote-material-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 10px;
+}
+
+.admin-quote-plus {
+  align-self: center;
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.12);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.admin-quote-resource-card,
+.admin-quote-optional-card,
+.admin-quote-optional-section {
+  display: grid;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid rgba(12, 16, 20, 0.085);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.admin-quote-resource-card {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.admin-quote-resource-card > label,
+.admin-quote-resource-card > .admin-secondary,
+.admin-quote-resource-card > .admin-quote-fields-2 {
+  grid-column: 1 / -1;
+}
+
+.admin-quote-resource-number {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.12);
+  font-size: 0.61rem;
+  font-weight: 900;
+}
+
+.admin-quote-resource-card > div:not(.admin-quote-fields-2) {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-quote-resource-card strong,
+.admin-quote-section-title strong {
+  font-size: 0.73rem;
+}
+
+.admin-quote-resource-card small,
+.admin-quote-section-title small {
+  color: var(--admin-muted);
+  font-size: 0.61rem;
+  line-height: 1.4;
+}
+
+.admin-quote-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-quote-resource-card-wide {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.admin-quote-fields-2,
+.admin-quote-fields-3 {
+  display: grid;
+  gap: 9px;
+}
+
+.admin-quote-fields-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-quote-fields-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-quote-step label,
+.admin-quote-selling-controls label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--admin-ink);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.admin-quote-step input:not([type='checkbox']),
+.admin-quote-step select,
+.admin-quote-selling-controls input,
+.admin-quote-selling-controls select {
+  width: 100%;
+  min-height: 41px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid rgba(12, 16, 20, 0.11);
+  border-radius: 9px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.admin-quote-step input:focus,
+.admin-quote-step select:focus,
+.admin-quote-selling-controls input:focus,
+.admin-quote-selling-controls select:focus {
+  outline: none;
+  border-color: var(--admin-blue-dark);
+  box-shadow: 0 0 0 3px rgba(100, 175, 198, 0.11);
+}
+
+.admin-quote-step label > small {
+  color: var(--admin-muted);
+  font-size: 0.59rem;
+  font-weight: 500;
+}
+
+.admin-quote-check {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  cursor: pointer;
+}
+
+.admin-quote-check input {
+  margin: 3px 0 0;
+}
+
+.admin-quote-check > span {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-quote-check small {
+  color: var(--admin-muted);
+  font-size: 0.61rem;
+  font-weight: 500;
+}
+
+.admin-quote-optional-section {
+  margin-top: 2px;
+  background: rgba(100, 175, 198, 0.045);
+}
+
+.admin-quote-section-title {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-quote-result-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.7fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.admin-quote-breakdown {
+  display: grid;
+  gap: 7px;
+}
+
+.admin-quote-cost-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 11px;
+  border: 1px solid rgba(12, 16, 20, 0.075);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.admin-quote-cost-row > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-quote-cost-row strong {
+  font-size: 0.68rem;
+}
+
+.admin-quote-cost-row small {
+  color: var(--admin-muted);
+  font-size: 0.59rem;
+}
+
+.admin-quote-cost-row > span {
+  flex: 0 0 auto;
+  color: var(--admin-blue-dark);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.admin-quote-cost-row-subtotal {
+  margin-top: 3px;
+  background: rgba(100, 175, 198, 0.08);
+}
+
+.admin-quote-price-panel {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-quote-selling-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgba(12, 16, 20, 0.075);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.admin-quote-price-metric,
+.admin-quote-price-final {
+  display: grid;
+  gap: 4px;
+  padding: 13px;
+  border-radius: 13px;
+}
+
+.admin-quote-price-metric {
+  border: 1px solid rgba(12, 16, 20, 0.08);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.admin-quote-price-final {
+  color: #f7edd7;
+  background: var(--admin-ink);
+}
+
+.admin-quote-price-metric span,
+.admin-quote-price-final span {
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.admin-quote-price-metric strong,
+.admin-quote-price-final strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.35rem;
+}
+
+.admin-quote-price-metric small,
+.admin-quote-price-final small {
+  font-size: 0.6rem;
+  opacity: 0.78;
+}
+
+.admin-quote-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 22px;
+  border-top: 1px solid rgba(12, 16, 20, 0.08);
+  background: rgba(255, 253, 248, 0.92);
+}
+
+.admin-quote-footer-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-quote-footer-hint {
+  max-width: 180px;
+  color: var(--admin-muted);
+  font-size: 0.58rem;
+  line-height: 1.3;
+}
+
+.admin-quote-footer .admin-primary,
+.admin-quote-footer .admin-secondary {
+  min-height: 39px;
+}
+
+@media (max-width: 880px) {
+  .admin-guided-job-grid,
+  .admin-guided-how {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-guided-job-card {
+    min-height: 0;
+  }
+
+  .admin-quote-material-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-quote-plus {
+    justify-self: center;
+  }
+
+  .admin-quote-fields-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-quote-result-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-quote-price-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-guided-calculator {
+    padding: 18px;
+  }
+
+  .admin-guided-intro {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-quote-overlay {
+    padding: 8px;
+  }
+
+  .admin-quote-modal {
+    max-height: 94vh;
+    border-radius: 17px;
+  }
+
+  .admin-quote-header,
+  .admin-quote-body,
+  .admin-quote-footer {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .admin-quote-progress {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .admin-quote-step-start {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .admin-quote-fields-2,
+  .admin-quote-fields-3,
+  .admin-quote-selling-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-quote-footer {
+    align-items: stretch;
+  }
+
+  .admin-quote-footer-main {
+    margin-left: auto;
+  }
+
+  .admin-quote-footer button {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
