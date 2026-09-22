@@ -14,6 +14,7 @@ type CostCategory =
 type CostUnit =
   | 'unit'
   | 'sheet'
+  | 'print'
   | 'g'
   | 'kg'
   | 'ml'
@@ -70,6 +71,7 @@ const categoryLabels: Record<CostCategory, string> = {
 const unitLabels: Record<CostUnit, string> = {
   unit: 'unidad',
   sheet: 'hoja',
+  print: 'impresión',
   g: 'g',
   kg: 'kg',
   ml: 'ml',
@@ -89,6 +91,26 @@ const emptyDraft: Draft = {
   packageQuantity: '',
   wastePercent: '0',
   notes: '',
+}
+
+function defaultUnitForCategory(category: CostCategory): CostUnit {
+  switch (category) {
+    case 'paper':
+      return 'sheet'
+    case 'ink':
+      return 'print'
+    case 'filament':
+      return 'g'
+    case 'paint':
+      return 'ml'
+    case 'energy':
+      return 'kwh'
+    case 'machine':
+    case 'labor':
+      return 'hour'
+    default:
+      return 'unit'
+  }
 }
 
 function money(value: number) {
@@ -123,13 +145,15 @@ async function responseMessage(response: Response) {
 }
 
 function draftFromResource(resource: CostResource): Draft {
+  const needsInkYield = resource.category === 'ink' && resource.unit !== 'print'
+
   return {
     name: resource.name,
     category: resource.category,
     detail: resource.detail ?? '',
-    unit: resource.unit,
+    unit: resource.category === 'ink' ? 'print' : resource.unit,
     purchasePrice: resource.purchase_price,
-    packageQuantity: resource.package_quantity,
+    packageQuantity: needsInkYield ? '' : resource.package_quantity,
     wastePercent: resource.waste_percent,
     notes: resource.notes ?? '',
   }
@@ -514,9 +538,19 @@ export default function AdminCostCalculator() {
                           Dato
                           <select
                             value={line.resourceId}
-                            onChange={(event) =>
-                              updateLine(line.id, { resourceId: event.target.value })
-                            }
+                            onChange={(event) => {
+                              const resourceId = event.target.value
+                              const nextResource = resources.find(
+                                (resource) => resource.id === resourceId,
+                              )
+
+                              updateLine(line.id, {
+                                resourceId,
+                                ...(nextResource?.unit === 'print'
+                                  ? { usage: '1', scope: 'unit' }
+                                  : {}),
+                              })
+                            }}
                           >
                             {resources.map((resource) => (
                               <option key={resource.id} value={resource.id}>
@@ -528,11 +562,13 @@ export default function AdminCostCalculator() {
                         </label>
 
                         <label>
-                          Consumo ({unitLabels[line.resource.unit]})
+                          {line.resource.unit === 'print'
+                            ? 'Impresiones por unidad'
+                            : `Consumo (${unitLabels[line.resource.unit]})`}
                           <input
                             type="number"
                             min={0}
-                            step="0.001"
+                            step={line.resource.unit === 'print' ? 1 : '0.001'}
                             value={line.usage}
                             onChange={(event) => updateLine(line.id, { usage: event.target.value })}
                           />
@@ -634,9 +670,24 @@ export default function AdminCostCalculator() {
               Categoría
               <select
                 value={draft.category}
-                onChange={(event) =>
-                  updateDraft('category', event.target.value as CostCategory)
-                }
+                onChange={(event) => {
+                  const nextCategory = event.target.value as CostCategory
+
+                  setDraft((current) => ({
+                    ...current,
+                    category: nextCategory,
+                    unit:
+                      nextCategory === 'ink'
+                        ? 'print'
+                        : current.unit === 'print'
+                          ? defaultUnitForCategory(nextCategory)
+                          : current.unit,
+                    packageQuantity:
+                      nextCategory === 'ink' && current.category !== 'ink'
+                        ? ''
+                        : current.packageQuantity,
+                  }))
+                }}
               >
                 {Object.entries(categoryLabels).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -656,19 +707,29 @@ export default function AdminCostCalculator() {
               />
             </label>
 
-            <label>
-              Unidad base
-              <select
-                value={draft.unit}
-                onChange={(event) => updateDraft('unit', event.target.value as CostUnit)}
-              >
-                {Object.entries(unitLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {draft.category === 'ink' ? (
+              <label>
+                Unidad base
+                <input value="impresión" readOnly aria-readonly="true" />
+                <small>Para tinta usamos rendimiento por impresión.</small>
+              </label>
+            ) : (
+              <label>
+                Unidad base
+                <select
+                  value={draft.unit}
+                  onChange={(event) => updateDraft('unit', event.target.value as CostUnit)}
+                >
+                  {Object.entries(unitLabels)
+                    .filter(([value]) => value !== 'print')
+                    .map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
 
             <label>
               Precio pagado
@@ -682,16 +743,34 @@ export default function AdminCostCalculator() {
             </label>
 
             <label>
-              Ese precio contiene
+              {draft.category === 'ink' ? '¿Cuántas impresiones rinde?' : 'Ese precio contiene'}
               <input
                 value={draft.packageQuantity}
                 onChange={(event) => updateDraft('packageQuantity', event.target.value)}
                 inputMode="decimal"
-                placeholder="Ej. 100 hojas / 1000 g / 1 hora"
+                placeholder={
+                  draft.category === 'ink'
+                    ? 'Ej. 50'
+                    : 'Ej. 100 hojas / 1000 g / 1 hora'
+                }
                 required
               />
-              <small>La calculadora obtiene automáticamente el costo por unidad base.</small>
+              <small>
+                {draft.category === 'ink'
+                  ? 'Ejemplo: si pagaste $10.000 y rinde 50 impresiones, la tinta cuesta $200 por impresión.'
+                  : 'La calculadora obtiene automáticamente el costo por unidad base.'}
+              </small>
             </label>
+
+            {draft.category === 'ink' && (
+              <div className="admin-cost-ink-note admin-cost-span-2">
+                <strong>Tinta por impresión</strong>
+                <span>
+                  La tinta se calcula por impresión y es independiente del papel elegido.
+                  En la calculadora, 1 impresión por unidad usa exactamente este costo.
+                </span>
+              </div>
+            )}
 
             <label>
               Desperdicio %

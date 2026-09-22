@@ -2740,3 +2740,31 @@
   min-height: 28px;
   line-height: 1.35;
 }
+
+
+/* ALIMAR INK PRINT YIELD 1A.24 */
+.admin-cost-ink-note {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(63, 120, 138, 0.2);
+  border-radius: 11px;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.08);
+}
+
+.admin-cost-ink-note strong {
+  font-size: 0.7rem;
+}
+
+.admin-cost-ink-note span {
+  color: var(--admin-muted);
+  font-size: 0.64rem;
+  line-height: 1.45;
+}
+
+.admin-cost-data-form input[readonly] {
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.08);
+  font-weight: 800;
+}

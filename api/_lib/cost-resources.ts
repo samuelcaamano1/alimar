@@ -17,6 +17,7 @@ const CATEGORIES = new Set([
 const UNITS = new Set([
   'unit',
   'sheet',
+  'print',
   'g',
   'kg',
   'ml',
@@ -76,7 +77,7 @@ function parseResource(body: Record<string, unknown>) {
   const name = text(body.name, 120)
   const category = text(body.category, 24)
   const detail = text(body.detail, 160) || null
-  const unit = text(body.unit, 20)
+  const unit = category === 'ink' ? 'print' : text(body.unit, 20)
   const purchasePrice = positiveDecimal(body.purchasePrice)
   const packageQuantity = positiveDecimal(body.packageQuantity)
   const wastePercent = percent(body.wastePercent)
@@ -100,7 +101,12 @@ function parseResource(body: Record<string, unknown>) {
 
   if (packageQuantity === null) {
     return Response.json(
-      { error: 'Ingresá cuántas unidades contiene ese precio.' },
+      {
+        error:
+          category === 'ink'
+            ? 'Ingresá cuántas impresiones rinde esa tinta.'
+            : 'Ingresá cuántas unidades contiene ese precio.',
+      },
       { status: 400 },
     )
   }
