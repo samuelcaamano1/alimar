@@ -231,7 +231,8 @@ export default function AdminApp() {
     setBusy(true)
     setMessage('')
 
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
 
     try {
       const response = await fetch('/api/admin/categories', {
@@ -245,7 +246,7 @@ export default function AdminApp() {
 
       if (!response.ok) throw new Error(await responseMessage(response))
 
-      event.currentTarget.reset()
+      formElement.reset()
       setMessage('Categoría creada.')
       await loadCatalog()
     } catch (error) {
@@ -402,6 +403,19 @@ export default function AdminApp() {
           )}
 
           <form onSubmit={handleLogin}>
+            <label className="admin-username-autofill">
+              Usuario
+              <input
+                type="text"
+                name="username"
+                value="admin"
+                autoComplete="username"
+                tabIndex={-1}
+                readOnly
+                aria-hidden="true"
+              />
+            </label>
+
             <label>
               Contraseña
               <input
