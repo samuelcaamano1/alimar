@@ -12,6 +12,7 @@ type OrderStatus =
 type AdminOrderItem = {
   id: string
   product_name: string
+  variant_name: string | null
   kind: 'service' | 'product'
   pricing_mode: 'fixed' | 'from' | 'quote'
   unit_price: string | null
@@ -180,7 +181,7 @@ export default function AdminOrdersPanel() {
         order.customer_phone,
         order.customer_email ?? '',
         order.customer_notes ?? '',
-        ...order.items.map((item) => item.product_name),
+        ...order.items.flatMap((item) => [item.product_name, item.variant_name ?? '']),
       ]
         .join(' ')
         .toLocaleLowerCase('es-AR')
@@ -361,6 +362,7 @@ export default function AdminOrdersPanel() {
                         <strong>
                           {item.quantity}× {item.product_name}
                         </strong>
+                        {item.variant_name && <small>Variante: {item.variant_name}</small>}
                         {item.customization_note && <small>{item.customization_note}</small>}
                       </div>
 

@@ -10,6 +10,12 @@ import {
 } from './orderRecovery'
 import './App.css'
 
+type CatalogVariant = {
+  id: string
+  name: string
+  priceOverride: string | null
+}
+
 type CatalogProduct = {
   id: string
   name: string
@@ -19,9 +25,13 @@ type CatalogProduct = {
   pricingMode: 'fixed' | 'from' | 'quote'
   basePrice: string | null
   imageUrl: string | null
+  variants: CatalogVariant[]
 }
 
 type CartItem = CatalogProduct & {
+  variantId: string | null
+  variantName: string | null
+  unitPrice: string | null
   quantity: number
   note: string
 }
@@ -48,15 +58,33 @@ function loadStoredCart(): CartItem[] {
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
 
-    return parsed.filter(
-      (item): item is CartItem =>
-        item &&
-        typeof item.id === 'string' &&
-        typeof item.name === 'string' &&
-        typeof item.slug === 'string' &&
-        typeof item.quantity === 'number' &&
-        item.quantity > 0,
-    )
+    return parsed.flatMap((item) => {
+      if (
+        !item ||
+        typeof item.id !== 'string' ||
+        typeof item.name !== 'string' ||
+        typeof item.slug !== 'string' ||
+        typeof item.quantity !== 'number' ||
+        item.quantity <= 0
+      ) {
+        return []
+      }
+
+      return [
+        {
+          ...item,
+          variants: Array.isArray(item.variants) ? item.variants : [],
+          variantId: typeof item.variantId === 'string' ? item.variantId : null,
+          variantName: typeof item.variantName === 'string' ? item.variantName : null,
+          unitPrice:
+            typeof item.unitPrice === 'string' || item.unitPrice === null
+              ? item.unitPrice
+              : typeof item.basePrice === 'string'
+                ? item.basePrice
+                : null,
+        } as CartItem,
+      ]
+    })
   } catch {
     return []
   }
@@ -68,6 +96,39 @@ function formatAmount(amount: number) {
     currency: 'ARS',
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+function priceForSelection(product: CatalogProduct, variant: CatalogVariant | null) {
+  if (product.pricingMode === 'quote') return null
+  return variant?.priceOverride ?? product.basePrice
+}
+
+function formatSelectionPrice(product: CatalogProduct, variant: CatalogVariant | null) {
+  const price = priceForSelection(product, variant)
+  if (!price) return 'Consultar'
+
+  const amount = Number(price)
+  if (!Number.isFinite(amount)) return 'Consultar'
+
+  const value = formatAmount(amount)
+
+  return product.pricingMode === 'from' && !variant?.priceOverride
+    ? `Desde ${value}`
+    : value
+}
+
+function formatCartItemPrice(item: CartItem) {
+  if (!item.unitPrice) return 'Consultar'
+
+  const amount = Number(item.unitPrice)
+  if (!Number.isFinite(amount)) return 'Consultar'
+
+  const value = formatAmount(amount)
+  return item.pricingMode === 'from' ? `Desde ${value}` : value
+}
+
+function cartItemKey(item: Pick<CartItem, 'id' | 'variantId'>) {
+  return `${item.id}:${item.variantId ?? 'base'}`
 }
 
 const serviceLines = [
@@ -108,10 +169,12 @@ function formatPrice(product: CatalogProduct) {
   return product.pricingMode === 'from' ? `Desde ${value}` : value
 }
 
-function productWhatsappUrl(product: CatalogProduct) {
-  const price = formatPrice(product)
+function productWhatsappUrl(product: CatalogProduct, variant: CatalogVariant | null = null) {
+  const price = formatSelectionPrice(product, variant)
+  const variantLabel = variant ? ` · ${variant.name}` : ''
+
   return site.whatsappUrlFor(
-    `Hola, quiero consultar por "${product.name}" (${price}).`,
+    `Hola, quiero consultar por "${product.name}${variantLabel}" (${price}).`,
   )
 }
 
@@ -120,6 +183,7 @@ function App() {
   const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null)
+  const [selectedVariantId, setSelectedVariantId] = useState('')
   const [cart, setCart] = useState<CartItem[]>(() => loadStoredCart())
   const [cartOpen, setCartOpen] = useState(false)
   const [recoveredOrder, setRecoveredOrder] = useState<RecoveredOrder | null>(() =>
@@ -159,42 +223,63 @@ function App() {
   const cartKnownTotal = useMemo(
     () =>
       cart.reduce((total, item) => {
-        if (item.pricingMode === 'quote' || !item.basePrice) return total
+        if (!item.unitPrice) return total
 
-        const price = Number(item.basePrice)
+        const price = Number(item.unitPrice)
         return Number.isFinite(price) ? total + price * item.quantity : total
       }, 0),
     [cart],
   )
 
   const cartHasQuote = useMemo(
-    () => cart.some((item) => item.pricingMode === 'quote' || !item.basePrice),
+    () => cart.some((item) => !item.unitPrice),
     [cart],
   )
 
-  function addToCart(product: CatalogProduct) {
+  function openProduct(product: CatalogProduct) {
+    setSelectedProduct(product)
+    setSelectedVariantId(product.variants.length === 1 ? product.variants[0].id : '')
+  }
+
+  function addToCart(product: CatalogProduct, variantId: string) {
+    const variant = product.variants.find((item) => item.id === variantId) ?? null
+
+    if (product.variants.length > 0 && !variant) return
+
+    const nextItem: CartItem = {
+      ...product,
+      variantId: variant?.id ?? null,
+      variantName: variant?.name ?? null,
+      unitPrice: priceForSelection(product, variant),
+      quantity: 1,
+      note: '',
+    }
+
+    const key = cartItemKey(nextItem)
+
     setCart((current) => {
-      const existing = current.find((item) => item.id === product.id)
+      const existing = current.find((item) => cartItemKey(item) === key)
 
       if (existing) {
         return current.map((item) =>
-          item.id === product.id
+          cartItemKey(item) === key
             ? { ...item, quantity: Math.min(item.quantity + 1, 99) }
             : item,
         )
       }
 
-      return [...current, { ...product, quantity: 1, note: '' }]
+      return [...current, nextItem]
     })
 
     setSelectedProduct(null)
+    setSelectedVariantId('')
     setCartOpen(true)
   }
 
-  function changeCartQuantity(productId: string, delta: number) {
+  function changeCartQuantity(itemKey: string, delta: number) {
     setCart((current) =>
       current.flatMap((item) => {
-        if (item.id !== productId) return [item]
+        if (cartItemKey(item) !== itemKey) return [item]
 
         const quantity = item.quantity + delta
         return quantity > 0 ? [{ ...item, quantity: Math.min(quantity, 99) }] : []
@@ -202,16 +287,16 @@ function App() {
     )
   }
 
-  function updateCartNote(productId: string, note: string) {
+  function updateCartNote(itemKey: string, note: string) {
     setCart((current) =>
       current.map((item) =>
-        item.id === productId ? { ...item, note: note.slice(0, 240) } : item,
+        cartItemKey(item) === itemKey ? { ...item, note: note.slice(0, 240) } : item,
       ),
     )
   }
 
-  function removeCartItem(productId: string) {
-    setCart((current) => current.filter((item) => item.id !== productId))
+  function removeCartItem(itemKey: string) {
+    setCart((current) => current.filter((item) => cartItemKey(item) !== itemKey))
   }
 
   const featuredProducts = useMemo(() => {
@@ -222,6 +307,9 @@ function App() {
 
     return source.flatMap((category) => category.products).slice(0, 9)
   }, [catalog, activeCategory])
+
+  const selectedVariant =
+    selectedProduct?.variants.find((variant) => variant.id === selectedVariantId) ?? null
 
   return (
     <div className="site-shell">
@@ -425,7 +513,7 @@ function App() {
                   type="button"
                   className="product-card product-card-button"
                   key={product.id}
-                  onClick={() => setSelectedProduct(product)}
+                  onClick={() => openProduct(product)}
                   aria-label={`Ver detalles de ${product.name}`}
                 >
                   <div className="product-image">
@@ -522,15 +610,35 @@ function App() {
                 {selectedProduct.shortDescription && (
                   <p>{selectedProduct.shortDescription}</p>
                 )}
+                {selectedProduct.variants.length > 0 && (
+                  <label className="product-variant-picker">
+                    Elegí una opción
+                    <select
+                      value={selectedVariantId}
+                      onChange={(event) => setSelectedVariantId(event.target.value)}
+                    >
+                      <option value="" disabled>
+                        Seleccionar variante
+                      </option>
+                      {selectedProduct.variants.map((variant) => (
+                        <option key={variant.id} value={variant.id}>
+                          {variant.name} · {formatSelectionPrice(selectedProduct, variant)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
                 <strong className="product-dialog-price">
-                  {formatPrice(selectedProduct)}
+                  {formatSelectionPrice(selectedProduct, selectedVariant)}
                 </strong>
 
                 <div className="product-dialog-actions">
                   <button
                     type="button"
                     className="button button-primary product-dialog-cta"
-                    onClick={() => addToCart(selectedProduct)}
+                    onClick={() => addToCart(selectedProduct, selectedVariantId)}
+                    disabled={selectedProduct.variants.length > 0 && !selectedVariant}
                   >
                     Agregar al pedido
                     <span aria-hidden="true">+</span>
@@ -538,7 +646,7 @@ function App() {
 
                   <a
                     className="button button-secondary product-dialog-cta"
-                    href={productWhatsappUrl(selectedProduct)}
+                    href={productWhatsappUrl(selectedProduct, selectedVariant)}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -640,8 +748,11 @@ function App() {
             ) : (
               <>
                 <div className="cart-items">
-                  {cart.map((item) => (
-                    <article className="cart-item" key={item.id}>
+                  {cart.map((item) => {
+                    const itemKey = cartItemKey(item)
+
+                    return (
+                    <article className="cart-item" key={itemKey}>
                       <div className="cart-item-image">
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt="" />
@@ -655,12 +766,15 @@ function App() {
                           <div>
                             <span>{item.kind === 'service' ? 'Servicio' : 'Producto'}</span>
                             <strong>{item.name}</strong>
+                            {item.variantName && (
+                              <small className="cart-item-variant">{item.variantName}</small>
+                            )}
                           </div>
 
                           <button
                             type="button"
                             className="cart-remove"
-                            onClick={() => removeCartItem(item.id)}
+                            onClick={() => removeCartItem(itemKey)}
                           >
                             Quitar
                           </button>
@@ -671,7 +785,7 @@ function App() {
                             <button
                               type="button"
                               aria-label="Restar uno"
-                              onClick={() => changeCartQuantity(item.id, -1)}
+                              onClick={() => changeCartQuantity(itemKey, -1)}
                             >
                               −
                             </button>
@@ -679,13 +793,13 @@ function App() {
                             <button
                               type="button"
                               aria-label="Sumar uno"
-                              onClick={() => changeCartQuantity(item.id, 1)}
+                              onClick={() => changeCartQuantity(itemKey, 1)}
                             >
                               +
                             </button>
                           </div>
 
-                          <strong>{formatPrice(item)}</strong>
+                          <strong>{formatCartItemPrice(item)}</strong>
                         </div>
 
                         <label className="cart-note">
@@ -695,12 +809,13 @@ function App() {
                             maxLength={240}
                             rows={2}
                             placeholder="Ej. nombre, fecha, colores o detalle especial"
-                            onChange={(event) => updateCartNote(item.id, event.target.value)}
+                            onChange={(event) => updateCartNote(itemKey, event.target.value)}
                           />
                         </label>
                       </div>
                     </article>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 <div className="cart-summary">
@@ -718,6 +833,7 @@ function App() {
                   <CheckoutForm
                     items={cart.map((item) => ({
                       id: item.id,
+                      variantId: item.variantId,
                       quantity: item.quantity,
                       note: item.note,
                     }))}

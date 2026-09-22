@@ -7,6 +7,7 @@ const MAX_ITEMS = 25
 
 type IncomingItem = {
   productId: string
+  variantId: string | null
   quantity: number
   note: string
 }
@@ -17,11 +18,20 @@ type ProductSnapshot = {
   kind: 'service' | 'product'
   pricing_mode: 'fixed' | 'from' | 'quote'
   base_price: string | null
+  has_variants: boolean
+}
+
+type VariantSnapshot = {
+  id: string
+  name: string
+  price_override: string | null
 }
 
 type ValidatedItem = ProductSnapshot & {
   quantity: number
   note: string | null
+  variantId: string | null
+  variantName: string | null
   unitPrice: number | null
   lineTotal: number | null
 }
@@ -69,7 +79,8 @@ function buildWhatsappMessage(args: {
 
   for (const item of args.items) {
     const price = item.lineTotal === null ? 'A consultar' : money(item.lineTotal)
-    lines.push(`- ${item.quantity}x ${item.name} — ${price}`)
+    const variant = item.variantName ? ` · ${item.variantName}` : ''
+    lines.push(`- ${item.quantity}x ${item.name}${variant} — ${price}`)
 
     if (item.note) {
       lines.push(`  Personalización: ${item.note}`)
@@ -159,19 +170,29 @@ export async function POST(request: Request) {
 
     const value = rawItem as Record<string, unknown>
     const productId = text(value.id ?? value.productId, 40)
+    const rawVariantId = text(value.variantId, 40)
+    const variantId = rawVariantId || null
     const quantity = Number(value.quantity)
     const note = text(value.note, 240)
 
-    if (!UUID_RE.test(productId) || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+    if (
+      !UUID_RE.test(productId) ||
+      (variantId !== null && !UUID_RE.test(variantId)) ||
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > 99
+    ) {
       return Response.json({ error: 'Hay un producto inválido en el pedido.' }, { status: 400 })
     }
 
-    if (seen.has(productId)) {
-      return Response.json({ error: 'El pedido contiene productos duplicados.' }, { status: 400 })
+    const itemKey = `${productId}:${variantId ?? 'base'}`
+
+    if (seen.has(itemKey)) {
+      return Response.json({ error: 'El pedido contiene opciones duplicadas.' }, { status: 400 })
     }
 
-    seen.add(productId)
-    incoming.push({ productId, quantity, note })
+    seen.add(itemKey)
+    incoming.push({ productId, variantId, quantity, note })
   }
 
   const sql = neon(databaseUrl)
@@ -200,14 +221,20 @@ export async function POST(request: Request) {
     for (const item of incoming) {
       const rows = await sql`
         SELECT
-          id::text,
-          name,
-          kind,
-          pricing_mode,
-          base_price::text
-        FROM products
-        WHERE id = ${item.productId}::uuid
-          AND active = true
+          p.id::text,
+          p.name,
+          p.kind,
+          p.pricing_mode,
+          p.base_price::text,
+          EXISTS (
+            SELECT 1
+            FROM product_variants pv
+            WHERE pv.product_id = p.id
+              AND pv.active = true
+          ) AS has_variants
+        FROM products p
+        WHERE p.id = ${item.productId}::uuid
+          AND p.active = true
         LIMIT 1
       `
 
@@ -219,10 +246,44 @@ export async function POST(request: Request) {
       }
 
       const product = rows[0] as ProductSnapshot
-      const numericPrice =
-        product.pricing_mode === 'quote' || product.base_price === null
+      let variant: VariantSnapshot | null = null
+
+      if (product.has_variants && !item.variantId) {
+        return Response.json(
+          { error: `Elegí una variante válida para ${product.name}.` },
+          { status: 409, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+
+      if (item.variantId) {
+        const variantRows = await sql`
+          SELECT
+            id::text,
+            name,
+            price_override::text
+          FROM product_variants
+          WHERE id = ${item.variantId}::uuid
+            AND product_id = ${item.productId}::uuid
+            AND active = true
+          LIMIT 1
+        `
+
+        if (variantRows.length === 0) {
+          return Response.json(
+            { error: `La variante elegida para ${product.name} ya no está disponible.` },
+            { status: 409, headers: { 'Cache-Control': 'no-store' } },
+          )
+        }
+
+        variant = variantRows[0] as VariantSnapshot
+      }
+
+      const priceSource =
+        product.pricing_mode === 'quote'
           ? null
-          : Number(product.base_price)
+          : variant?.price_override ?? product.base_price
+
+      const numericPrice = priceSource === null ? null : Number(priceSource)
 
       if (
         product.pricing_mode !== 'quote' &&
@@ -238,6 +299,8 @@ export async function POST(request: Request) {
         ...product,
         quantity: item.quantity,
         note: item.note || null,
+        variantId: variant?.id ?? null,
+        variantName: variant?.name ?? null,
         unitPrice: numericPrice,
         lineTotal: numericPrice === null ? null : numericPrice * item.quantity,
       })
@@ -291,7 +354,9 @@ export async function POST(request: Request) {
         INSERT INTO order_items (
           order_id,
           product_id,
+          variant_id,
           product_name,
+          variant_name,
           kind,
           pricing_mode,
           unit_price,
@@ -302,7 +367,9 @@ export async function POST(request: Request) {
         VALUES (
           ${orderId}::uuid,
           ${item.id}::uuid,
+          ${item.variantId}::uuid,
           ${item.name},
+          ${item.variantName},
           ${item.kind},
           ${item.pricing_mode},
           ${item.unitPrice},

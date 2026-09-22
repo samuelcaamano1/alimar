@@ -15,6 +15,13 @@ type CatalogRow = {
   image_url: string | null
 }
 
+type VariantRow = {
+  id: string
+  product_id: string
+  name: string
+  price_override: string | null
+}
+
 export async function GET() {
   const databaseUrl = process.env.DATABASE_URL
 
@@ -24,6 +31,7 @@ export async function GET() {
 
   try {
     const sql = neon(databaseUrl)
+
     const rows = (await sql`
       SELECT
         c.id::text AS category_id,
@@ -53,6 +61,38 @@ export async function GET() {
       ORDER BY c.sort_order ASC, c.name ASC, p.featured DESC, p.name ASC
     `) as CatalogRow[]
 
+    const variantRows = (await sql`
+      SELECT
+        pv.id::text,
+        pv.product_id::text,
+        pv.name,
+        pv.price_override::text
+      FROM product_variants pv
+      INNER JOIN products p ON p.id = pv.product_id
+      WHERE pv.active = true
+        AND p.active = true
+      ORDER BY pv.product_id, pv.sort_order ASC, pv.name ASC
+    `) as VariantRow[]
+
+    const variantsByProduct = new Map<
+      string,
+      Array<{
+        id: string
+        name: string
+        priceOverride: string | null
+      }>
+    >()
+
+    for (const variant of variantRows) {
+      const current = variantsByProduct.get(variant.product_id) ?? []
+      current.push({
+        id: variant.id,
+        name: variant.name,
+        priceOverride: variant.price_override,
+      })
+      variantsByProduct.set(variant.product_id, current)
+    }
+
     const categories = new Map<
       string,
       {
@@ -69,6 +109,11 @@ export async function GET() {
           pricingMode: 'fixed' | 'from' | 'quote'
           basePrice: string | null
           imageUrl: string | null
+          variants: Array<{
+            id: string
+            name: string
+            priceOverride: string | null
+          }>
         }>
       }
     >()
@@ -100,6 +145,7 @@ export async function GET() {
           pricingMode: row.pricing_mode,
           basePrice: row.base_price,
           imageUrl: row.image_url,
+          variants: variantsByProduct.get(row.product_id) ?? [],
         })
       }
     }

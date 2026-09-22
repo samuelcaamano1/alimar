@@ -2,7 +2,13 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { saveRecoveredOrder, type RecoveredOrder } from './orderRecovery'
 import { site } from './site'
 
-type CheckoutItem = { id: string; quantity: number; note: string }
+type CheckoutItem = {
+  id: string
+  variantId: string | null
+  quantity: number
+  note: string
+}
+
 type CreateOrderResponse = { orderCode: string; whatsappMessage: string }
 type CheckoutFormProps = {
   items: CheckoutItem[]
@@ -22,7 +28,9 @@ export default function CheckoutForm({ items, onCreated }: CheckoutFormProps) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const requestId = useRef(crypto.randomUUID())
-  const cartSignature = items.map((item) => `${item.id}:${item.quantity}:${item.note}`).join('|')
+  const cartSignature = items
+    .map((item) => `${item.id}:${item.variantId ?? 'base'}:${item.quantity}:${item.note}`)
+    .join('|')
 
   useEffect(() => {
     requestId.current = crypto.randomUUID()
@@ -63,7 +71,6 @@ export default function CheckoutForm({ items, onCreated }: CheckoutFormProps) {
 
       const recoveredOrder = saveRecoveredOrder(data.orderCode)
       onCreated(recoveredOrder)
-
       window.location.assign(site.whatsappUrlFor(data.whatsappMessage))
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo registrar el pedido.')

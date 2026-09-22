@@ -34,6 +34,7 @@ type OrderRow = {
   created_at: string
   item_id: string | null
   product_name: string | null
+  variant_name: string | null
   kind: 'service' | 'product' | null
   pricing_mode: 'fixed' | 'from' | 'quote' | null
   unit_price: string | null
@@ -101,6 +102,7 @@ export async function GET(request: Request) {
         o.created_at::text,
         i.id::text AS item_id,
         i.product_name,
+        i.variant_name,
         i.kind,
         i.pricing_mode,
         i.unit_price::text,
@@ -147,6 +149,7 @@ export async function GET(request: Request) {
         items: Array<{
           id: string
           product_name: string
+          variant_name: string | null
           kind: 'service' | 'product'
           pricing_mode: 'fixed' | 'from' | 'quote'
           unit_price: string | null
@@ -180,6 +183,7 @@ export async function GET(request: Request) {
         orders.get(row.id)?.items.push({
           id: row.item_id,
           product_name: row.product_name,
+          variant_name: row.variant_name,
           kind: row.kind,
           pricing_mode: row.pricing_mode,
           unit_price: row.unit_price,
