@@ -1717,3 +1717,88 @@
     grid-column: auto;
   }
 }
+
+
+/* ALIMAR ORDER RECOVERY 1A.11 */
+.order-recovery {
+  position: fixed;
+  z-index: 68;
+  right: 20px;
+  bottom: 84px;
+  width: min(390px, calc(100vw - 40px));
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(12, 16, 20, 0.14);
+  border-radius: 18px;
+  color: var(--ink);
+  background: rgba(248, 238, 216, 0.97);
+  box-shadow: 0 24px 60px rgba(12, 16, 20, 0.2);
+  backdrop-filter: blur(14px);
+}
+
+.order-recovery > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.order-recovery > div:first-child > span {
+  color: var(--blue-dark);
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.order-recovery > div:first-child > strong {
+  font-family: var(--display);
+  font-size: 1.45rem;
+  letter-spacing: -0.025em;
+}
+
+.order-recovery p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.order-recovery-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.order-recovery-actions a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--cream);
+  background: var(--charcoal);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.order-recovery-actions button {
+  border: 0;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  text-decoration: underline;
+}
+
+@media (max-width: 700px) {
+  .order-recovery {
+    right: 14px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    width: calc(100vw - 28px);
+    box-sizing: border-box;
+  }
+}

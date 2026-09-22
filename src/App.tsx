@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { alimarLogoDataUrl } from './brand'
 import { site } from './site'
 import CheckoutForm from './CheckoutForm'
+import {
+  clearRecoveredOrder,
+  loadRecoveredOrder,
+  recoveryWhatsappMessage,
+  type RecoveredOrder,
+} from './orderRecovery'
 import './App.css'
 
 type CatalogProduct = {
@@ -116,6 +122,9 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null)
   const [cart, setCart] = useState<CartItem[]>(() => loadStoredCart())
   const [cartOpen, setCartOpen] = useState(false)
+  const [recoveredOrder, setRecoveredOrder] = useState<RecoveredOrder | null>(() =>
+    loadRecoveredOrder(),
+  )
 
   useEffect(() => {
     const controller = new AbortController()
@@ -543,6 +552,36 @@ function App() {
         )}
       </main>
 
+      {recoveredOrder && (
+        <aside className="order-recovery" aria-label="Último pedido registrado">
+          <div>
+            <span>Pedido registrado</span>
+            <strong>{recoveredOrder.orderCode}</strong>
+            <p>Si WhatsApp no se abrió o cerraste la conversación, podés retomarla desde acá.</p>
+          </div>
+
+          <div className="order-recovery-actions">
+            <a
+              href={site.whatsappUrlFor(recoveryWhatsappMessage(recoveredOrder.orderCode))}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Continuar por WhatsApp ↗
+            </a>
+
+            <button
+              type="button"
+              onClick={() => {
+                clearRecoveredOrder()
+                setRecoveredOrder(null)
+              }}
+            >
+              Ocultar
+            </button>
+          </div>
+        </aside>
+      )}
+
       <button
         type="button"
         className="cart-fab"
@@ -682,9 +721,11 @@ function App() {
                       quantity: item.quantity,
                       note: item.note,
                     }))}
-                    onCreated={() => {
+                    onCreated={(order) => {
                       window.localStorage.removeItem(CART_STORAGE_KEY)
                       setCart([])
+                      setRecoveredOrder(order)
+                      setCartOpen(false)
                     }}
                   />
                 </div>

@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { saveRecoveredOrder, type RecoveredOrder } from './orderRecovery'
 import { site } from './site'
 
 type CheckoutItem = { id: string; quantity: number; note: string }
 type CreateOrderResponse = { orderCode: string; whatsappMessage: string }
-type CheckoutFormProps = { items: CheckoutItem[]; onCreated: () => void }
+type CheckoutFormProps = {
+  items: CheckoutItem[]
+  onCreated: (order: RecoveredOrder) => void
+}
 
 async function errorMessage(response: Response) {
   try {
@@ -57,7 +61,9 @@ export default function CheckoutForm({ items, onCreated }: CheckoutFormProps) {
         throw new Error('El pedido se registró pero la respuesta fue incompleta.')
       }
 
-      onCreated()
+      const recoveredOrder = saveRecoveredOrder(data.orderCode)
+      onCreated(recoveredOrder)
+
       window.location.assign(site.whatsappUrlFor(data.whatsappMessage))
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo registrar el pedido.')
