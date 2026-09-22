@@ -2724,3 +2724,19 @@
     padding: 12px;
   }
 }
+
+
+/* ALIMAR SMART COST CALCULATOR CONTROL ALIGNMENT 1A.23.2 */
+.admin-cost-controls {
+  align-items: start;
+}
+
+.admin-cost-controls label {
+  grid-template-rows: auto 44px minmax(28px, auto);
+}
+
+.admin-cost-controls small {
+  display: block;
+  min-height: 28px;
+  line-height: 1.35;
+}

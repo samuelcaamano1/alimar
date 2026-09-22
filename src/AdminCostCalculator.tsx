@@ -414,6 +414,7 @@ export default function AdminCostCalculator() {
                 value={productionQuantity}
                 onChange={(event) => setProductionQuantity(event.target.value)}
               />
+                          <small>Cantidad total de unidades del trabajo o pedido.</small>
             </label>
 
             <label>
@@ -437,6 +438,7 @@ export default function AdminCostCalculator() {
                 value={profitPercent}
                 onChange={(event) => setProfitPercent(event.target.value)}
               />
+                          <small>Margen aplicado sobre el costo total calculado.</small>
             </label>
 
             <label>
@@ -452,6 +454,7 @@ export default function AdminCostCalculator() {
                 <option value="500">$500</option>
                 <option value="1000">$1.000</option>
               </select>
+                          <small>El precio sugerido sube al múltiplo elegido.</small>
             </label>
             </div>
           </div>
