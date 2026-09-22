@@ -415,8 +415,8 @@ export default function AdminApp() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/product-order', {
-        method: 'PATCH',
+      const response = await fetch('/api/admin/products?action=order', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryId: product.category_id,

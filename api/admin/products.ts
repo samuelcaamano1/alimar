@@ -148,6 +148,72 @@ async function uniqueSlug(
   throw new Error('Could not generate unique slug')
 }
 
+async function handleProductOrder(
+  databaseUrl: string,
+  body: Record<string, unknown>,
+) {
+  const categoryId = typeof body.categoryId === 'string' ? body.categoryId.trim() : ''
+  const orderedIds = Array.isArray(body.orderedIds)
+    ? body.orderedIds.filter((value): value is string => typeof value === 'string')
+    : []
+
+  if (!UUID_RE.test(categoryId)) {
+    return Response.json({ error: 'Categoría inválida.' }, { status: 400 })
+  }
+
+  if (
+    orderedIds.length === 0 ||
+    orderedIds.length > 500 ||
+    orderedIds.some((id) => !UUID_RE.test(id)) ||
+    new Set(orderedIds).size !== orderedIds.length
+  ) {
+    return Response.json({ error: 'Orden de productos inválido.' }, { status: 400 })
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+
+    const activeRows = await sql`
+      SELECT id::text
+      FROM products
+      WHERE category_id = ${categoryId}::uuid
+        AND active = true
+    `
+
+    const activeIds = new Set(activeRows.map((row) => String(row.id)))
+
+    if (
+      activeIds.size !== orderedIds.length ||
+      orderedIds.some((id) => !activeIds.has(id))
+    ) {
+      return Response.json(
+        { error: 'La lista de productos cambió. Actualizá el catálogo e intentá de nuevo.' },
+        { status: 409, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    await sql.transaction(
+      orderedIds.map((id, index) => sql`
+        UPDATE products
+        SET sort_order = ${index}, updated_at = now()
+        WHERE id = ${id}::uuid
+          AND category_id = ${categoryId}::uuid
+          AND active = true
+      `),
+    )
+
+    return Response.json(
+      { ok: true },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudo actualizar el orden de productos.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
 export async function POST(request: Request) {
   const originError = requireSameOrigin(request)
   if (originError) return originError
@@ -166,6 +232,10 @@ export async function POST(request: Request) {
     body = (await request.json()) as Record<string, unknown>
   } catch {
     return Response.json({ error: 'Invalid request' }, { status: 400 })
+  }
+
+  if (new URL(request.url).searchParams.get('action') === 'order') {
+    return handleProductOrder(databaseUrl, body)
   }
 
   const parsed = parseProductInput(body)

@@ -267,7 +267,7 @@ function App() {
     setProductImages([])
     setSelectedProductImageUrl(selectedProduct.imageUrl ?? '')
 
-    fetch(`/api/product-images?productId=${encodeURIComponent(selectedProduct.id)}`, {
+    fetch(`/api/catalog?view=images&productId=${encodeURIComponent(selectedProduct.id)}`, {
       signal: controller.signal,
     })
       .then(async (response) => {
