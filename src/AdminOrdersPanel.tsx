@@ -93,7 +93,8 @@ export default function AdminOrdersPanel() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [message, setMessage] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | OrderStatus>('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null)
   const [draftStatus, setDraftStatus] = useState<Record<string, OrderStatus>>({})
   const [draftNote, setDraftNote] = useState<Record<string, string>>({})
@@ -148,13 +149,45 @@ export default function AdminOrdersPanel() {
     return () => controller.abort()
   }, [applyOrders])
 
-  const visibleOrders = useMemo(
-    () =>
-      statusFilter === 'all'
-        ? orders
-        : orders.filter((order) => order.status === statusFilter),
-    [orders, statusFilter],
+  const orderCounts = useMemo(
+    () => ({
+      all: orders.length,
+      new: orders.filter((order) => order.status === 'new').length,
+      open: orders.filter((order) =>
+        ['contacted', 'confirmed', 'in_progress'].includes(order.status),
+      ).length,
+      ready: orders.filter((order) => order.status === 'ready').length,
+    }),
+    [orders],
   )
+
+  const visibleOrders = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase('es-AR')
+
+    return orders.filter((order) => {
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'open'
+          ? ['contacted', 'confirmed', 'in_progress'].includes(order.status)
+          : order.status === statusFilter)
+
+      if (!matchesStatus) return false
+      if (!query) return true
+
+      const haystack = [
+        order.public_code,
+        order.customer_name,
+        order.customer_phone,
+        order.customer_email ?? '',
+        order.customer_notes ?? '',
+        ...order.items.map((item) => item.product_name),
+      ]
+        .join(' ')
+        .toLocaleLowerCase('es-AR')
+
+      return haystack.includes(query)
+    })
+  }, [orders, searchQuery, statusFilter])
 
   async function saveStatus(order: AdminOrder) {
     const nextStatus = draftStatus[order.id] ?? order.status
@@ -206,14 +239,65 @@ export default function AdminOrdersPanel() {
         </button>
       </div>
 
+      <div className="admin-order-stats" aria-label="Resumen de pedidos">
+        <button
+          type="button"
+          className={statusFilter === 'all' ? 'is-active' : ''}
+          onClick={() => setStatusFilter('all')}
+        >
+          <span>Todos</span>
+          <strong>{orderCounts.all}</strong>
+        </button>
+
+        <button
+          type="button"
+          className={statusFilter === 'new' ? 'is-active' : ''}
+          onClick={() => setStatusFilter('new')}
+        >
+          <span>Nuevos</span>
+          <strong>{orderCounts.new}</strong>
+        </button>
+
+        <button
+          type="button"
+          className={statusFilter === 'open' ? 'is-active' : ''}
+          onClick={() => setStatusFilter('open')}
+        >
+          <span>En curso</span>
+          <strong>{orderCounts.open}</strong>
+        </button>
+
+        <button
+          type="button"
+          className={statusFilter === 'ready' ? 'is-active' : ''}
+          onClick={() => setStatusFilter('ready')}
+        >
+          <span>Listos</span>
+          <strong>{orderCounts.ready}</strong>
+        </button>
+      </div>
+
       <div className="admin-orders-toolbar">
+        <label className="admin-order-search">
+          Buscar
+          <input
+            type="search"
+            value={searchQuery}
+            placeholder="Código, cliente, teléfono o producto"
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+        </label>
+
         <label>
           Estado
           <select
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as 'all' | OrderStatus)}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as 'all' | 'open' | OrderStatus)
+            }
           >
             <option value="all">Todos</option>
+            <option value="open">En curso</option>
             {statusOptions.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}

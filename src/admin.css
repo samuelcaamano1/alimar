@@ -1016,3 +1016,89 @@
     grid-column: auto;
   }
 }
+
+
+/* ALIMAR ORDER DASHBOARD 1A.10 */
+.admin-order-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-order-stats button {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 14px 15px;
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  text-align: left;
+  color: var(--admin-ink);
+  background: rgba(255, 255, 255, 0.34);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.admin-order-stats button:hover,
+.admin-order-stats button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(63, 120, 138, 0.45);
+}
+
+.admin-order-stats button.is-active {
+  border-color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.16);
+}
+
+.admin-order-stats span {
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.admin-order-stats strong {
+  color: var(--admin-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.admin-orders-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(150px, 220px) auto;
+  align-items: end;
+}
+
+.admin-order-search input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid var(--admin-line);
+  border-radius: 10px;
+  color: var(--admin-ink);
+  background: rgba(255, 255, 255, 0.65);
+  font: inherit;
+}
+
+.admin-order-search input:focus {
+  outline: 0;
+  border-color: var(--admin-blue-dark);
+  box-shadow: 0 0 0 3px rgba(100, 175, 198, 0.14);
+}
+
+@media (max-width: 760px) {
+  .admin-order-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-orders-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
