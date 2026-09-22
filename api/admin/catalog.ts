@@ -12,6 +12,7 @@ type CategoryRow = {
 type ProductRow = {
   id: string
   category_id: string | null
+  sort_order: number
   name: string
   slug: string
   short_description: string | null
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
       SELECT
         p.id::text,
         p.category_id::text,
+        p.sort_order,
         p.name,
         p.slug,
         p.short_description,
@@ -69,7 +71,7 @@ export async function GET(request: Request) {
         LIMIT 1
       ) image ON true
       WHERE p.active = true
-      ORDER BY p.featured DESC, p.name ASC
+      ORDER BY p.category_id, p.sort_order ASC, p.featured DESC, p.name ASC
     `) as ProductRow[]
 
     return Response.json(

@@ -179,6 +179,13 @@ export async function POST(request: Request) {
     }
 
     const slug = await uniqueSlug(sql, parsed.name)
+    const nextSortRows = await sql`
+      SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_sort
+      FROM products
+      WHERE category_id = ${parsed.categoryId}::uuid
+        AND active = true
+    `
+    const nextSort = Number(nextSortRows[0]?.next_sort ?? 0)
     let productId = ''
 
     if (parsed.imageUrl) {
@@ -193,7 +200,8 @@ export async function POST(request: Request) {
             pricing_mode,
             base_price,
             customization_allowed,
-            featured
+            featured,
+            sort_order
           )
           VALUES (
             ${parsed.categoryId}::uuid,
@@ -204,7 +212,8 @@ export async function POST(request: Request) {
             ${parsed.pricingMode},
             ${parsed.priceNumber},
             ${parsed.customizationAllowed},
-            ${parsed.featured}
+            ${parsed.featured},
+            ${nextSort}
           )
           RETURNING id
         ),
@@ -239,7 +248,8 @@ export async function POST(request: Request) {
           pricing_mode,
           base_price,
           customization_allowed,
-          featured
+          featured,
+          sort_order
         )
         VALUES (
           ${parsed.categoryId}::uuid,
@@ -250,7 +260,8 @@ export async function POST(request: Request) {
           ${parsed.pricingMode},
           ${parsed.priceNumber},
           ${parsed.customizationAllowed},
-          ${parsed.featured}
+          ${parsed.featured},
+          ${nextSort}
         )
         RETURNING id::text
       `
@@ -317,6 +328,27 @@ export async function PATCH(request: Request) {
       return Response.json({ error: 'Product not found' }, { status: 404 })
     }
 
+    const currentRows = await sql`
+      SELECT category_id::text
+      FROM products
+      WHERE id = ${id}::uuid
+        AND active = true
+      LIMIT 1
+    `
+
+    const currentCategoryId = String(currentRows[0]?.category_id ?? '')
+    let targetSortOrder: number | null = null
+
+    if (currentCategoryId !== parsed.categoryId) {
+      const targetSortRows = await sql`
+        SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_sort
+        FROM products
+        WHERE category_id = ${parsed.categoryId}::uuid
+          AND active = true
+      `
+      targetSortOrder = Number(targetSortRows[0]?.next_sort ?? 0)
+    }
+
     const slug = await uniqueSlug(sql, parsed.name, id)
 
     if (imageAction === 'replace' && parsed.imageUrl) {
@@ -333,6 +365,7 @@ export async function PATCH(request: Request) {
             base_price = ${parsed.priceNumber},
             customization_allowed = ${parsed.customizationAllowed},
             featured = ${parsed.featured},
+            sort_order = COALESCE(${targetSortOrder}, sort_order),
             updated_at = now()
           WHERE id = ${id}::uuid
             AND active = true
@@ -372,6 +405,7 @@ export async function PATCH(request: Request) {
             base_price = ${parsed.priceNumber},
             customization_allowed = ${parsed.customizationAllowed},
             featured = ${parsed.featured},
+            sort_order = COALESCE(${targetSortOrder}, sort_order),
             updated_at = now()
           WHERE id = ${id}::uuid
             AND active = true
@@ -394,6 +428,7 @@ export async function PATCH(request: Request) {
           base_price = ${parsed.priceNumber},
           customization_allowed = ${parsed.customizationAllowed},
           featured = ${parsed.featured},
+          sort_order = COALESCE(${targetSortOrder}, sort_order),
           updated_at = now()
         WHERE id = ${id}::uuid
           AND active = true

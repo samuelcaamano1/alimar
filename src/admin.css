@@ -1389,3 +1389,23 @@
     width: 100%;
   }
 }
+
+
+/* ALIMAR PRODUCT ORDERING 1A.18 */
+.admin-order-arrow {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 10px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.admin-order-arrow:disabled {
+  opacity: 0.42;
+}
+
+@media (max-width: 620px) {
+  .admin-row-actions .admin-order-arrow {
+    flex: 0 0 44px;
+  }
+}

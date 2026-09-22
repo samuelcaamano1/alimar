@@ -58,7 +58,7 @@ export async function GET() {
         LIMIT 1
       ) image ON true
       WHERE c.active = true
-      ORDER BY c.sort_order ASC, c.name ASC, p.featured DESC, p.name ASC
+      ORDER BY c.sort_order ASC, c.name ASC, p.sort_order ASC, p.featured DESC, p.name ASC
     `) as CatalogRow[]
 
     const variantRows = (await sql`

@@ -24,6 +24,7 @@ type AdminCategory = {
 type AdminProduct = {
   id: string
   category_id: string | null
+  sort_order: number
   name: string
   slug: string
   short_description: string | null
@@ -101,6 +102,7 @@ export default function AdminApp() {
   const [editImageAction, setEditImageAction] =
     useState<'keep' | 'replace' | 'remove'>('keep')
   const [editImageBusy, setEditImageBusy] = useState(false)
+  const [productOrderBusyId, setProductOrderBusyId] = useState<string | null>(null)
 
   const loadCatalog = useCallback(async () => {
     const response = await fetch('/api/admin/catalog', {
@@ -389,6 +391,45 @@ export default function AdminApp() {
       setMessage(error instanceof Error ? error.message : 'No se pudo actualizar el producto.')
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function handleMoveProduct(
+    product: AdminProduct,
+    siblings: AdminProduct[],
+    direction: -1 | 1,
+  ) {
+    if (!product.category_id) return
+
+    const currentIndex = siblings.findIndex((item) => item.id === product.id)
+    const nextIndex = currentIndex + direction
+
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= siblings.length) return
+
+    const next = [...siblings]
+    const [moved] = next.splice(currentIndex, 1)
+    next.splice(nextIndex, 0, moved)
+
+    setProductOrderBusyId(product.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/product-order', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: product.category_id,
+          orderedIds: next.map((item) => item.id),
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      await refreshCatalogAfterMutation('Orden de productos actualizado.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo reordenar el producto.')
+    } finally {
+      setProductOrderBusyId(null)
     }
   }
 
@@ -710,7 +751,7 @@ export default function AdminApp() {
                     <h3>{category.name}</h3>
 
                     <div className="admin-product-list">
-                      {products.map((product) => (
+                      {products.map((product, productIndex) => (
                         <article className="admin-product-row" key={product.id}>
                           <div className="admin-product-thumb">
                             {product.image_url ? (
@@ -733,6 +774,34 @@ export default function AdminApp() {
                           </div>
 
                           <div className="admin-row-actions">
+                            <button
+                              className="admin-secondary admin-order-arrow"
+                              type="button"
+                              aria-label={`Subir ${product.name}`}
+                              onClick={() => void handleMoveProduct(product, products, -1)}
+                              disabled={
+                                busy ||
+                                productOrderBusyId !== null ||
+                                productIndex === 0
+                              }
+                            >
+                              ↑
+                            </button>
+
+                            <button
+                              className="admin-secondary admin-order-arrow"
+                              type="button"
+                              aria-label={`Bajar ${product.name}`}
+                              onClick={() => void handleMoveProduct(product, products, 1)}
+                              disabled={
+                                busy ||
+                                productOrderBusyId !== null ||
+                                productIndex === products.length - 1
+                              }
+                            >
+                              ↓
+                            </button>
+
                             <button
                               className="admin-edit"
                               type="button"
