@@ -9,6 +9,7 @@ import {
 import { alimarLogoDataUrl } from './brand'
 import { compressAdminImage } from './adminImage'
 import AdminOrdersPanel from './AdminOrdersPanel'
+import AdminCategoriesPanel from './AdminCategoriesPanel'
 import AdminProductVariants from './AdminProductVariants'
 import './admin.css'
 
@@ -17,6 +18,7 @@ type AdminCategory = {
   name: string
   slug: string
   description: string | null
+  sort_order: number
 }
 
 type AdminProduct = {
@@ -683,9 +685,15 @@ export default function AdminApp() {
           </section>
         </div>
 
+        <AdminCategoriesPanel
+          categories={catalog.categories}
+          products={catalog.products}
+          onChanged={loadCatalog}
+        />
+
         <section className="admin-panel admin-list-panel">
           <div className="admin-panel-heading">
-            <span>03</span>
+            <span>04</span>
             <div>
               <h2>Catálogo actual</h2>
               <p>{catalog.products.length} productos activos</p>

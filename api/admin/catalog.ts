@@ -6,6 +6,7 @@ type CategoryRow = {
   name: string
   slug: string
   description: string | null
+  sort_order: number
 }
 
 type ProductRow = {
@@ -39,7 +40,8 @@ export async function GET(request: Request) {
         id::text,
         name,
         slug,
-        description
+        description,
+        sort_order
       FROM categories
       WHERE active = true
       ORDER BY sort_order ASC, name ASC

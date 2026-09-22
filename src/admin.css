@@ -1269,3 +1269,123 @@
   white-space: nowrap !important;
   border: 0 !important;
 }
+
+
+/* ALIMAR CATEGORY MANAGEMENT 1A.17 */
+.admin-category-manager {
+  margin-top: 18px;
+}
+
+.admin-category-message {
+  margin-bottom: 14px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.1);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.admin-category-manager-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-category-manager-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.admin-category-manager-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.admin-category-manager-copy strong {
+  color: var(--admin-ink);
+  font-size: 0.95rem;
+}
+
+.admin-category-manager-copy span,
+.admin-category-manager-copy small {
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+}
+
+.admin-category-manager-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-category-manager-actions .admin-secondary {
+  min-width: 42px;
+  min-height: 40px;
+  padding: 0 11px;
+}
+
+.admin-category-edit-form {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(160px, 0.8fr) minmax(220px, 1.2fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--admin-line);
+}
+
+.admin-category-edit-form label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.admin-category-edit-form input,
+.admin-category-edit-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 11px;
+  border: 1px solid var(--admin-line);
+  border-radius: 10px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.admin-category-edit-form textarea {
+  resize: vertical;
+}
+
+@media (max-width: 760px) {
+  .admin-category-manager-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-category-manager-actions {
+    flex-wrap: wrap;
+  }
+
+  .admin-category-manager-actions .admin-edit,
+  .admin-category-manager-actions .admin-danger {
+    flex: 1;
+  }
+
+  .admin-category-edit-form {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-category-edit-form .admin-primary {
+    width: 100%;
+  }
+}
