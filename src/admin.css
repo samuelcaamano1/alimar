@@ -1102,3 +1102,156 @@
     align-items: stretch;
   }
 }
+
+
+/* ALIMAR PRODUCT VARIANTS 1A.12 */
+.admin-variants {
+  display: grid;
+  gap: 14px;
+  margin-top: 26px;
+  padding-top: 24px;
+  border-top: 1px solid var(--admin-line);
+}
+
+.admin-variants-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-variants-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-variants-heading span {
+  color: var(--admin-blue-dark);
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-variants-heading strong {
+  color: var(--admin-ink);
+  font-size: 0.95rem;
+}
+
+.admin-variants-heading small {
+  max-width: 280px;
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.admin-variants-message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #743131;
+  background: rgba(166, 63, 63, 0.08);
+  font-size: 0.75rem;
+}
+
+.admin-variants-empty {
+  padding: 14px;
+  border: 1px dashed var(--admin-line);
+  border-radius: 12px;
+  color: var(--admin-muted);
+  background: rgba(255, 255, 255, 0.24);
+  font-size: 0.76rem;
+}
+
+.admin-variants-list {
+  display: grid;
+  gap: 9px;
+}
+
+.admin-variant-row,
+.admin-variant-create {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(145px, .65fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--admin-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.admin-variant-row label,
+.admin-variant-create label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.admin-variant-row input,
+.admin-variant-create input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 11px;
+  border: 1px solid var(--admin-line);
+  border-radius: 10px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.admin-variant-row input:focus,
+.admin-variant-create input:focus {
+  outline: 0;
+  border-color: var(--admin-blue-dark);
+  box-shadow: 0 0 0 3px rgba(100, 175, 198, 0.14);
+}
+
+.admin-variant-row input:disabled,
+.admin-variant-create input:disabled {
+  opacity: 0.58;
+}
+
+.admin-variant-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.admin-variant-actions .admin-secondary,
+.admin-variant-actions .admin-danger {
+  min-height: 42px;
+}
+
+.admin-variant-create {
+  border-style: dashed;
+  background: rgba(100, 175, 198, 0.05);
+}
+
+@media (max-width: 700px) {
+  .admin-variants-heading {
+    flex-direction: column;
+  }
+
+  .admin-variants-heading small {
+    text-align: left;
+  }
+
+  .admin-variant-row,
+  .admin-variant-create {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-variant-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-variant-actions button,
+  .admin-variant-create .admin-primary {
+    width: 100%;
+  }
+}

@@ -9,6 +9,7 @@ import {
 import { alimarLogoDataUrl } from './brand'
 import { compressAdminImage } from './adminImage'
 import AdminOrdersPanel from './AdminOrdersPanel'
+import AdminProductVariants from './AdminProductVariants'
 import './admin.css'
 
 type AdminCategory = {
@@ -892,6 +893,11 @@ export default function AdminApp() {
                 </button>
               </div>
             </form>
+
+            <AdminProductVariants
+              key={editingProduct.id}
+              product={editingProduct}
+            />
           </section>
         </div>
       )}
