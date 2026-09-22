@@ -5,11 +5,33 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_ITEMS = 25
 
+type IncomingCustomization = {
+  fieldId: string
+  value: string
+}
+
+type ValidatedCustomization = {
+  fieldId: string
+  label: string
+  fieldType: 'text' | 'textarea' | 'number' | 'date' | 'select'
+  value: string
+}
+
+type CustomizationFieldSnapshot = {
+  id: string
+  label: string
+  field_type: 'text' | 'textarea' | 'number' | 'date' | 'select'
+  options: unknown
+  required: boolean
+  max_length: number
+}
+
 type IncomingItem = {
   productId: string
   variantId: string | null
   quantity: number
   note: string
+  customizations: IncomingCustomization[]
 }
 
 type ProductSnapshot = {
@@ -19,6 +41,7 @@ type ProductSnapshot = {
   pricing_mode: 'fixed' | 'from' | 'quote'
   base_price: string | null
   has_variants: boolean
+  customization_allowed: boolean
 }
 
 type VariantSnapshot = {
@@ -34,10 +57,17 @@ type ValidatedItem = ProductSnapshot & {
   variantName: string | null
   unitPrice: number | null
   lineTotal: number | null
+  customizations: ValidatedCustomization[]
 }
 
 function text(value: unknown, max: number) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
+}
+
+function validDateValue(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
 }
 
 function sameOrigin(request: Request) {
@@ -82,8 +112,12 @@ function buildWhatsappMessage(args: {
     const variant = item.variantName ? ` · ${item.variantName}` : ''
     lines.push(`- ${item.quantity}x ${item.name}${variant} — ${price}`)
 
+    for (const customization of item.customizations) {
+      lines.push(`  ${customization.label}: ${customization.value}`)
+    }
+
     if (item.note) {
-      lines.push(`  Personalización: ${item.note}`)
+      lines.push(`  Nota adicional: ${item.note}`)
     }
   }
 
@@ -174,6 +208,43 @@ export async function POST(request: Request) {
     const variantId = rawVariantId || null
     const quantity = Number(value.quantity)
     const note = text(value.note, 240)
+    const rawCustomizations = Array.isArray(value.customizations)
+      ? value.customizations
+      : []
+
+    if (rawCustomizations.length > 8) {
+      return Response.json(
+        { error: 'Hay demasiados campos de personalización en un producto.' },
+        { status: 400 },
+      )
+    }
+
+    const customizations: IncomingCustomization[] = []
+    const seenCustomizationIds = new Set<string>()
+
+    for (const rawCustomization of rawCustomizations) {
+      if (!rawCustomization || typeof rawCustomization !== 'object') {
+        return Response.json({ error: 'Hay una personalización inválida.' }, { status: 400 })
+      }
+
+      const customization = rawCustomization as Record<string, unknown>
+      const fieldId = text(customization.fieldId, 40)
+      const rawValue =
+        typeof customization.value === 'string'
+          ? customization.value.trim()
+          : ''
+
+      if (
+        !UUID_RE.test(fieldId) ||
+        rawValue.length > 500 ||
+        seenCustomizationIds.has(fieldId)
+      ) {
+        return Response.json({ error: 'Hay una personalización inválida.' }, { status: 400 })
+      }
+
+      seenCustomizationIds.add(fieldId)
+      customizations.push({ fieldId, value: rawValue })
+    }
 
     if (
       !UUID_RE.test(productId) ||
@@ -185,14 +256,19 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Hay un producto inválido en el pedido.' }, { status: 400 })
     }
 
-    const itemKey = `${productId}:${variantId ?? 'base'}`
+    const customizationKey = JSON.stringify(
+      [...customizations]
+        .sort((left, right) => left.fieldId.localeCompare(right.fieldId))
+        .map((customization) => [customization.fieldId, customization.value]),
+    )
+    const itemKey = `${productId}:${variantId ?? 'base'}:${customizationKey}`
 
     if (seen.has(itemKey)) {
       return Response.json({ error: 'El pedido contiene opciones duplicadas.' }, { status: 400 })
     }
 
     seen.add(itemKey)
-    incoming.push({ productId, variantId, quantity, note })
+    incoming.push({ productId, variantId, quantity, note, customizations })
   }
 
   const sql = neon(databaseUrl)
@@ -226,6 +302,7 @@ export async function POST(request: Request) {
           p.kind,
           p.pricing_mode,
           p.base_price::text,
+          p.customization_allowed,
           EXISTS (
             SELECT 1
             FROM product_variants pv
@@ -278,7 +355,110 @@ export async function POST(request: Request) {
         variant = variantRows[0] as VariantSnapshot
       }
 
-      const priceSource =
+      const validatedCustomizations: ValidatedCustomization[] = []
+      
+      if (!product.customization_allowed && item.customizations.length > 0) {
+        return Response.json(
+          { error: `${product.name} ya no admite personalización. Actualizá el carrito.` },
+          { status: 409, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+      
+      if (product.customization_allowed) {
+        const customizationRows = (await sql`
+          SELECT
+            id::text,
+            label,
+            field_type,
+            options,
+            required,
+            max_length
+          FROM product_customization_fields
+          WHERE product_id = ${item.productId}::uuid
+            AND active = true
+          ORDER BY sort_order ASC, created_at ASC
+        `) as CustomizationFieldSnapshot[]
+      
+        const definitions = new Map(
+          customizationRows.map((field) => [field.id, field]),
+        )
+        const requested = new Map(
+          item.customizations.map((customization) => [
+            customization.fieldId,
+            customization.value,
+          ]),
+        )
+      
+        for (const fieldId of requested.keys()) {
+          if (!definitions.has(fieldId)) {
+            return Response.json(
+              { error: `Una personalización de ${product.name} ya no está disponible.` },
+              { status: 409, headers: { 'Cache-Control': 'no-store' } },
+            )
+          }
+        }
+      
+        for (const field of customizationRows) {
+          const value = (requested.get(field.id) ?? '').trim()
+      
+          if (field.required && !value) {
+            return Response.json(
+              { error: `Completá "${field.label}" para ${product.name}.` },
+              { status: 409, headers: { 'Cache-Control': 'no-store' } },
+            )
+          }
+      
+          if (!value) continue
+      
+          if (
+            (field.field_type === 'text' || field.field_type === 'textarea') &&
+            value.length > field.max_length
+          ) {
+            return Response.json(
+              { error: `"${field.label}" supera el máximo permitido.` },
+              { status: 409, headers: { 'Cache-Control': 'no-store' } },
+            )
+          }
+      
+          if (field.field_type === 'number') {
+            const normalized = value.replace(',', '.')
+            if (!/^-?\d+(?:\.\d+)?$/.test(normalized) || !Number.isFinite(Number(normalized))) {
+              return Response.json(
+                { error: `"${field.label}" debe ser un número válido.` },
+                { status: 409, headers: { 'Cache-Control': 'no-store' } },
+              )
+            }
+          }
+      
+          if (field.field_type === 'date' && !validDateValue(value)) {
+            return Response.json(
+              { error: `"${field.label}" debe ser una fecha válida.` },
+              { status: 409, headers: { 'Cache-Control': 'no-store' } },
+            )
+          }
+      
+          if (field.field_type === 'select') {
+            const options = Array.isArray(field.options)
+              ? field.options.filter((option): option is string => typeof option === 'string')
+              : []
+      
+            if (!options.includes(value)) {
+              return Response.json(
+                { error: `Elegí una opción válida para "${field.label}".` },
+                { status: 409, headers: { 'Cache-Control': 'no-store' } },
+              )
+            }
+          }
+      
+          validatedCustomizations.push({
+            fieldId: field.id,
+            label: field.label,
+            fieldType: field.field_type,
+            value,
+          })
+        }
+      }
+            const priceSource =
         product.pricing_mode === 'quote'
           ? null
           : variant?.price_override ?? product.base_price
@@ -303,6 +483,7 @@ export async function POST(request: Request) {
         variantName: variant?.name ?? null,
         unitPrice: numericPrice,
         lineTotal: numericPrice === null ? null : numericPrice * item.quantity,
+        customizations: validatedCustomizations,
       })
     }
 
@@ -362,7 +543,8 @@ export async function POST(request: Request) {
           unit_price,
           quantity,
           line_total,
-          customization_note
+          customization_note,
+          customization_values
         )
         VALUES (
           ${orderId}::uuid,
@@ -375,7 +557,8 @@ export async function POST(request: Request) {
           ${item.unitPrice},
           ${item.quantity},
           ${item.lineTotal},
-          ${item.note}
+          ${item.note},
+          ${JSON.stringify(item.customizations)}::jsonb
         )
       `),
       sql`

@@ -21,6 +21,13 @@ type OrderStatus =
   | 'completed'
   | 'cancelled'
 
+type OrderCustomizationValue = {
+  fieldId: string
+  label: string
+  fieldType: 'text' | 'textarea' | 'number' | 'date' | 'select'
+  value: string
+}
+
 type OrderRow = {
   id: string
   public_code: string
@@ -41,6 +48,7 @@ type OrderRow = {
   quantity: number | null
   line_total: string | null
   customization_note: string | null
+  customization_values: unknown
 }
 
 type EventRow = {
@@ -51,6 +59,38 @@ type EventRow = {
   to_status: OrderStatus | null
   note: string | null
   created_at: string
+}
+
+function parseCustomizationValues(value: unknown): OrderCustomizationValue[] {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return []
+
+    const item = entry as Record<string, unknown>
+
+    if (
+      typeof item.fieldId !== 'string' ||
+      typeof item.label !== 'string' ||
+      typeof item.fieldType !== 'string' ||
+      typeof item.value !== 'string'
+    ) {
+      return []
+    }
+
+    if (!['text', 'textarea', 'number', 'date', 'select'].includes(item.fieldType)) {
+      return []
+    }
+
+    return [
+      {
+        fieldId: item.fieldId,
+        label: item.label,
+        fieldType: item.fieldType as OrderCustomizationValue['fieldType'],
+        value: item.value,
+      },
+    ]
+  })
 }
 
 function text(value: unknown, max: number) {
@@ -108,7 +148,8 @@ export async function GET(request: Request) {
         i.unit_price::text,
         i.quantity,
         i.line_total::text,
-        i.customization_note
+        i.customization_note,
+        i.customization_values
       FROM recent_orders o
       LEFT JOIN order_items i ON i.order_id = o.id
       ORDER BY o.created_at DESC, i.created_at ASC
@@ -156,6 +197,7 @@ export async function GET(request: Request) {
           quantity: number
           line_total: string | null
           customization_note: string | null
+          customization_values: OrderCustomizationValue[]
         }>
         events: EventRow[]
       }
@@ -190,6 +232,7 @@ export async function GET(request: Request) {
           quantity: row.quantity,
           line_total: row.line_total,
           customization_note: row.customization_note,
+          customization_values: parseCustomizationValues(row.customization_values),
         })
       }
     }

@@ -1981,3 +1981,90 @@
     max-height: 34dvh;
   }
 }
+
+
+/* ALIMAR STOREFRONT CUSTOMIZATIONS 1A.21 */
+.product-customization-fields {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(95, 155, 173, 0.25);
+  border-radius: 14px;
+  background: rgba(243, 232, 207, 0.38);
+}
+
+.product-customization-heading {
+  display: grid;
+  gap: 3px;
+}
+
+.product-customization-heading strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.product-customization-heading span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.product-customization-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.product-customization-fields input,
+.product-customization-fields textarea,
+.product-customization-fields select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 11px;
+  border: 1px solid rgba(95, 155, 173, 0.28);
+  border-radius: 10px;
+  color: var(--ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.product-customization-fields textarea {
+  resize: vertical;
+}
+
+.product-customization-error {
+  margin: 0;
+  color: #9a3d35;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.cart-customizations {
+  display: grid;
+  gap: 3px;
+  margin: 8px 0 4px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(100, 175, 198, 0.08);
+}
+
+.cart-customizations small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.cart-customizations strong {
+  color: var(--ink);
+}
+
+.admin-order-customizations {
+  display: grid;
+  gap: 2px;
+  margin-top: 3px;
+}
+
+.admin-order-customizations small {
+  display: block;
+}

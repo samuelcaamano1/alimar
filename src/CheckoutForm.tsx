@@ -7,6 +7,7 @@ type CheckoutItem = {
   variantId: string | null
   quantity: number
   note: string
+  customizations: Array<{ fieldId: string; value: string }>
 }
 
 type CreateOrderResponse = { orderCode: string; whatsappMessage: string }

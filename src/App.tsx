@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { alimarLogoDataUrl } from './brand'
 import { site } from './site'
 import CheckoutForm from './CheckoutForm'
@@ -23,6 +23,22 @@ type CatalogImage = {
   is_primary: boolean
 }
 
+type CatalogCustomizationField = {
+  id: string
+  label: string
+  fieldType: 'text' | 'textarea' | 'number' | 'date' | 'select'
+  placeholder: string | null
+  options: string[]
+  required: boolean
+  maxLength: number
+}
+
+type CartCustomizationValue = {
+  fieldId: string
+  label: string
+  value: string
+}
+
 type CatalogProduct = {
   id: string
   name: string
@@ -32,6 +48,8 @@ type CatalogProduct = {
   pricingMode: 'fixed' | 'from' | 'quote'
   basePrice: string | null
   imageUrl: string | null
+  customizationAllowed: boolean
+  customizationFields: CatalogCustomizationField[]
   variants: CatalogVariant[]
 }
 
@@ -41,6 +59,7 @@ type CartItem = CatalogProduct & {
   unitPrice: string | null
   quantity: number
   note: string
+  customizations: CartCustomizationValue[]
 }
 
 type CatalogCategory = {
@@ -81,6 +100,31 @@ function loadStoredCart(): CartItem[] {
         {
           ...item,
           variants: Array.isArray(item.variants) ? item.variants : [],
+          customizationAllowed: item.customizationAllowed === true,
+          customizationFields: Array.isArray(item.customizationFields)
+            ? item.customizationFields
+            : [],
+          customizations: Array.isArray(item.customizations)
+            ? item.customizations.flatMap((value: unknown) => {
+                if (!value || typeof value !== 'object') return []
+                const entry = value as Record<string, unknown>
+                if (
+                  typeof entry.fieldId !== 'string' ||
+                  typeof entry.label !== 'string' ||
+                  typeof entry.value !== 'string'
+                ) {
+                  return []
+                }
+
+                return [
+                  {
+                    fieldId: entry.fieldId,
+                    label: entry.label,
+                    value: entry.value,
+                  },
+                ]
+              })
+            : [],
           variantId: typeof item.variantId === 'string' ? item.variantId : null,
           variantName: typeof item.variantName === 'string' ? item.variantName : null,
           unitPrice:
@@ -143,8 +187,17 @@ function formatCartLinePrice(item: CartItem) {
   return formatAmount(unitPrice * item.quantity)
 }
 
-function cartItemKey(item: Pick<CartItem, 'id' | 'variantId'>) {
-  return `${item.id}:${item.variantId ?? 'base'}`
+function customizationSignature(customizations: CartCustomizationValue[]) {
+  return [...customizations]
+    .sort((left, right) => left.fieldId.localeCompare(right.fieldId))
+    .map((item) => `${item.fieldId}=${encodeURIComponent(item.value)}`)
+    .join('&')
+}
+
+function cartItemKey(
+  item: Pick<CartItem, 'id' | 'variantId' | 'customizations'>,
+) {
+  return `${item.id}:${item.variantId ?? 'base'}:${customizationSignature(item.customizations)}`
 }
 
 const serviceLines = [
@@ -213,6 +266,10 @@ function App() {
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState('')
+  const [selectedCustomizationValues, setSelectedCustomizationValues] = useState<
+    Record<string, string>
+  >({})
+  const [selectedCustomizationMessage, setSelectedCustomizationMessage] = useState('')
   const [productImages, setProductImages] = useState<CatalogImage[]>([])
   const [selectedProductImageUrl, setSelectedProductImageUrl] = useState('')
   const [cart, setCart] = useState<CartItem[]>(() => loadStoredCart())
@@ -247,6 +304,7 @@ function App() {
       const persistedCart = cart.map((item) => ({
         ...item,
         imageUrl: item.imageUrl?.startsWith('data:') ? null : item.imageUrl,
+        customizationFields: [],
         variants: [],
       }))
 
@@ -314,12 +372,45 @@ function App() {
   function openProduct(product: CatalogProduct) {
     setSelectedProduct(product)
     setSelectedVariantId(product.variants.length === 1 ? product.variants[0].id : '')
+    setSelectedCustomizationValues({})
+    setSelectedCustomizationMessage('')
   }
 
   function addToCart(product: CatalogProduct, variantId: string) {
     const variant = product.variants.find((item) => item.id === variantId) ?? null
 
     if (product.variants.length > 0 && !variant) return
+
+    const missingCustomization = product.customizationFields.find(
+      (field) =>
+        product.customizationAllowed &&
+        field.required &&
+        !(selectedCustomizationValues[field.id] ?? '').trim(),
+    )
+
+    if (missingCustomization) {
+      setSelectedCustomizationMessage(
+        `Completá "${missingCustomization.label}" antes de agregar el producto.`,
+      )
+      return
+    }
+
+    const customizations = product.customizationAllowed
+      ? product.customizationFields.flatMap((field) => {
+          const value = (selectedCustomizationValues[field.id] ?? '').trim()
+          return value
+            ? [
+                {
+                  fieldId: field.id,
+                  label: field.label,
+                  value,
+                },
+              ]
+            : []
+        })
+      : []
+
+    setSelectedCustomizationMessage('')
 
     const nextItem: CartItem = {
       ...product,
@@ -328,6 +419,7 @@ function App() {
       unitPrice: priceForSelection(product, variant),
       quantity: 1,
       note: '',
+      customizations,
     }
 
     const key = cartItemKey(nextItem)
@@ -348,6 +440,8 @@ function App() {
 
     setSelectedProduct(null)
     setSelectedVariantId('')
+    setSelectedCustomizationValues({})
+    setSelectedCustomizationMessage('')
     setCartOpen(true)
   }
 
@@ -748,7 +842,95 @@ function App() {
                   </label>
                 )}
 
-                <strong className="product-dialog-price" aria-live="polite">
+                {selectedProduct.customizationAllowed &&
+                  selectedProduct.customizationFields.length > 0 && (
+                    <div className="product-customization-fields">
+                      <div className="product-customization-heading">
+                        <strong>Personalización</strong>
+                        <span>Completá los datos para este producto.</span>
+                      </div>
+                
+                      {selectedProduct.customizationFields.map((field) => {
+                        const value = selectedCustomizationValues[field.id] ?? ''
+                        const commonProps = {
+                          value,
+                          required: field.required,
+                          onChange: (
+                            event:
+                              | ChangeEvent<HTMLInputElement>
+                              | ChangeEvent<HTMLTextAreaElement>
+                              | ChangeEvent<HTMLSelectElement>,
+                          ) => {
+                            setSelectedCustomizationValues((current) => ({
+                              ...current,
+                              [field.id]: event.target.value,
+                            }))
+                            setSelectedCustomizationMessage('')
+                          },
+                        }
+                
+                        if (field.fieldType === 'textarea') {
+                          return (
+                            <label key={field.id}>
+                              {field.label}
+                              {field.required && <span aria-hidden="true"> *</span>}
+                              <textarea
+                                {...commonProps}
+                                rows={3}
+                                maxLength={field.maxLength}
+                                placeholder={field.placeholder ?? ''}
+                              />
+                            </label>
+                          )
+                        }
+                
+                        if (field.fieldType === 'select') {
+                          return (
+                            <label key={field.id}>
+                              {field.label}
+                              {field.required && <span aria-hidden="true"> *</span>}
+                              <select {...commonProps}>
+                                <option value="">
+                                  {field.placeholder || 'Seleccionar'}
+                                </option>
+                                {field.options.map((option) => (
+                                  <option key={option} value={option}>
+                                    {option}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          )
+                        }
+                
+                        return (
+                          <label key={field.id}>
+                            {field.label}
+                            {field.required && <span aria-hidden="true"> *</span>}
+                            <input
+                              {...commonProps}
+                              type={
+                                field.fieldType === 'number'
+                                  ? 'number'
+                                  : field.fieldType === 'date'
+                                    ? 'date'
+                                    : 'text'
+                              }
+                              maxLength={field.fieldType === 'text' ? field.maxLength : undefined}
+                              placeholder={field.placeholder ?? ''}
+                            />
+                          </label>
+                        )
+                      })}
+                
+                      {selectedCustomizationMessage && (
+                        <p className="product-customization-error">
+                          {selectedCustomizationMessage}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                                <strong className="product-dialog-price" aria-live="polite">
                   {formatSelectionPrice(selectedProduct, selectedVariant)}
                 </strong>
 
@@ -926,6 +1108,16 @@ function App() {
                           </div>
                         </div>
 
+                        {item.customizations.length > 0 && (
+                          <div className="cart-customizations">
+                            {item.customizations.map((customization) => (
+                              <small key={customization.fieldId}>
+                                <strong>{customization.label}:</strong> {customization.value}
+                              </small>
+                            ))}
+                          </div>
+                        )}
+
                         <label className="cart-note">
                           Personalización / nota
                           <textarea
@@ -960,6 +1152,10 @@ function App() {
                       variantId: item.variantId,
                       quantity: item.quantity,
                       note: item.note,
+                      customizations: item.customizations.map((customization) => ({
+                        fieldId: customization.fieldId,
+                        value: customization.value,
+                      })),
                     }))}
                     onCreated={(order) => {
                       window.localStorage.removeItem(CART_STORAGE_KEY)

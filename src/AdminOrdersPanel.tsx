@@ -9,6 +9,13 @@ type OrderStatus =
   | 'completed'
   | 'cancelled'
 
+type AdminOrderCustomization = {
+  fieldId: string
+  label: string
+  fieldType: 'text' | 'textarea' | 'number' | 'date' | 'select'
+  value: string
+}
+
 type AdminOrderItem = {
   id: string
   product_name: string
@@ -19,6 +26,7 @@ type AdminOrderItem = {
   quantity: number
   line_total: string | null
   customization_note: string | null
+  customization_values: AdminOrderCustomization[]
 }
 
 type AdminOrderEvent = {
@@ -363,7 +371,20 @@ export default function AdminOrdersPanel() {
                           {item.quantity}× {item.product_name}
                         </strong>
                         {item.variant_name && <small>Variante: {item.variant_name}</small>}
-                        {item.customization_note && <small>{item.customization_note}</small>}
+                        {item.customization_values.length > 0 && (
+                          <div className="admin-order-customizations">
+                            {item.customization_values.map((customization) => (
+                              <small key={customization.fieldId}>
+                                <strong>{customization.label}:</strong> {customization.value}
+                              </small>
+                            ))}
+                          </div>
+                        )}
+                        {item.customization_note && (
+                          <small>
+                            <strong>Nota:</strong> {item.customization_note}
+                          </small>
+                        )}
                       </div>
 
                       <span>{item.line_total ? money(item.line_total) : 'A consultar'}</span>

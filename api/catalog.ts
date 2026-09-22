@@ -15,6 +15,7 @@ type CatalogRow = {
   pricing_mode: 'fixed' | 'from' | 'quote' | null
   base_price: string | null
   image_url: string | null
+  customization_allowed: boolean
 }
 
 type VariantRow = {
@@ -22,6 +23,17 @@ type VariantRow = {
   product_id: string
   name: string
   price_override: string | null
+}
+
+type CustomizationFieldRow = {
+  id: string
+  product_id: string
+  label: string
+  field_type: 'text' | 'textarea' | 'number' | 'date' | 'select'
+  placeholder: string | null
+  options: unknown
+  required: boolean
+  max_length: number
 }
 
 export async function GET(request: Request) {
@@ -79,6 +91,7 @@ export async function GET(request: Request) {
         p.kind,
         p.pricing_mode,
         p.base_price::text,
+        p.customization_allowed,
         image.image_url
       FROM categories c
       LEFT JOIN products p
@@ -108,6 +121,24 @@ export async function GET(request: Request) {
       ORDER BY pv.product_id, pv.sort_order ASC, pv.name ASC
     `) as VariantRow[]
 
+    const customizationRows = (await sql`
+      SELECT
+        pcf.id::text,
+        pcf.product_id::text,
+        pcf.label,
+        pcf.field_type,
+        pcf.placeholder,
+        pcf.options,
+        pcf.required,
+        pcf.max_length
+      FROM product_customization_fields pcf
+      INNER JOIN products p ON p.id = pcf.product_id
+      WHERE pcf.active = true
+        AND p.active = true
+        AND p.customization_allowed = true
+      ORDER BY pcf.product_id, pcf.sort_order ASC, pcf.created_at ASC
+    `) as CustomizationFieldRow[]
+
     const variantsByProduct = new Map<
       string,
       Array<{
@@ -127,6 +158,38 @@ export async function GET(request: Request) {
       variantsByProduct.set(variant.product_id, current)
     }
 
+    const customizationsByProduct = new Map<
+      string,
+      Array<{
+        id: string
+        label: string
+        fieldType: 'text' | 'textarea' | 'number' | 'date' | 'select'
+        placeholder: string | null
+        options: string[]
+        required: boolean
+        maxLength: number
+      }>
+    >()
+
+    for (const field of customizationRows) {
+      const current = customizationsByProduct.get(field.product_id) ?? []
+      const options = Array.isArray(field.options)
+        ? field.options.filter((value): value is string => typeof value === 'string')
+        : []
+
+      current.push({
+        id: field.id,
+        label: field.label,
+        fieldType: field.field_type,
+        placeholder: field.placeholder,
+        options,
+        required: field.required,
+        maxLength: field.max_length,
+      })
+
+      customizationsByProduct.set(field.product_id, current)
+    }
+
     const categories = new Map<
       string,
       {
@@ -143,6 +206,16 @@ export async function GET(request: Request) {
           pricingMode: 'fixed' | 'from' | 'quote'
           basePrice: string | null
           imageUrl: string | null
+          customizationAllowed: boolean
+          customizationFields: Array<{
+            id: string
+            label: string
+            fieldType: 'text' | 'textarea' | 'number' | 'date' | 'select'
+            placeholder: string | null
+            options: string[]
+            required: boolean
+            maxLength: number
+          }>
           variants: Array<{
             id: string
             name: string
@@ -179,6 +252,8 @@ export async function GET(request: Request) {
           pricingMode: row.pricing_mode,
           basePrice: row.base_price,
           imageUrl: row.image_url,
+          customizationAllowed: row.customization_allowed,
+          customizationFields: customizationsByProduct.get(row.product_id) ?? [],
           variants: variantsByProduct.get(row.product_id) ?? [],
         })
       }
