@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { alimarLogoDataUrl } from './brand'
 import { compressAdminImage } from './adminImage'
+import AdminOrdersPanel from './AdminOrdersPanel'
 import './admin.css'
 
 type AdminCategory = {
@@ -458,6 +459,8 @@ export default function AdminApp() {
         </section>
 
         {message && <div className="admin-toast">{message}</div>}
+
+        <AdminOrdersPanel />
 
         <div className="admin-grid">
           <section className="admin-panel">

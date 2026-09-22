@@ -1603,3 +1603,117 @@
     padding-inline: 18px;
   }
 }
+
+
+/* ALIMAR CHECKOUT 1A.8 */
+.checkout-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.checkout-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.checkout-heading > span {
+  color: var(--blue-dark);
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.checkout-heading > strong {
+  font-family: var(--display);
+  font-size: 1.28rem;
+}
+
+.checkout-heading > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.checkout-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.checkout-grid label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.checkout-span-2 {
+  grid-column: 1 / -1;
+}
+
+.checkout-grid input,
+.checkout-grid textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  font-size: 0.78rem;
+  outline: none;
+}
+
+.checkout-grid input:focus,
+.checkout-grid textarea:focus {
+  border-color: var(--blue-dark);
+  box-shadow: 0 0 0 3px rgba(100, 175, 198, 0.16);
+}
+
+.checkout-grid textarea {
+  resize: vertical;
+}
+
+.checkout-submit {
+  width: 100%;
+  margin-top: 2px;
+}
+
+.checkout-submit:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.checkout-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #7a2830;
+  background: rgba(172, 71, 82, 0.1);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.checkout-safe-note {
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 520px) {
+  .checkout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-span-2 {
+    grid-column: auto;
+  }
+}

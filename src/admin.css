@@ -722,3 +722,170 @@
     width: 100%;
   }
 }
+
+
+/* ALIMAR ORDERS ADMIN 1A.8 */
+.admin-orders-panel {
+  margin-bottom: 24px;
+}
+
+.admin-orders-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.admin-orders-refresh {
+  align-self: center;
+}
+
+.admin-orders-list {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-order-card {
+  padding: 18px;
+  border: 1px solid var(--admin-line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.admin-order-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-order-code {
+  color: var(--admin-blue-dark);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.admin-order-top h3 {
+  margin: 3px 0 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.45rem;
+}
+
+.admin-order-top p {
+  margin: 4px 0 0;
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+}
+
+.admin-order-status {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.16);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.admin-order-status.is-cancelled {
+  color: #7a2830;
+  background: rgba(172, 71, 82, 0.12);
+}
+
+.admin-order-status.is-completed {
+  color: #365b43;
+  background: rgba(72, 132, 91, 0.14);
+}
+
+.admin-order-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 14px;
+  color: var(--admin-muted);
+  font-size: 0.78rem;
+}
+
+.admin-order-contact a {
+  color: var(--admin-blue-dark);
+  font-weight: 750;
+}
+
+.admin-order-note {
+  margin: 13px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(100, 175, 198, 0.08);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.admin-order-items {
+  display: grid;
+  margin-top: 14px;
+  border-top: 1px solid var(--admin-line);
+}
+
+.admin-order-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--admin-line);
+  font-size: 0.78rem;
+}
+
+.admin-order-item > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.admin-order-item small {
+  color: var(--admin-muted);
+  line-height: 1.4;
+}
+
+.admin-order-item > span {
+  flex: 0 0 auto;
+  font-weight: 800;
+}
+
+.admin-order-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 14px;
+}
+
+.admin-order-total span {
+  color: var(--admin-muted);
+  font-size: 0.74rem;
+}
+
+.admin-order-total strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.15rem;
+}
+
+.admin-order-quote {
+  margin: 7px 0 0;
+  color: var(--admin-blue-dark);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 700px) {
+  .admin-orders-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .admin-orders-refresh {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .admin-order-item {
+    align-items: flex-start;
+  }
+}

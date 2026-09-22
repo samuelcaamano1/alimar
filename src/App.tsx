@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { alimarLogoDataUrl } from './brand'
 import { site } from './site'
+import CheckoutForm from './CheckoutForm'
 import './App.css'
 
 type CatalogProduct = {
@@ -675,13 +676,17 @@ function App() {
                     </p>
                   )}
 
-                  <div className="cart-next-step">
-                    <span>Siguiente paso</span>
-                    <strong>Datos del cliente + confirmación del pedido</strong>
-                    <p>
-                      Lo conectamos a Neon en la próxima update antes de abrir WhatsApp.
-                    </p>
-                  </div>
+                  <CheckoutForm
+                    items={cart.map((item) => ({
+                      id: item.id,
+                      quantity: item.quantity,
+                      note: item.note,
+                    }))}
+                    onCreated={() => {
+                      window.localStorage.removeItem(CART_STORAGE_KEY)
+                      setCart([])
+                    }}
+                  />
                 </div>
               </>
             )}
