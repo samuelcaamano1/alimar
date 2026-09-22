@@ -2221,3 +2221,506 @@
     width: 100%;
   }
 }
+
+
+/* ALIMAR SMART COST CALCULATOR VISUAL POLISH 1A.23.1 */
+.admin-cost-calculator {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border-color: rgba(63, 120, 138, 0.2);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(100, 175, 198, 0.16), transparent 28%),
+    rgba(255, 248, 233, 0.92);
+  box-shadow: 0 22px 65px rgba(12, 16, 20, 0.055);
+}
+
+.admin-cost-calculator::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, var(--admin-blue-dark), var(--admin-blue), transparent 78%);
+}
+
+.admin-cost-heading-v2 {
+  min-height: 154px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 36px;
+  padding: 30px 32px 28px;
+  border-bottom: 1px solid rgba(12, 16, 20, 0.09);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.admin-cost-heading-copy {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.admin-cost-eyebrow,
+.admin-cost-empty-kicker {
+  color: var(--admin-blue-dark);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.admin-cost-heading-v2 h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2rem, 3.5vw, 2.9rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.admin-cost-heading-v2 p {
+  max-width: 710px;
+  margin: 2px 0 0;
+  color: var(--admin-muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.admin-cost-heading-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 7px;
+}
+
+.admin-cost-heading-meta span {
+  padding: 5px 8px;
+  border: 1px solid rgba(63, 120, 138, 0.16);
+  border-radius: 999px;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.075);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.admin-cost-tabs {
+  align-self: center;
+  padding: 5px;
+  border: 1px solid rgba(12, 16, 20, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 253, 248, 0.76);
+  box-shadow: 0 8px 24px rgba(12, 16, 20, 0.045);
+}
+
+.admin-cost-tabs button {
+  min-height: 42px;
+  padding: 0 15px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.admin-cost-tabs button:hover,
+.admin-cost-tabs button:focus-visible {
+  color: var(--admin-ink);
+}
+
+.admin-cost-tabs button.is-active {
+  color: var(--admin-ink);
+  background: rgba(100, 175, 198, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(63, 120, 138, 0.06);
+}
+
+.admin-cost-message {
+  margin: 18px 28px 0;
+}
+
+.admin-cost-workspace,
+.admin-cost-data {
+  gap: 20px;
+  padding: 24px 28px 30px;
+}
+
+.admin-cost-setup-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(12, 16, 20, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.58);
+  box-shadow: 0 12px 34px rgba(12, 16, 20, 0.035);
+}
+
+.admin-cost-section-heading {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 11px;
+  align-items: start;
+}
+
+.admin-cost-section-heading > span,
+.admin-cost-section-number {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.13);
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.admin-cost-section-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-cost-section-heading strong,
+.admin-cost-lines-heading strong {
+  color: var(--admin-ink);
+  font-size: 0.82rem;
+}
+
+.admin-cost-section-heading small {
+  color: var(--admin-muted);
+  font-size: 0.66rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.admin-cost-controls {
+  gap: 12px;
+}
+
+.admin-cost-controls label {
+  min-height: 94px;
+  align-content: start;
+  padding: 12px;
+  border: 1px solid rgba(12, 16, 20, 0.075);
+  border-radius: 13px;
+  color: var(--admin-ink);
+  background: rgba(255, 255, 255, 0.38);
+  font-size: 0.67rem;
+}
+
+.admin-cost-controls input,
+.admin-cost-controls select {
+  min-height: 44px;
+  border-color: rgba(12, 16, 20, 0.11);
+  border-radius: 10px;
+  background: rgba(255, 253, 248, 0.92);
+  outline: none;
+  font-weight: 700;
+}
+
+.admin-cost-controls input:focus,
+.admin-cost-controls select:focus,
+.admin-cost-data-form input:focus,
+.admin-cost-data-form select:focus,
+.admin-cost-data-form textarea:focus,
+.admin-cost-data-toolbar input:focus,
+.admin-cost-data-toolbar select:focus,
+.admin-cost-line input:focus,
+.admin-cost-line select:focus {
+  border-color: var(--admin-blue-dark);
+  box-shadow: 0 0 0 3px rgba(100, 175, 198, 0.12);
+}
+
+.admin-cost-controls small {
+  margin-top: -1px;
+  font-size: 0.58rem;
+}
+
+.admin-cost-empty-hero {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 23px;
+  border: 1px solid rgba(63, 120, 138, 0.18);
+  border-radius: 18px;
+  background:
+    linear-gradient(115deg, rgba(100, 175, 198, 0.1), rgba(255, 255, 255, 0.28) 52%, transparent);
+}
+
+.admin-cost-empty-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px;
+  color: #f7edd7;
+  background: var(--admin-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.admin-cost-empty-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-cost-empty-copy > strong {
+  max-width: 680px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.16rem;
+  line-height: 1.1;
+}
+
+.admin-cost-empty-copy p {
+  max-width: 760px;
+  font-size: 0.72rem;
+}
+
+.admin-cost-empty-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+.admin-cost-empty-tags span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: var(--admin-muted);
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 0.59rem;
+  font-weight: 750;
+}
+
+.admin-cost-lines {
+  order: 2;
+  padding: 18px;
+  border: 1px solid rgba(12, 16, 20, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.48);
+}
+
+.admin-cost-lines-heading {
+  align-items: start;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+}
+
+.admin-cost-lines-heading > div {
+  gap: 4px;
+}
+
+.admin-cost-lines-heading span:not(.admin-cost-section-number) {
+  max-width: 650px;
+  font-size: 0.66rem;
+}
+
+.admin-cost-summary {
+  order: 1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-cost-summary > div {
+  min-height: 88px;
+  align-content: center;
+  padding: 14px 15px;
+  border-color: rgba(12, 16, 20, 0.085);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.admin-cost-summary span {
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.admin-cost-summary strong {
+  font-size: 1.12rem;
+}
+
+.admin-cost-summary .admin-cost-summary-highlight {
+  grid-column: span 2;
+  min-height: 104px;
+  border-color: rgba(63, 120, 138, 0.28);
+  background:
+    linear-gradient(135deg, rgba(100, 175, 198, 0.15), rgba(255, 255, 255, 0.36));
+}
+
+.admin-cost-summary-highlight strong {
+  font-size: 1.55rem;
+}
+
+.admin-cost-line {
+  padding: 12px;
+  border-color: rgba(12, 16, 20, 0.08);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.admin-cost-line-result {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(100, 175, 198, 0.08);
+}
+
+.admin-cost-line-result strong {
+  color: var(--admin-blue-dark);
+  font-size: 0.9rem;
+}
+
+.admin-cost-data {
+  grid-template-columns: minmax(340px, 0.78fr) minmax(480px, 1.22fr);
+}
+
+.admin-cost-data-form,
+.admin-cost-data-list {
+  border: 1px solid rgba(12, 16, 20, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.5);
+  box-shadow: 0 12px 34px rgba(12, 16, 20, 0.025);
+}
+
+.admin-cost-data-form {
+  padding: 18px;
+}
+
+.admin-cost-data-list {
+  padding: 16px;
+}
+
+.admin-cost-data-title {
+  margin: -18px -18px 8px;
+  padding: 18px;
+  border-bottom: 1px solid rgba(12, 16, 20, 0.08);
+  background: rgba(100, 175, 198, 0.055);
+  border-radius: 18px 18px 0 0;
+}
+
+.admin-cost-data-title strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.15rem;
+}
+
+.admin-cost-data-title span {
+  max-width: 600px;
+  font-size: 0.66rem;
+}
+
+.admin-cost-data-form label,
+.admin-cost-data-toolbar label {
+  color: var(--admin-ink);
+  font-size: 0.67rem;
+}
+
+.admin-cost-resource-row {
+  border-color: rgba(12, 16, 20, 0.08);
+  background: rgba(255, 255, 255, 0.44);
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.admin-cost-resource-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(63, 120, 138, 0.26);
+  box-shadow: 0 8px 22px rgba(12, 16, 20, 0.035);
+}
+
+.admin-cost-resource-main > span {
+  padding: 3px 6px;
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(100, 175, 198, 0.1);
+}
+
+@media (max-width: 1050px) {
+  .admin-cost-heading-v2 {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .admin-cost-tabs {
+    justify-self: start;
+  }
+
+  .admin-cost-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-cost-summary .admin-cost-summary-highlight {
+    grid-column: span 1;
+  }
+
+  .admin-cost-data {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-cost-calculator {
+    border-radius: 20px;
+  }
+
+  .admin-cost-heading-v2 {
+    min-height: 0;
+    padding: 23px 20px 20px;
+  }
+
+  .admin-cost-heading-v2 h2 {
+    font-size: 2rem;
+  }
+
+  .admin-cost-tabs {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .admin-cost-tabs button {
+    flex: 1;
+    padding: 0 8px;
+  }
+
+  .admin-cost-message {
+    margin: 16px 18px 0;
+  }
+
+  .admin-cost-workspace,
+  .admin-cost-data {
+    padding: 18px;
+  }
+
+  .admin-cost-controls,
+  .admin-cost-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-cost-controls label {
+    min-height: 0;
+  }
+
+  .admin-cost-summary .admin-cost-summary-highlight {
+    grid-column: auto;
+  }
+
+  .admin-cost-empty-hero {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .admin-cost-empty-hero .admin-primary {
+    width: 100%;
+  }
+
+  .admin-cost-lines-heading {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .admin-cost-lines-heading .admin-secondary {
+    grid-column: 1 / -1;
+  }
+
+  .admin-cost-data-list {
+    padding: 12px;
+  }
+}

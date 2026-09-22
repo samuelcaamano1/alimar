@@ -359,13 +359,18 @@ export default function AdminCostCalculator() {
 
   return (
     <section className="admin-panel admin-cost-calculator">
-      <div className="admin-panel-heading admin-cost-heading">
-        <span>Costos</span>
-        <div>
+      <div className="admin-cost-heading-v2">
+        <div className="admin-cost-heading-copy">
+          <span className="admin-cost-eyebrow">Costos & rentabilidad</span>
           <h2>Calculadora inteligente</h2>
           <p>
-            Calculá materiales, tinta, energía, máquina y tiempo usando tu propia base de costos.
+            Armá precios con tus costos reales de materiales, tinta, energía, máquina y tiempo.
           </p>
+
+          <div className="admin-cost-heading-meta">
+            <span>{resources.length} datos cargados</span>
+            <span>Cálculo privado del admin</span>
+          </div>
         </div>
 
         <div className="admin-cost-tabs" role="tablist" aria-label="Calculadora de costos">
@@ -381,7 +386,7 @@ export default function AdminCostCalculator() {
             className={view === 'data' ? 'is-active' : ''}
             onClick={() => setView('data')}
           >
-            Datos de costos
+            Base de costos
           </button>
         </div>
       </div>
@@ -390,7 +395,16 @@ export default function AdminCostCalculator() {
 
       {view === 'calculator' ? (
         <div className="admin-cost-workspace">
-          <div className="admin-cost-controls">
+          <div className="admin-cost-setup-card">
+            <div className="admin-cost-section-heading">
+              <span>01</span>
+              <div>
+                <strong>Configuración del trabajo</strong>
+                <small>Definí cantidad, indirectos, recargo y redondeo antes de cargar consumos.</small>
+              </div>
+            </div>
+
+            <div className="admin-cost-controls">
             <label>
               Cantidad a producir
               <input
@@ -439,23 +453,39 @@ export default function AdminCostCalculator() {
                 <option value="1000">$1.000</option>
               </select>
             </label>
+            </div>
           </div>
 
           {resources.length === 0 ? (
-            <div className="admin-cost-empty">
-              <strong>La calculadora todavía no tiene datos.</strong>
-              <p>
-                Entrá en “Datos de costos” y cargá papeles, tinta, filamento, energía, mano de
-                obra y cualquier otro gasto que quieras considerar.
-              </p>
+            <div className="admin-cost-empty admin-cost-empty-hero">
+              <div className="admin-cost-empty-icon" aria-hidden="true">+</div>
+
+              <div className="admin-cost-empty-copy">
+                <span className="admin-cost-empty-kicker">Empezá por tu base</span>
+                <strong>La calculadora se vuelve útil cuando conoce tus costos reales.</strong>
+                <p>
+                  Cargá una vez tus papeles, tintas, filamentos, energía, tiempos y desgaste de
+                  máquina. Después los reutilizás en cada presupuesto.
+                </p>
+
+                <div className="admin-cost-empty-tags" aria-label="Ejemplos de costos">
+                  <span>Papel</span>
+                  <span>Tinta</span>
+                  <span>Filamento</span>
+                  <span>Energía</span>
+                  <span>Tiempo</span>
+                </div>
+              </div>
+
               <button className="admin-primary" type="button" onClick={() => setView('data')}>
-                Cargar datos
+                Ir a Base de costos
               </button>
             </div>
           ) : (
             <>
               <div className="admin-cost-lines">
                 <div className="admin-cost-lines-heading">
+                  <span className="admin-cost-section-number">02</span>
                   <div>
                     <strong>Consumos del trabajo</strong>
                     <span>
@@ -581,8 +611,8 @@ export default function AdminCostCalculator() {
             <div className="admin-cost-data-title">
               <strong>{editingId ? 'Editar dato de costo' : 'Nuevo dato de costo'}</strong>
               <span>
-                Ejemplos: resma A4, papel holográfico, tinta color, filamento PLA, kWh, hora
-                de diseño o hora de impresora 3D.
+                Tu base de costos alimenta automáticamente la calculadora. Podés cargar desde
+                una hoja de papel hasta una hora de diseño o de impresora 3D.
               </span>
             </div>
 
