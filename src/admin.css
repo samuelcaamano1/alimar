@@ -1807,3 +1807,417 @@
     grid-column: 1 / -1;
   }
 }
+
+
+/* ALIMAR SMART COST CALCULATOR 1A.23 */
+.admin-cost-calculator {
+  margin-bottom: 24px;
+}
+
+.admin-cost-heading {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.admin-cost-tabs {
+  display: flex;
+  gap: 6px;
+  align-self: center;
+  padding: 4px;
+  border: 1px solid var(--admin-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.admin-cost-tabs button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--admin-muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.admin-cost-tabs button.is-active {
+  color: var(--admin-ink);
+  background: rgba(100, 175, 198, 0.16);
+}
+
+.admin-cost-message {
+  margin-bottom: 14px;
+}
+
+.admin-cost-workspace,
+.admin-cost-data {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-cost-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-cost-controls label,
+.admin-cost-data-form label,
+.admin-cost-data-toolbar label,
+.admin-cost-line label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.admin-cost-controls input,
+.admin-cost-controls select,
+.admin-cost-data-form input,
+.admin-cost-data-form select,
+.admin-cost-data-form textarea,
+.admin-cost-data-toolbar input,
+.admin-cost-data-toolbar select,
+.admin-cost-line input,
+.admin-cost-line select {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 11px;
+  border: 1px solid var(--admin-line);
+  border-radius: 10px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.admin-cost-data-form textarea {
+  min-height: 78px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+.admin-cost-controls small,
+.admin-cost-data-form small {
+  color: var(--admin-muted);
+  font-size: 0.64rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.admin-cost-empty {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 18px;
+  border: 1px dashed var(--admin-line);
+  border-radius: 14px;
+  background: rgba(100, 175, 198, 0.05);
+}
+
+.admin-cost-empty p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.admin-cost-empty-small {
+  padding: 14px;
+  color: var(--admin-muted);
+  font-size: 0.74rem;
+}
+
+.admin-cost-lines {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-cost-lines-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-cost-lines-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-cost-lines-heading strong {
+  color: var(--admin-ink);
+}
+
+.admin-cost-lines-heading span {
+  max-width: 720px;
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.admin-cost-line-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-cost-line {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) minmax(130px, .6fr) minmax(130px, .6fr) minmax(150px, .7fr) auto;
+  align-items: end;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid var(--admin-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.admin-cost-line-result {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  padding-bottom: 5px;
+}
+
+.admin-cost-line-result small {
+  color: var(--admin-muted);
+  font-size: 0.62rem;
+}
+
+.admin-cost-line-result strong {
+  color: var(--admin-ink);
+  font-size: 0.86rem;
+}
+
+.admin-cost-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.admin-cost-summary > div {
+  display: grid;
+  gap: 5px;
+  padding: 13px 14px;
+  border: 1px solid var(--admin-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.admin-cost-summary span {
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+}
+
+.admin-cost-summary strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.05rem;
+}
+
+.admin-cost-summary small {
+  color: var(--admin-muted);
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.admin-cost-summary .admin-cost-summary-highlight {
+  border-color: rgba(63, 120, 138, 0.42);
+  background: rgba(100, 175, 198, 0.12);
+}
+
+.admin-cost-summary-highlight strong {
+  color: var(--admin-blue-dark);
+  font-size: 1.28rem;
+}
+
+.admin-cost-data {
+  grid-template-columns: minmax(300px, .85fr) minmax(420px, 1.3fr);
+  align-items: start;
+}
+
+.admin-cost-data-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.admin-cost-data-title,
+.admin-cost-span-2 {
+  grid-column: 1 / -1;
+}
+
+.admin-cost-data-title {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.admin-cost-data-title strong {
+  color: var(--admin-ink);
+}
+
+.admin-cost-data-title span {
+  color: var(--admin-muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.admin-cost-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-cost-data-list {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-cost-data-toolbar {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(150px, .5fr);
+  gap: 9px;
+}
+
+.admin-cost-resource-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-cost-resource-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(180px, .8fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid var(--admin-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.admin-cost-resource-main,
+.admin-cost-resource-price {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.admin-cost-resource-main > span {
+  color: var(--admin-blue-dark);
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.admin-cost-resource-main strong {
+  color: var(--admin-ink);
+}
+
+.admin-cost-resource-main small,
+.admin-cost-resource-price small {
+  color: var(--admin-muted);
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+
+.admin-cost-resource-price {
+  justify-items: end;
+  text-align: right;
+}
+
+.admin-cost-resource-price strong {
+  color: var(--admin-blue-dark);
+  font-size: 0.82rem;
+}
+
+.admin-cost-resource-actions {
+  display: flex;
+  gap: 6px;
+}
+
+@media (max-width: 980px) {
+  .admin-cost-controls,
+  .admin-cost-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-cost-data {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-cost-line {
+    grid-template-columns: minmax(0, 1fr) minmax(120px, .5fr) minmax(120px, .5fr);
+  }
+
+  .admin-cost-line-result {
+    justify-items: start;
+  }
+}
+
+@media (max-width: 700px) {
+  .admin-cost-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .admin-cost-tabs {
+    grid-column: 1 / -1;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .admin-cost-tabs button {
+    flex: 1;
+  }
+
+  .admin-cost-controls,
+  .admin-cost-summary,
+  .admin-cost-data-form,
+  .admin-cost-data-toolbar,
+  .admin-cost-line,
+  .admin-cost-resource-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-cost-lines-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-cost-lines-heading .admin-secondary {
+    width: 100%;
+  }
+
+  .admin-cost-line .admin-danger {
+    width: 100%;
+  }
+
+  .admin-cost-resource-price {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .admin-cost-resource-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-cost-form-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-cost-form-actions button {
+    width: 100%;
+  }
+}

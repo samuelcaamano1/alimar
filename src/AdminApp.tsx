@@ -9,6 +9,7 @@ import {
 import { alimarLogoDataUrl } from './brand'
 import { compressAdminImage } from './adminImage'
 import AdminOrdersPanel from './AdminOrdersPanel'
+import AdminCostCalculator from './AdminCostCalculator'
 import AdminCategoriesPanel from './AdminCategoriesPanel'
 import AdminProductVariants from './AdminProductVariants'
 import AdminProductGallery from './AdminProductGallery'
@@ -552,6 +553,8 @@ export default function AdminApp() {
         </section>
 
         {message && <div className="admin-toast">{message}</div>}
+
+        <AdminCostCalculator />
 
         <AdminOrdersPanel />
 

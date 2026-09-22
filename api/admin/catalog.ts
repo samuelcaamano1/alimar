@@ -1,5 +1,11 @@
 import { neon } from '@neondatabase/serverless'
-import { requireAdmin } from '../_lib/admin-auth.js'
+import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
+import {
+  createCostResource,
+  deleteCostResource,
+  listCostResources,
+  updateCostResource,
+} from '../_lib/cost-resources.js'
 
 type CategoryRow = {
   id: string
@@ -31,6 +37,12 @@ export async function GET(request: Request) {
   const databaseUrl = process.env.DATABASE_URL
   if (!databaseUrl) {
     return Response.json({ error: 'Database not configured' }, { status: 503 })
+  }
+
+  const requestUrl = new URL(request.url)
+
+  if (requestUrl.searchParams.get('action') === 'cost-resources') {
+    return listCostResources(databaseUrl)
   }
 
   try {
@@ -84,4 +96,79 @@ export async function GET(request: Request) {
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }
+}
+
+
+async function costMutationContext(request: Request) {
+  const originError = requireSameOrigin(request)
+  if (originError) return { error: originError }
+
+  const authError = requireAdmin(request)
+  if (authError) return { error: authError }
+
+  const databaseUrl = process.env.DATABASE_URL
+  if (!databaseUrl) {
+    return {
+      error: Response.json(
+        { error: 'Database not configured' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    }
+  }
+
+  const requestUrl = new URL(request.url)
+  if (requestUrl.searchParams.get('action') !== 'cost-resources') {
+    return {
+      error: Response.json(
+        { error: 'Invalid action' },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    }
+  }
+
+  return { databaseUrl, requestUrl }
+}
+
+export async function POST(request: Request) {
+  const context = await costMutationContext(request)
+  if ('error' in context) return context.error
+
+  let body: Record<string, unknown>
+
+  try {
+    body = (await request.json()) as Record<string, unknown>
+  } catch {
+    return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  }
+
+  return createCostResource(context.databaseUrl, body)
+}
+
+export async function PATCH(request: Request) {
+  const context = await costMutationContext(request)
+  if ('error' in context) return context.error
+
+  let body: Record<string, unknown>
+
+  try {
+    body = (await request.json()) as Record<string, unknown>
+  } catch {
+    return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  }
+
+  return updateCostResource(
+    context.databaseUrl,
+    context.requestUrl.searchParams.get('id') ?? '',
+    body,
+  )
+}
+
+export async function DELETE(request: Request) {
+  const context = await costMutationContext(request)
+  if ('error' in context) return context.error
+
+  return deleteCostResource(
+    context.databaseUrl,
+    context.requestUrl.searchParams.get('id') ?? '',
+  )
 }
