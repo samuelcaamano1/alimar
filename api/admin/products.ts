@@ -1,6 +1,12 @@
 import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 import { parseAdminMoney } from '../_lib/money.js'
+import {
+  createProductCustomizationField,
+  deleteProductCustomizationField,
+  listProductCustomizationFields,
+  updateProductCustomizationField,
+} from '../_lib/product-customizations.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const MAX_IMAGE_LENGTH = 1_500_000
@@ -214,6 +220,27 @@ async function handleProductOrder(
   }
 }
 
+export async function GET(request: Request) {
+  const authError = requireAdmin(request)
+  if (authError) return authError
+
+  const databaseUrl = process.env.DATABASE_URL
+  if (!databaseUrl) {
+    return Response.json({ error: 'Database not configured' }, { status: 503 })
+  }
+
+  const requestUrl = new URL(request.url)
+
+  if (requestUrl.searchParams.get('action') !== 'customizations') {
+    return Response.json({ error: 'Invalid action' }, { status: 400 })
+  }
+
+  return listProductCustomizationFields(
+    databaseUrl,
+    requestUrl.searchParams.get('productId') ?? '',
+  )
+}
+
 export async function POST(request: Request) {
   const originError = requireSameOrigin(request)
   if (originError) return originError
@@ -234,8 +261,14 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Invalid request' }, { status: 400 })
   }
 
-  if (new URL(request.url).searchParams.get('action') === 'order') {
+  const action = new URL(request.url).searchParams.get('action')
+
+  if (action === 'order') {
     return handleProductOrder(databaseUrl, body)
+  }
+
+  if (action === 'customizations') {
+    return createProductCustomizationField(databaseUrl, body)
   }
 
   const parsed = parseProductInput(body)
@@ -362,7 +395,22 @@ export async function PATCH(request: Request) {
     return Response.json({ error: 'Database not configured' }, { status: 503 })
   }
 
-  const id = new URL(request.url).searchParams.get('id') ?? ''
+  const requestUrl = new URL(request.url)
+
+  if (requestUrl.searchParams.get('action') === 'customizations') {
+    let body: Record<string, unknown>
+
+    try {
+      body = (await request.json()) as Record<string, unknown>
+    } catch {
+      return Response.json({ error: 'Invalid request' }, { status: 400 })
+    }
+
+    const customizationId = requestUrl.searchParams.get('id') ?? ''
+    return updateProductCustomizationField(databaseUrl, customizationId, body)
+  }
+
+  const id = requestUrl.searchParams.get('id') ?? ''
   if (!UUID_RE.test(id)) {
     return Response.json({ error: 'Invalid product id' }, { status: 400 })
   }
@@ -534,7 +582,14 @@ export async function DELETE(request: Request) {
     return Response.json({ error: 'Database not configured' }, { status: 503 })
   }
 
-  const id = new URL(request.url).searchParams.get('id') ?? ''
+  const requestUrl = new URL(request.url)
+
+  if (requestUrl.searchParams.get('action') === 'customizations') {
+    const customizationId = requestUrl.searchParams.get('id') ?? ''
+    return deleteProductCustomizationField(databaseUrl, customizationId)
+  }
+
+  const id = requestUrl.searchParams.get('id') ?? ''
   if (!UUID_RE.test(id)) {
     return Response.json({ error: 'Invalid product id' }, { status: 400 })
   }

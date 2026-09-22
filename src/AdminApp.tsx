@@ -12,6 +12,7 @@ import AdminOrdersPanel from './AdminOrdersPanel'
 import AdminCategoriesPanel from './AdminCategoriesPanel'
 import AdminProductVariants from './AdminProductVariants'
 import AdminProductGallery from './AdminProductGallery'
+import AdminProductCustomizations from './AdminProductCustomizations'
 import './admin.css'
 
 type AdminCategory = {
@@ -1018,6 +1019,11 @@ export default function AdminApp() {
                 </button>
               </div>
             </form>
+
+            <AdminProductCustomizations
+              key={`customizations-${editingProduct.id}`}
+              product={editingProduct}
+            />
 
             <AdminProductGallery
               key={`gallery-${editingProduct.id}`}
