@@ -89,6 +89,12 @@ function formatBytes(value: number) {
   return `${Math.round(value / 1024)} KB`
 }
 
+function scrollAdminSection(selector: string) {
+  document
+    .querySelector(selector)
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 export default function AdminApp() {
   const [quoteSource, setQuoteSource] = useState<CustomRequest | null>(null)
   const [customRequestRefreshToken, setCustomRequestRefreshToken] = useState(0)
@@ -558,6 +564,48 @@ export default function AdminApp() {
         </section>
 
         {message && <div className="admin-toast">{message}</div>}
+
+        <nav
+          className="admin-quick-nav"
+          aria-label="Navegación rápida del administrador"
+        >
+          <button
+            type="button"
+            onClick={() => scrollAdminSection('.admin-business-dashboard')}
+          >
+            Resumen
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollAdminSection('.admin-customers')}
+          >
+            Clientes
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollAdminSection('.admin-cost-calculator')}
+          >
+            Presupuestos
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollAdminSection('.admin-custom-requests')}
+          >
+            Solicitudes
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollAdminSection('.admin-orders-panel')}
+          >
+            Pedidos
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollAdminSection('.admin-grid')}
+          >
+            Catálogo
+          </button>
+        </nav>
 
         <AdminBusinessDashboard />
 

@@ -7283,3 +7283,82 @@
     justify-items: start;
   }
 }
+
+
+/* ALIMAR ADMIN QUICK NAV 1A.43 */
+.admin-quick-nav {
+  position: sticky;
+  top: 8px;
+  z-index: 30;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 7px;
+  margin: 0 0 10px;
+  border: 1px solid rgba(12,16,20,.075);
+  border-radius: 12px;
+  background: rgba(255,253,248,.9);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(12,16,20,.055);
+  scrollbar-width: thin;
+}
+
+.admin-quick-nav button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(12,16,20,.075);
+  border-radius: 999px;
+  color: var(--admin-muted);
+  background: rgba(255,255,255,.65);
+  cursor: pointer;
+  font: inherit;
+  font-size: .56rem;
+  font-weight: 850;
+  transition:
+    border-color .16s ease,
+    background .16s ease,
+    color .16s ease,
+    transform .16s ease;
+}
+
+.admin-quick-nav button:hover,
+.admin-quick-nav button:focus-visible {
+  color: var(--admin-blue-dark);
+  border-color: rgba(63,120,138,.25);
+  background: rgba(100,175,198,.1);
+  outline: none;
+}
+
+.admin-quick-nav button:active {
+  transform: translateY(1px);
+}
+
+.admin-business-dashboard,
+.admin-customers,
+.admin-cost-calculator,
+.admin-custom-requests,
+.admin-orders-panel,
+.admin-grid {
+  scroll-margin-top: 78px;
+}
+
+@media (max-width: 650px) {
+  .admin-quick-nav {
+    top: 5px;
+    margin-inline: -2px;
+    padding: 6px;
+  }
+
+  .admin-quick-nav button {
+    min-height: 32px;
+    padding-inline: 9px;
+    font-size: .53rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-quick-nav button {
+    transition: none;
+  }
+}
