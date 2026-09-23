@@ -98,6 +98,22 @@ type QuoteCommercialMetricSet = {
   all: QuoteCommercialMetrics
 }
 
+type QuoteJobProfitability = {
+  job_type: string
+  closed_count: number
+  revenue: string
+  estimated_cost: string
+  actual_cost: string
+  profit: string
+  overrun_count: number
+  saving_count: number
+}
+
+type QuoteJobProfitabilitySet = {
+  month: QuoteJobProfitability[]
+  all: QuoteJobProfitability[]
+}
+
 type GuidedCost = {
   key: string
   label: string
@@ -211,6 +227,19 @@ function quoteResponseReasonLabel(value: string | null) {
       return 'Otro'
     default:
       return 'Sin motivo'
+  }
+}
+
+function quoteJobTypeLabel(value: string) {
+  switch (value) {
+    case 'paper-print':
+      return 'Papelería / impresión'
+    case '3d-print':
+      return 'Impresión 3D'
+    case 'manual':
+      return 'Manualidades'
+    default:
+      return 'Otro trabajo'
   }
 }
 
@@ -396,6 +425,8 @@ export default function AdminCostCalculator({
   const [quoteFocusFilter, setQuoteFocusFilter] = useState<QuoteFocusFilter>('all')
   const [quoteMetricPeriod, setQuoteMetricPeriod] = useState<QuoteMetricPeriod>('month')
   const [quoteMetrics, setQuoteMetrics] = useState<QuoteCommercialMetricSet | null>(null)
+  const [quoteProfitabilityByJob, setQuoteProfitabilityByJob] =
+    useState<QuoteJobProfitabilitySet | null>(null)
   const [selectedQuote, setSelectedQuote] = useState<AdminQuote | null>(null)
   const [saveQuoteOpen, setSaveQuoteOpen] = useState(false)
   const [quoteSaving, setQuoteSaving] = useState(false)
@@ -466,9 +497,11 @@ export default function AdminCostCalculator({
       const data = (await response.json()) as {
         quotes: AdminQuote[]
         metrics: QuoteCommercialMetricSet
+        profitability_by_job: QuoteJobProfitabilitySet
       }
       setQuotes(data.quotes)
       setQuoteMetrics(data.metrics)
+      setQuoteProfitabilityByJob(data.profitability_by_job)
       setQuoteState('ready')
     } catch (error) {
       setMessage(
@@ -556,6 +589,8 @@ export default function AdminCostCalculator({
 
 
   const activeQuoteMetrics = quoteMetrics?.[quoteMetricPeriod] ?? null
+  const activeJobProfitability =
+    quoteProfitabilityByJob?.[quoteMetricPeriod] ?? []
   const activeAcceptanceRate = activeQuoteMetrics
     ? acceptanceRate(activeQuoteMetrics)
     : null
@@ -2328,6 +2363,82 @@ export default function AdminCostCalculator({
                           Exactos
                           <strong>{activeQuoteMetrics.actual_on_target_count}</strong>
                         </span>
+                      </div>
+                    </section>
+                  )}
+
+                  {activeJobProfitability.length > 0 && (
+                    <section className="admin-quote-job-profitability">
+                      <div className="admin-quote-job-profitability-heading">
+                        <div>
+                          <span>Rentabilidad por tipo de trabajo</span>
+                          <strong>
+                            Qué clase de proyecto deja mejor resultado real
+                          </strong>
+                        </div>
+                        <small>
+                          Solo PED con costo real cargado en el período seleccionado.
+                        </small>
+                      </div>
+
+                      <div className="admin-quote-job-profitability-grid">
+                        {activeJobProfitability.map((item) => {
+                          const margin = grossMargin(item.revenue, item.actual_cost)
+                          const variance = costVariancePercent(
+                            item.estimated_cost,
+                            item.actual_cost,
+                          )
+
+                          return (
+                            <article key={item.job_type}>
+                              <div className="admin-quote-job-profitability-top">
+                                <div>
+                                  <span>{quoteJobTypeLabel(item.job_type)}</span>
+                                  <strong>{item.closed_count} PED</strong>
+                                </div>
+                                <strong>{money(Number(item.profit))}</strong>
+                              </div>
+
+                              <dl>
+                                <div>
+                                  <dt>Ingreso</dt>
+                                  <dd>{money(Number(item.revenue))}</dd>
+                                </div>
+                                <div>
+                                  <dt>Costo real</dt>
+                                  <dd>{money(Number(item.actual_cost))}</dd>
+                                </div>
+                                <div>
+                                  <dt>Margen</dt>
+                                  <dd>
+                                    {margin === null
+                                      ? '—'
+                                      : String(Math.round(margin)) + '%'}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>Desvío</dt>
+                                  <dd>
+                                    {variance === null
+                                      ? '—'
+                                      : (variance > 0 ? '+' : '') +
+                                        String(Math.round(variance)) +
+                                        '%'}
+                                  </dd>
+                                </div>
+                              </dl>
+
+                              <footer>
+                                <span>
+                                  Sobre estimación <strong>{item.overrun_count}</strong>
+                                </span>
+                                <span>
+                                  Bajo estimación <strong>{item.saving_count}</strong>
+                                </span>
+                              </footer>
+                            </article>
+                          )
+                        })}
                       </div>
                     </section>
                   )}

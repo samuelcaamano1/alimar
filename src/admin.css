@@ -5931,3 +5931,160 @@
     grid-column: 2;
   }
 }
+
+
+/* ALIMAR PROFITABILITY BY JOB 1A.39 */
+.admin-quote-job-profitability {
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(63,120,138,.15);
+  border-radius: 11px;
+  background: rgba(100,175,198,.045);
+}
+
+.admin-quote-job-profitability-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-quote-job-profitability-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-quote-job-profitability-heading span {
+  color: var(--admin-blue-dark);
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.admin-quote-job-profitability-heading > div > strong {
+  font-size: .68rem;
+}
+
+.admin-quote-job-profitability-heading > small {
+  max-width: 380px;
+  color: var(--admin-muted);
+  font-size: .54rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.admin-quote-job-profitability-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 8px;
+}
+
+.admin-quote-job-profitability-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid rgba(12,16,20,.07);
+  border-radius: 10px;
+  background: rgba(255,255,255,.5);
+}
+
+.admin-quote-job-profitability-top {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-quote-job-profitability-top > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-quote-job-profitability-top span {
+  overflow: hidden;
+  color: var(--admin-muted);
+  font-size: .54rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-quote-job-profitability-top > div > strong {
+  color: var(--admin-ink);
+  font-size: .58rem;
+}
+
+.admin-quote-job-profitability-top > strong {
+  color: #286b4a;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: .9rem;
+  white-space: nowrap;
+}
+
+.admin-quote-job-profitability-grid dl {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 5px;
+  margin: 0;
+}
+
+.admin-quote-job-profitability-grid dl > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(100,175,198,.045);
+}
+
+.admin-quote-job-profitability-grid dt {
+  color: var(--admin-muted);
+  font-size: .5rem;
+}
+
+.admin-quote-job-profitability-grid dd {
+  overflow: hidden;
+  margin: 0;
+  color: var(--admin-ink);
+  font-size: .59rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+}
+
+.admin-quote-job-profitability-grid footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.admin-quote-job-profitability-grid footer span {
+  padding: 4px 6px;
+  border-radius: 999px;
+  color: var(--admin-muted);
+  background: rgba(12,16,20,.035);
+  font-size: .5rem;
+}
+
+.admin-quote-job-profitability-grid footer strong {
+  color: var(--admin-blue-dark);
+}
+
+@media (max-width: 900px) {
+  .admin-quote-job-profitability-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-quote-job-profitability-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .admin-quote-job-profitability-heading > small {
+    text-align: left;
+  }
+}

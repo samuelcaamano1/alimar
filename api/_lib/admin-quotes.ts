@@ -81,6 +81,19 @@ function formatRow(row: Record<string, unknown>) {
   }
 }
 
+function formatJobProfitability(row: Record<string, unknown>) {
+  return {
+    job_type: String(row.job_type ?? 'unknown'),
+    closed_count: Number(row.closed_count ?? 0),
+    revenue: String(row.revenue ?? '0'),
+    estimated_cost: String(row.estimated_cost ?? '0'),
+    actual_cost: String(row.actual_cost ?? '0'),
+    profit: String(row.profit ?? '0'),
+    overrun_count: Number(row.overrun_count ?? 0),
+    saving_count: Number(row.saving_count ?? 0),
+  }
+}
+
 function formatCommercialMetrics(row: Record<string, unknown>) {
   return {
     total_count: Number(row.total_count ?? 0),
@@ -109,6 +122,64 @@ function formatCommercialMetrics(row: Record<string, unknown>) {
     reject_cancelled_count: Number(row.reject_cancelled_count ?? 0),
     reject_other_count: Number(row.reject_other_count ?? 0),
   }
+}
+
+async function profitabilityByJob(
+  databaseUrl: string,
+  period: 'month' | 'all',
+) {
+  const sql = neon(databaseUrl)
+
+  const rows = period === 'month'
+    ? await sql`
+        SELECT
+          quote.job_type,
+          COUNT(*)::int AS closed_count,
+          COALESCE(SUM(quote.total_price), 0)::text AS revenue,
+          COALESCE(SUM(quote.real_cost), 0)::text AS estimated_cost,
+          COALESCE(SUM(linked_order.actual_cost), 0)::text AS actual_cost,
+          COALESCE(
+            SUM(quote.total_price - linked_order.actual_cost),
+            0
+          )::text AS profit,
+          COUNT(*) FILTER (
+            WHERE linked_order.actual_cost > quote.real_cost
+          )::int AS overrun_count,
+          COUNT(*) FILTER (
+            WHERE linked_order.actual_cost < quote.real_cost
+          )::int AS saving_count
+        FROM quotes quote
+        JOIN orders linked_order ON linked_order.quote_id = quote.id
+        WHERE linked_order.actual_cost IS NOT NULL
+          AND linked_order.actual_cost_updated_at >= date_trunc('month', CURRENT_DATE)
+        GROUP BY quote.job_type
+        ORDER BY COUNT(*) DESC, quote.job_type ASC
+      `
+    : await sql`
+        SELECT
+          quote.job_type,
+          COUNT(*)::int AS closed_count,
+          COALESCE(SUM(quote.total_price), 0)::text AS revenue,
+          COALESCE(SUM(quote.real_cost), 0)::text AS estimated_cost,
+          COALESCE(SUM(linked_order.actual_cost), 0)::text AS actual_cost,
+          COALESCE(
+            SUM(quote.total_price - linked_order.actual_cost),
+            0
+          )::text AS profit,
+          COUNT(*) FILTER (
+            WHERE linked_order.actual_cost > quote.real_cost
+          )::int AS overrun_count,
+          COUNT(*) FILTER (
+            WHERE linked_order.actual_cost < quote.real_cost
+          )::int AS saving_count
+        FROM quotes quote
+        JOIN orders linked_order ON linked_order.quote_id = quote.id
+        WHERE linked_order.actual_cost IS NOT NULL
+        GROUP BY quote.job_type
+        ORDER BY COUNT(*) DESC, quote.job_type ASC
+      `
+
+  return (rows as Record<string, unknown>[]).map(formatJobProfitability)
 }
 
 async function commercialMetrics(
@@ -363,9 +434,11 @@ export async function listAdminQuotes(databaseUrl: string) {
       LIMIT 100
     `
 
-    const [monthMetrics, allMetrics] = await Promise.all([
+    const [monthMetrics, allMetrics, monthByJob, allByJob] = await Promise.all([
       commercialMetrics(databaseUrl, 'month'),
       commercialMetrics(databaseUrl, 'all'),
+      profitabilityByJob(databaseUrl, 'month'),
+      profitabilityByJob(databaseUrl, 'all'),
     ])
 
     return Response.json(
@@ -379,6 +452,10 @@ export async function listAdminQuotes(databaseUrl: string) {
         metrics: {
           month: monthMetrics,
           all: allMetrics,
+        },
+        profitability_by_job: {
+          month: monthByJob,
+          all: allByJob,
         },
       },
       { headers: { 'Cache-Control': 'no-store' } },
