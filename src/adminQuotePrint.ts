@@ -253,7 +253,7 @@ export function openQuotePrintView(
   <title>${escapeHtml(quote.public_code)} · Alimar</title>
   <style>
     :root {
-      color-scheme: light;
+      color-scheme: only light;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --ink: #0c1014;
       --muted: #69747b;
@@ -582,13 +582,157 @@ export function openQuotePrintView(
     }
 
     @media print {
-      body { background: #fff; }
+      html,
+      body {
+        width: 210mm;
+        min-height: 0;
+        margin: 0;
+        color: #0c1014 !important;
+        background: #fff !important;
+        color-scheme: only light;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
       .toolbar { display: none !important; }
+
       .page {
         width: 210mm;
-        min-height: 297mm;
+        min-height: 0;
         margin: 0;
-        box-shadow: none;
+        padding: 9mm 11mm 8mm;
+        color: #0c1014 !important;
+        background: #fff !important;
+        box-shadow: none !important;
+      }
+
+      .page,
+      .page * {
+        color-scheme: only light;
+      }
+
+      .brand {
+        gap: 16px;
+        padding-bottom: 8px;
+        border-bottom-color: #0c1014 !important;
+      }
+
+      .brand-name strong { font-size: 25px; }
+      .brand-name span { font-size: 8px; }
+      .doc-meta strong { font-size: 12px; }
+      .doc-meta span { font-size: 8px; }
+
+      .hero {
+        gap: 14px;
+        padding: 10px 0 8px;
+      }
+
+      .hero h1 { font-size: 21px; }
+      .hero p { margin-top: 4px; font-size: 8px; }
+      .status { padding: 4px 7px; font-size: 8px; background: #eef7fa !important; }
+
+      .grid {
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      .card {
+        min-height: 48px;
+        padding: 6px 8px;
+        color: #0c1014 !important;
+        background: #fff !important;
+        border-color: #cfd7da !important;
+        break-inside: avoid;
+      }
+
+      .card span { margin-bottom: 2px; font-size: 7px; }
+      .card strong { font-size: 9px; }
+      .card small { margin-top: 2px; font-size: 7.5px; }
+
+      .section-title {
+        margin: 9px 0 5px;
+        color: #3f788a !important;
+        font-size: 8px;
+      }
+
+      table {
+        border-color: #cfd7da !important;
+        background: #fff !important;
+        break-inside: avoid;
+      }
+
+      th,
+      td {
+        padding: 5px 7px;
+        border-bottom-color: #dce2e4 !important;
+        color: #0c1014 !important;
+        font-size: 8px;
+      }
+
+      th {
+        color: #4f5b61 !important;
+        background: #eef7fa !important;
+        font-size: 7px;
+      }
+
+      td span { color: #5a666c !important; font-size: 7px; }
+
+      .totals {
+        grid-template-columns: minmax(0, 1fr) minmax(210px, .62fr);
+        gap: 10px;
+        margin-top: 8px;
+      }
+
+      .notes {
+        min-height: 58px;
+        padding: 7px 8px;
+        color: #0c1014 !important;
+        background: #fff !important;
+        border-color: #cfd7da !important;
+        break-inside: avoid;
+      }
+
+      .notes strong { margin-bottom: 3px; font-size: 8px; }
+      .notes p { color: #5a666c !important; font-size: 7.5px; line-height: 1.35; }
+      .total-box { gap: 2px; }
+
+      .total-line {
+        padding: 4px 6px;
+        border-bottom-color: #dce2e4 !important;
+        color: #0c1014 !important;
+        font-size: 8px;
+      }
+
+      .total-line span { color: #5a666c !important; }
+      .total-line.real { background: #eef7fa !important; border-color: #b8d5de !important; }
+
+      .final {
+        margin-top: 4px;
+        padding: 8px 9px;
+        color: #0c1014 !important;
+        background: #f3e8cf !important;
+        border: 1px solid #c8b893;
+        break-inside: avoid;
+      }
+
+      .final span,
+      .final strong,
+      .final small {
+        color: #0c1014 !important;
+      }
+
+      .final span { font-size: 7px; }
+      .final strong { margin-top: 2px; font-size: 18px; }
+      .final small { margin-top: 2px; font-size: 7px; opacity: 1; }
+
+      footer {
+        margin-top: 9px;
+        padding-top: 6px;
+        color: #5a666c !important;
+        border-top-color: #dce2e4 !important;
+        font-size: 7px;
+        line-height: 1.3;
+        break-inside: avoid;
       }
     }
 

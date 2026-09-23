@@ -80,6 +80,111 @@ type CustomRequestSuccess = {
   whatsappMessage: string
 }
 
+type CustomRequestType = 'paper' | '3d' | 'event' | 'design' | 'other'
+type CustomRequestExampleKey =
+  | 'tattoo-paper'
+  | 'birthday'
+  | 'invitations'
+  | 'stickers'
+  | 'boxes'
+  | 'signs'
+  | '3d'
+  | 'other'
+
+type CustomRequestExample = {
+  key: CustomRequestExampleKey
+  title: string
+  hint: string
+  requestType: CustomRequestType
+  art: string
+  sizePlaceholder: string
+  themePlaceholder: string
+  descriptionPlaceholder: string
+}
+
+const customRequestExamples: CustomRequestExample[] = [
+  {
+    key: 'tattoo-paper',
+    title: 'Papel para tatuajes',
+    hint: 'Hojas, diseños o referencias impresas parecidas a lo que viste.',
+    requestType: 'paper',
+    art: 'sheet',
+    sizePlaceholder: 'Ej. chico, mediano o del tamaño de una hoja común',
+    themePlaceholder: 'Ej. líneas negras, flores, nombres, dibujos...',
+    descriptionPlaceholder: 'Contanos qué querés que aparezca en la hoja y cómo te imaginás el resultado.',
+  },
+  {
+    key: 'birthday',
+    title: 'Cumpleaños y mesa dulce',
+    hint: 'Cartelitos, toppers, etiquetas y detalles con una misma temática.',
+    requestType: 'event',
+    art: 'party',
+    sizePlaceholder: 'Ej. para una mesa chica, mediana o grande',
+    themePlaceholder: 'Ej. dinosaurios, fútbol, princesas, tonos pastel...',
+    descriptionPlaceholder: 'Contanos de quién es el cumple, la edad y qué cosas te gustaría tener.',
+  },
+  {
+    key: 'invitations',
+    title: 'Tarjetitas e invitaciones',
+    hint: 'Para cumpleaños, bautismos, eventos o una ocasión especial.',
+    requestType: 'paper',
+    art: 'card',
+    sizePlaceholder: 'Ej. como una tarjeta, postal o foto',
+    themePlaceholder: 'Ej. elegante, infantil, flores, colores claros...',
+    descriptionPlaceholder: 'Decinos para qué evento es y qué texto o datos tendría que llevar.',
+  },
+  {
+    key: 'stickers',
+    title: 'Stickers y etiquetas',
+    hint: 'Para emprendimientos, regalos, frascos, bolsas o recuerdos.',
+    requestType: 'paper',
+    art: 'stickers',
+    sizePlaceholder: 'Ej. chiquitos para bolsitas o medianos para frascos',
+    themePlaceholder: 'Ej. logo, nombre, colores de tu marca...',
+    descriptionPlaceholder: 'Contanos dónde los vas a usar y qué tendría que decir o mostrar cada sticker.',
+  },
+  {
+    key: 'boxes',
+    title: 'Cajitas y souvenirs',
+    hint: 'Packaging, recuerdos y pequeños detalles armados para regalar.',
+    requestType: 'event',
+    art: 'box',
+    sizePlaceholder: 'Ej. para golosinas, souvenir chico o regalo mediano',
+    themePlaceholder: 'Ej. nombre, personaje, colores del evento...',
+    descriptionPlaceholder: 'Contanos qué querés guardar o entregar adentro y cómo te gustaría que se vea.',
+  },
+  {
+    key: 'signs',
+    title: 'Carteles y folletos',
+    hint: 'Para promocionar, informar, decorar o mostrar algo importante.',
+    requestType: 'design',
+    art: 'poster',
+    sizePlaceholder: 'Ej. para mano, mostrador, pared o vidriera',
+    themePlaceholder: 'Ej. llamativo, simple, elegante, con fotos...',
+    descriptionPlaceholder: 'Contanos qué necesitás comunicar y qué información sí o sí tiene que aparecer.',
+  },
+  {
+    key: '3d',
+    title: 'Figuras y piezas 3D',
+    hint: 'Nombres, adornos, figuras, soportes o una pieza que imaginaste.',
+    requestType: '3d',
+    art: 'cube',
+    sizePlaceholder: 'Ej. cabe en la mano, 10 cm, tamaño adorno...',
+    themePlaceholder: 'Ej. rojo y negro, personaje, nombre, estilo simple...',
+    descriptionPlaceholder: 'Contanos qué pieza querés, para qué la usarías y cómo debería verse.',
+  },
+  {
+    key: 'other',
+    title: 'Tengo otra idea',
+    hint: 'Si no encaja en ninguna opción, contanos con tus palabras.',
+    requestType: 'other',
+    art: 'idea',
+    sizePlaceholder: 'Si sabés el tamaño, contanos más o menos cuál',
+    themePlaceholder: 'Colores, estilo o referencias que te gusten',
+    descriptionPlaceholder: 'Contanos la idea como se la contarías a alguien por WhatsApp. No hace falta usar palabras técnicas.',
+  },
+]
+
 const CART_STORAGE_KEY = 'alimar-cart-v1'
 
 function loadStoredCart(): CartItem[] {
@@ -289,6 +394,8 @@ function StorefrontApp() {
   const [customRequestMessage, setCustomRequestMessage] = useState('')
   const [customRequestSuccess, setCustomRequestSuccess] =
     useState<CustomRequestSuccess | null>(null)
+  const [selectedCustomRequestExampleKey, setSelectedCustomRequestExampleKey] =
+    useState<CustomRequestExampleKey | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -492,6 +599,13 @@ function StorefrontApp() {
 
     const formElement = event.currentTarget
     const form = new FormData(formElement)
+    const rawDescription = String(form.get('description') ?? '').trim()
+    const selectedExample = customRequestExamples.find(
+      (example) => example.key === selectedCustomRequestExampleKey,
+    )
+    const requestDescription = selectedExample
+      ? `Ejemplo elegido: ${selectedExample.title}\n\n${rawDescription}`
+      : rawDescription
 
     setCustomRequestBusy(true)
     setCustomRequestMessage('')
@@ -504,12 +618,12 @@ function StorefrontApp() {
           requestId: customRequestId || crypto.randomUUID(),
           customerName: form.get('customerName'),
           customerPhone: form.get('customerPhone'),
-          requestType: form.get('requestType'),
+          requestType: selectedExample?.requestType ?? form.get('requestType'),
           quantity: form.get('quantity'),
           neededDate: form.get('neededDate'),
           dimensions: form.get('dimensions'),
           theme: form.get('theme'),
-          description: form.get('description'),
+          description: requestDescription,
           referenceUrl: form.get('referenceUrl'),
         }),
       })
@@ -551,6 +665,10 @@ function StorefrontApp() {
 
     return source.flatMap((category) => category.products)
   }, [catalog, activeCategory])
+
+  const selectedCustomRequestExample = customRequestExamples.find(
+    (example) => example.key === selectedCustomRequestExampleKey,
+  ) ?? null
 
   const selectedVariant =
     selectedProduct?.variants.find((variant) => variant.id === selectedVariantId) ?? null
@@ -842,10 +960,10 @@ function StorefrontApp() {
               <header className="custom-request-header">
                 <div>
                   <p className="eyebrow">Proyecto a medida</p>
-                  <h2 id="custom-request-title">Contanos qué imaginaste.</h2>
+                  <h2 id="custom-request-title">Elegí algo parecido a tu idea.</h2>
                   <p>
-                    No necesitás saber todos los detalles. Con esta información podemos entender
-                    la idea y preparar un presupuesto.
+                    No hace falta saber tamaños de papel ni nombres técnicos. Elegí un ejemplo y
+                    después contanos con tus palabras para preparar el presupuesto.
                   </p>
                 </div>
 
@@ -886,112 +1004,179 @@ function StorefrontApp() {
                   </div>
                 </div>
               ) : (
-                <form className="custom-request-form" onSubmit={submitCustomRequest}>
-                  <div className="custom-request-fields">
-                    <label>
-                      ¿Qué necesitás?
-                      <select name="requestType" defaultValue="paper" required>
-                        <option value="paper">Papelería / impresión</option>
-                        <option value="3d">Impresión 3D</option>
-                        <option value="event">Evento / cumpleaños</option>
-                        <option value="design">Diseño gráfico</option>
-                        <option value="other">Otro personalizado</option>
-                      </select>
-                    </label>
+                selectedCustomRequestExample ? (
+                  <form className="custom-request-form" onSubmit={submitCustomRequest}>
+                    <div className="custom-request-selected-example">
+                      <div
+                        className={`custom-request-example-art is-${selectedCustomRequestExample.art}`}
+                        aria-hidden="true"
+                      >
+                        <span />
+                        <span />
+                        <i />
+                      </div>
 
-                    <label>
-                      Cantidad aproximada
-                      <input
-                        name="quantity"
-                        type="number"
-                        min={1}
-                        max={9999}
-                        placeholder="Ej. 30"
-                      />
-                    </label>
+                      <div>
+                        <span>Elegiste algo parecido a</span>
+                        <strong>{selectedCustomRequestExample.title}</strong>
+                        <small>{selectedCustomRequestExample.hint}</small>
+                      </div>
 
-                    <label>
-                      ¿Para cuándo lo necesitás?
-                      <input name="neededDate" type="date" />
-                    </label>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCustomRequestExampleKey(null)}
+                      >
+                        Cambiar ejemplo
+                      </button>
+                    </div>
 
-                    <label>
-                      Medidas aproximadas
-                      <input name="dimensions" maxLength={120} placeholder="Ej. A5, 10 × 15 cm..." />
-                    </label>
+                    <input
+                      type="hidden"
+                      name="requestType"
+                      value={selectedCustomRequestExample.requestType}
+                    />
 
-                    <label className="custom-request-span-2">
-                      Tema, colores o estilo
-                      <input
-                        name="theme"
-                        maxLength={240}
-                        placeholder="Ej. dinosaurios, tonos pastel, minimalista..."
-                      />
-                    </label>
+                    <div className="custom-request-fields">
+                      <label>
+                        ¿Cuántos necesitás más o menos?
+                        <input
+                          name="quantity"
+                          type="number"
+                          min={1}
+                          max={9999}
+                          placeholder="Ej. 30"
+                        />
+                      </label>
 
-                    <label className="custom-request-span-2">
-                      Contanos la idea
-                      <textarea
-                        name="description"
-                        rows={4}
-                        minLength={10}
-                        maxLength={3000}
-                        placeholder="Qué querés hacer, cómo lo imaginás y cualquier detalle importante."
-                        required
-                      />
-                    </label>
+                      <label>
+                        ¿Para cuándo lo necesitás?
+                        <input name="neededDate" type="date" />
+                      </label>
 
-                    <label className="custom-request-span-2">
-                      Link de referencia
-                      <input
-                        name="referenceUrl"
-                        type="url"
-                        maxLength={500}
-                        placeholder="https://... (opcional)"
-                      />
-                    </label>
+                      <label className="custom-request-span-2">
+                        Tamaño aproximado <span className="custom-request-optional">si lo sabés</span>
+                        <input
+                          name="dimensions"
+                          maxLength={120}
+                          placeholder={selectedCustomRequestExample.sizePlaceholder}
+                        />
+                      </label>
 
-                    <label>
-                      Tu nombre
-                      <input
-                        name="customerName"
-                        autoComplete="name"
-                        maxLength={120}
-                        required
-                      />
-                    </label>
+                      <label className="custom-request-span-2">
+                        ¿Cómo te gustaría que se vea?
+                        <input
+                          name="theme"
+                          maxLength={240}
+                          placeholder={selectedCustomRequestExample.themePlaceholder}
+                        />
+                      </label>
 
-                    <label>
-                      WhatsApp
-                      <input
-                        name="customerPhone"
-                        inputMode="tel"
-                        autoComplete="tel"
-                        maxLength={40}
-                        placeholder="Ej. 11 3568 2635"
-                        required
-                      />
-                    </label>
+                      <label className="custom-request-span-2">
+                        Contanos con tus palabras
+                        <textarea
+                          name="description"
+                          rows={4}
+                          minLength={10}
+                          maxLength={2600}
+                          placeholder={selectedCustomRequestExample.descriptionPlaceholder}
+                          required
+                        />
+                      </label>
+
+                      <label className="custom-request-span-2">
+                        ¿Viste algo parecido? Pegá el link <span className="custom-request-optional">opcional</span>
+                        <input
+                          name="referenceUrl"
+                          type="url"
+                          maxLength={500}
+                          placeholder="Instagram, Pinterest, una publicación, etc."
+                        />
+                      </label>
+
+                      <label>
+                        Tu nombre
+                        <input
+                          name="customerName"
+                          autoComplete="name"
+                          maxLength={120}
+                          required
+                        />
+                      </label>
+
+                      <label>
+                        WhatsApp
+                        <input
+                          name="customerPhone"
+                          inputMode="tel"
+                          autoComplete="tel"
+                          maxLength={40}
+                          placeholder="Ej. 11 3568 2635"
+                          required
+                        />
+                      </label>
+                    </div>
+
+                    {customRequestMessage && (
+                      <div className="custom-request-error">{customRequestMessage}</div>
+                    )}
+
+                    <footer className="custom-request-footer">
+                      <a href={site.whatsappUrl} target="_blank" rel="noreferrer">
+                        Prefiero hablar directo por WhatsApp ↗
+                      </a>
+
+                      <button
+                        className="button button-primary"
+                        type="submit"
+                        disabled={customRequestBusy}
+                      >
+                        {customRequestBusy ? 'Enviando…' : 'Enviar mi idea'}
+                      </button>
+                    </footer>
+                  </form>
+                ) : (
+                  <div className="custom-request-picker">
+                    <div className="custom-request-picker-copy">
+                      <strong>¿Qué se parece más a lo que querés?</strong>
+                      <p>
+                        No hace falta saber el tamaño exacto, qué papel lleva ni usar palabras técnicas.
+                        Elegí algo parecido y después contanos la idea como la explicarías por WhatsApp.
+                      </p>
+                    </div>
+
+                    <div className="custom-request-example-grid">
+                      {customRequestExamples.map((example) => (
+                        <button
+                          className="custom-request-example"
+                          type="button"
+                          key={example.key}
+                          onClick={() => setSelectedCustomRequestExampleKey(example.key)}
+                        >
+                          <div
+                            className={`custom-request-example-art is-${example.art}`}
+                            aria-hidden="true"
+                          >
+                            <span />
+                            <span />
+                            <i />
+                          </div>
+                          <div>
+                            <strong>{example.title}</strong>
+                            <span>{example.hint}</span>
+                          </div>
+                          <i aria-hidden="true">→</i>
+                        </button>
+                      ))}
+                    </div>
+
+                    <footer className="custom-request-picker-footer">
+                      <span>¿Preferís explicarlo hablando?</span>
+                      <a href={site.whatsappUrl} target="_blank" rel="noreferrer">
+                        Escribinos directo por WhatsApp ↗
+                      </a>
+                    </footer>
                   </div>
-
-                  {customRequestMessage && (
-                    <div className="custom-request-error">{customRequestMessage}</div>
-                  )}
-
-                  <footer className="custom-request-footer">
-                    <a href={site.whatsappUrl} target="_blank" rel="noreferrer">
-                      Prefiero hablar directo por WhatsApp ↗
-                    </a>
-
-                    <button
-                      className="button button-primary"
-                      type="submit"
-                      disabled={customRequestBusy}
-                    >
-                      {customRequestBusy ? 'Enviando…' : 'Enviar solicitud'}
-                    </button>
-                  </footer>
-                </form>
+                )
               )}
             </section>
           </div>
