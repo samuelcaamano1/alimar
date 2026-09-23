@@ -38,6 +38,7 @@ export type QuoteSnapshot = {
 export type AdminQuote = {
   id: string
   public_code: string
+  public_token: string
   status: QuoteStatus
   title: string
   customer_name: string | null
@@ -110,9 +111,16 @@ function dateTimeLabel(value: string) {
   }).format(date)
 }
 
+export function quotePublicUrl(quote: AdminQuote) {
+  const url = new URL('/', window.location.origin)
+  url.searchParams.set('presupuesto', quote.public_token)
+  return url.toString()
+}
+
 export function quoteCustomerWhatsappMessage(quote: AdminQuote) {
   const customer = quote.customer_name?.trim() || 'Hola'
   const validity = quote.valid_until ? dateLabel(quote.valid_until) : 'sin vencimiento'
+  const publicUrl = quotePublicUrl(quote)
 
   return [
     `Hola ${customer}, te envío el presupuesto ${quote.public_code} de Alimar.`,
@@ -122,7 +130,9 @@ export function quoteCustomerWhatsappMessage(quote: AdminQuote) {
     `Total: ${money(Number(quote.total_price))}`,
     `Válido hasta: ${validity}`,
     '',
-    'Si estás de acuerdo, respondeme por acá con “Acepto” y lo convertimos en pedido.',
+    `Podés verlo y aceptarlo acá: ${publicUrl}`,
+    '',
+    'Si preferís, también podés responderme por WhatsApp.',
   ].join('\n')
 }
 

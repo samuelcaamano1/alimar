@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from '
 import { alimarLogoDataUrl } from './brand'
 import { site } from './site'
 import CheckoutForm from './CheckoutForm'
+import PublicQuoteView from './PublicQuoteView'
 import {
   clearRecoveredOrder,
   loadRecoveredOrder,
@@ -265,7 +266,7 @@ function productWhatsappUrl(product: CatalogProduct, variant: CatalogVariant | n
   )
 }
 
-function App() {
+function StorefrontApp() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>([])
   const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [activeCategory, setActiveCategory] = useState<string>('all')
@@ -1436,6 +1437,15 @@ function App() {
       </footer>
     </div>
   )
+}
+
+function App() {
+  const searchParams = new URLSearchParams(window.location.search)
+  const publicQuoteToken = searchParams.get('presupuesto')?.trim() ?? ''
+
+  return publicQuoteToken
+    ? <PublicQuoteView token={publicQuoteToken} />
+    : <StorefrontApp />
 }
 
 export default App

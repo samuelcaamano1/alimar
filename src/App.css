@@ -2286,3 +2286,398 @@
     flex-direction: column;
   }
 }
+
+
+/* ALIMAR PUBLIC QUOTE APPROVAL 1A.31 */
+.public-quote-shell {
+  min-height: 100vh;
+  padding: 28px 16px 48px;
+  color: #0c1014;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(100,175,198,.22), transparent 30%),
+    radial-gradient(circle at 88% 86%, rgba(243,232,207,.8), transparent 32%),
+    #f7f2e7;
+}
+
+.public-quote-page,
+.public-quote-loading,
+.public-quote-error {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  border: 1px solid rgba(12,16,20,.1);
+  border-radius: 26px;
+  background: rgba(255,253,247,.94);
+  box-shadow: 0 28px 80px rgba(12,16,20,.1);
+}
+
+.public-quote-page {
+  overflow: hidden;
+}
+
+.public-quote-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(12,16,20,.08);
+}
+
+.public-quote-brand img,
+.public-quote-loading img,
+.public-quote-error img {
+  width: auto;
+  height: 46px;
+  object-fit: contain;
+}
+
+.public-quote-brand > div {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.public-quote-brand span {
+  color: #69747b;
+  font-size: .66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.public-quote-brand strong {
+  color: #3f788a;
+  font-size: .82rem;
+}
+
+.public-quote-hero {
+  display: grid;
+  gap: 8px;
+  padding: 30px 26px 22px;
+}
+
+.public-quote-hero h1 {
+  max-width: 620px;
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+
+.public-quote-intro {
+  max-width: 610px;
+  margin: 4px 0 0;
+  color: #69747b;
+  font-size: .82rem;
+  line-height: 1.55;
+}
+
+.public-quote-status {
+  width: fit-content;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #3f788a;
+  background: rgba(100,175,198,.11);
+  font-size: .63rem;
+  font-weight: 900;
+}
+
+.public-quote-status.is-accepted {
+  color: #286b4a;
+  background: rgba(65,143,98,.12);
+}
+
+.public-quote-status.is-expired,
+.public-quote-status.is-rejected {
+  color: #8a5a2d;
+  background: rgba(181,126,62,.12);
+}
+
+.public-quote-work {
+  display: grid;
+  gap: 4px;
+  margin: 0 26px 12px;
+  padding: 15px;
+  border: 1px solid rgba(63,120,138,.18);
+  border-radius: 14px;
+  background: rgba(100,175,198,.07);
+}
+
+.public-quote-work span,
+.public-quote-grid span,
+.public-quote-total span {
+  color: #69747b;
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.public-quote-work strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.18rem;
+}
+
+.public-quote-work small {
+  color: #69747b;
+  font-size: .68rem;
+}
+
+.public-quote-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 9px;
+  padding: 0 26px 12px;
+}
+
+.public-quote-grid > div {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 13px;
+  border: 1px solid rgba(12,16,20,.08);
+  border-radius: 12px;
+  background: rgba(255,255,255,.45);
+}
+
+.public-quote-grid strong {
+  font-size: .9rem;
+}
+
+.public-quote-grid small {
+  color: #69747b;
+  font-size: .62rem;
+  line-height: 1.35;
+}
+
+.public-quote-total {
+  display: grid;
+  gap: 4px;
+  margin: 0 26px 14px;
+  padding: 18px;
+  border-radius: 16px;
+  color: #f3e8cf;
+  background: #0c1014;
+}
+
+.public-quote-total span,
+.public-quote-total small {
+  color: rgba(243,232,207,.72);
+}
+
+.public-quote-total strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 2rem;
+}
+
+.public-quote-total small {
+  font-size: .65rem;
+}
+
+.public-quote-message {
+  margin: 0 26px 12px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  color: #8a4e2d;
+  background: rgba(188,124,75,.1);
+  font-size: .7rem;
+}
+
+.public-quote-message.is-success {
+  color: #286b4a;
+  background: rgba(65,143,98,.1);
+}
+
+.public-quote-accepted,
+.public-quote-expired,
+.public-quote-confirm {
+  margin: 0 26px 14px;
+  padding: 14px;
+  border-radius: 14px;
+}
+
+.public-quote-accepted {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr);
+  gap: 10px;
+  border: 1px solid rgba(65,143,98,.2);
+  background: rgba(65,143,98,.08);
+}
+
+.public-quote-accepted > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #418f62;
+  font-weight: 900;
+}
+
+.public-quote-accepted > div,
+.public-quote-expired,
+.public-quote-confirm > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.public-quote-accepted p,
+.public-quote-expired p,
+.public-quote-confirm p {
+  margin: 0;
+  color: #69747b;
+  font-size: .7rem;
+  line-height: 1.5;
+}
+
+.public-quote-accepted small {
+  color: #286b4a;
+  font-size: .64rem;
+  font-weight: 800;
+}
+
+.public-quote-expired {
+  border: 1px solid rgba(181,126,62,.2);
+  background: rgba(181,126,62,.08);
+}
+
+.public-quote-confirm {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(63,120,138,.24);
+  background: rgba(100,175,198,.08);
+}
+
+.public-quote-confirm span {
+  color: #3f788a;
+  font-size: .6rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.public-quote-confirm > div:last-child {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.public-quote-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px 26px 24px;
+}
+
+.public-quote-actions button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.public-quote-footer {
+  display: grid;
+  gap: 3px;
+  padding: 16px 26px 20px;
+  border-top: 1px solid rgba(12,16,20,.08);
+  color: #69747b;
+}
+
+.public-quote-footer strong {
+  color: #0c1014;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.public-quote-footer span {
+  font-size: .68rem;
+}
+
+.public-quote-footer small {
+  margin-top: 4px;
+  font-size: .58rem;
+  line-height: 1.4;
+}
+
+.public-quote-loading,
+.public-quote-error {
+  min-height: 430px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 30px;
+  text-align: center;
+}
+
+.public-quote-loading span,
+.public-quote-error > span {
+  color: #3f788a;
+  font-size: .68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.public-quote-error h1 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.public-quote-error p {
+  max-width: 460px;
+  margin: 0 0 8px;
+  color: #69747b;
+}
+
+@media (max-width: 650px) {
+  .public-quote-shell {
+    padding: 8px 8px 24px;
+  }
+
+  .public-quote-page,
+  .public-quote-loading,
+  .public-quote-error {
+    border-radius: 18px;
+  }
+
+  .public-quote-brand,
+  .public-quote-hero,
+  .public-quote-footer {
+    padding-left: 17px;
+    padding-right: 17px;
+  }
+
+  .public-quote-work,
+  .public-quote-total,
+  .public-quote-message,
+  .public-quote-accepted,
+  .public-quote-expired,
+  .public-quote-confirm {
+    margin-left: 17px;
+    margin-right: 17px;
+  }
+
+  .public-quote-grid {
+    grid-template-columns: 1fr;
+    padding-left: 17px;
+    padding-right: 17px;
+  }
+
+  .public-quote-actions {
+    display: grid;
+    padding-left: 17px;
+    padding-right: 17px;
+  }
+
+  .public-quote-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .public-quote-confirm > div:last-child {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

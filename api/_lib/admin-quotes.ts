@@ -50,6 +50,7 @@ function formatRow(row: Record<string, unknown>) {
   return {
     id: String(row.id ?? ''),
     public_code: `PRE-${String(number).padStart(6, '0')}`,
+    public_token: String(row.public_token ?? ''),
     status: String(row.status ?? 'draft'),
     title: String(row.title ?? ''),
     customer_name: row.customer_name ? String(row.customer_name) : null,
@@ -80,6 +81,7 @@ export async function listAdminQuotes(databaseUrl: string) {
       SELECT
         quote.id::text,
         quote.quote_number,
+        quote.public_token,
         quote.status,
         quote.title,
         quote.customer_name,
@@ -321,6 +323,7 @@ export async function createAdminQuote(
           RETURNING
             id::text,
             quote_number,
+            public_token,
             status,
             title,
             customer_name,
@@ -388,6 +391,7 @@ export async function updateAdminQuote(
       RETURNING
         id::text,
         quote_number,
+        public_token,
         status,
         title,
         customer_name,

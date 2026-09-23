@@ -1,6 +1,7 @@
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 import { neon } from '@neondatabase/serverless'
+import { getPublicQuote } from './_lib/public-quotes.js'
 
 type CatalogRow = {
   category_id: string
@@ -46,6 +47,13 @@ export async function GET(request: Request) {
   try {
     const sql = neon(databaseUrl)
     const requestUrl = new URL(request.url)
+
+    if (requestUrl.searchParams.get('view') === 'quote') {
+      return getPublicQuote(
+        databaseUrl,
+        requestUrl.searchParams.get('token') ?? '',
+      )
+    }
 
     if (requestUrl.searchParams.get('view') === 'images') {
       const productId = requestUrl.searchParams.get('productId') ?? ''

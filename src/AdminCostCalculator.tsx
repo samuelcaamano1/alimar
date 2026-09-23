@@ -3,6 +3,7 @@ import type { CustomRequest } from './AdminCustomRequests'
 import {
   openQuotePrintView,
   quoteCustomerWhatsappUrl,
+  quotePublicUrl,
   type AdminQuote,
   type QuoteSnapshot,
   type QuoteStatus,
@@ -383,10 +384,10 @@ export default function AdminCostCalculator({
   }, [loadResources])
 
   useEffect(() => {
-    if (view === 'quotes' && quoteState === 'idle') {
+    if (view === 'quotes') {
       void loadQuotes()
     }
-  }, [loadQuotes, quoteState, view])
+  }, [loadQuotes, view])
 
   useEffect(() => {
     if (!quoteSource) return
@@ -924,6 +925,17 @@ export default function AdminCostCalculator({
     }
   }
 
+  async function copyQuoteLink(quote: AdminQuote) {
+    const url = quotePublicUrl(quote)
+
+    try {
+      await navigator.clipboard.writeText(url)
+      setMessage(`Link de ${quote.public_code} copiado.`)
+    } catch {
+      window.prompt('Copiá este link del presupuesto:', url)
+    }
+  }
+
   function openQuoteWhatsapp(quote: AdminQuote) {
     const url = quoteCustomerWhatsappUrl(quote)
 
@@ -933,6 +945,10 @@ export default function AdminCostCalculator({
     }
 
     window.open(url, '_blank', 'noopener,noreferrer')
+
+    if (quote.status === 'draft') {
+      void updateQuoteStatus(quote, 'sent')
+    }
   }
 
   async function convertQuoteToOrder(quote: AdminQuote) {
@@ -1939,6 +1955,14 @@ export default function AdminCostCalculator({
                   <button
                     className="admin-secondary"
                     type="button"
+                    onClick={() => void copyQuoteLink(quote)}
+                  >
+                    Copiar link
+                  </button>
+
+                  <button
+                    className="admin-secondary"
+                    type="button"
                     onClick={() => {
                       if (!openQuotePrintView(quote)) {
                         setMessage('El navegador bloqueó la vista de impresión.')
@@ -2490,6 +2514,14 @@ export default function AdminCostCalculator({
                     Enviar por WhatsApp
                   </button>
                 )}
+
+                <button
+                  className="admin-secondary"
+                  type="button"
+                  onClick={() => void copyQuoteLink(selectedQuote)}
+                >
+                  Copiar link público
+                </button>
 
                 <button
                   className="admin-secondary"
