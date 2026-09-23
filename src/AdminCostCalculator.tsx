@@ -165,6 +165,21 @@ function dateLabel(value: string | null) {
   }).format(date)
 }
 
+function quoteResponseReasonLabel(value: string | null) {
+  switch (value) {
+    case 'price':
+      return 'Precio'
+    case 'timing':
+      return 'Tiempos'
+    case 'cancelled':
+      return 'Ya no lo necesita'
+    case 'other':
+      return 'Otro'
+    default:
+      return 'Sin motivo'
+  }
+}
+
 function daysUntil(value: string | null) {
   if (!value) return null
 
@@ -2100,6 +2115,11 @@ export default function AdminCostCalculator({
                     {quote.last_reminded_at && (
                       <span>Último recordatorio {dateTimeLabel(quote.last_reminded_at)}</span>
                     )}
+                    {quote.status === 'rejected' && (
+                      <span>
+                        No avanzó · {quoteResponseReasonLabel(quote.customer_response_reason)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -2677,6 +2697,18 @@ export default function AdminCostCalculator({
                   <strong>{money(Number(selectedQuote.total_price))}</strong>
                 </div>
               </div>
+
+              {selectedQuote.status === 'rejected' && (
+                <div className="admin-quote-response-feedback">
+                  <strong>Respuesta del cliente</strong>
+                  <span>
+                    No avanzó · {quoteResponseReasonLabel(selectedQuote.customer_response_reason)}
+                  </span>
+                  {selectedQuote.customer_response_note && (
+                    <p>{selectedQuote.customer_response_note}</p>
+                  )}
+                </div>
+              )}
 
               {selectedQuote.notes && (
                 <div className="admin-quote-detail-notes">

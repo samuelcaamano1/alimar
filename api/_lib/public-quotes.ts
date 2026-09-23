@@ -27,6 +27,12 @@ function formatPublicQuote(row: Record<string, unknown>) {
     customer_responded_at: row.customer_responded_at
       ? String(row.customer_responded_at)
       : null,
+    customer_response_reason: row.customer_response_reason
+      ? String(row.customer_response_reason)
+      : null,
+    customer_response_note: row.customer_response_note
+      ? String(row.customer_response_note)
+      : null,
     order_code: row.order_code ? String(row.order_code) : null,
     created_at: String(row.created_at ?? ''),
   }
@@ -57,6 +63,8 @@ async function selectPublicQuote(
       quote.suggested_unit_price::text,
       quote.total_price::text,
       quote.customer_responded_at::text,
+      quote.customer_response_reason,
+      quote.customer_response_note,
       linked_order.public_code AS order_code,
       quote.created_at::text
     FROM quotes quote
@@ -132,6 +140,16 @@ export async function acceptPublicQuote(request: Request) {
   }
 
   const token = typeof body.token === 'string' ? body.token.trim() : ''
+  const decision = body.decision === 'reject' ? 'reject' : 'accept'
+  const reason =
+    typeof body.reason === 'string' &&
+    ['price', 'timing', 'cancelled', 'other'].includes(body.reason)
+      ? body.reason
+      : null
+  const note =
+    typeof body.note === 'string'
+      ? body.note.trim().slice(0, 500)
+      : ''
 
   if (!UUID_RE.test(token)) {
     return Response.json(
@@ -151,7 +169,7 @@ export async function acceptPublicQuote(request: Request) {
       )
     }
 
-    if (current.status === 'accepted') {
+    if (current.status === 'accepted' || current.status === 'rejected') {
       return Response.json(
         { quote: current, existing: true },
         { headers: { 'Cache-Control': 'private, no-store' } },
@@ -172,11 +190,20 @@ export async function acceptPublicQuote(request: Request) {
       )
     }
 
+    if (decision === 'reject' && !reason) {
+      return Response.json(
+        { error: 'Elegí un motivo para continuar.' },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
     const updated = await sql`
       UPDATE quotes
       SET
-        status = 'accepted',
+        status = ${decision === 'reject' ? 'rejected' : 'accepted'},
         customer_responded_at = COALESCE(customer_responded_at, now()),
+        customer_response_reason = ${decision === 'reject' ? reason : null},
+        customer_response_note = ${decision === 'reject' ? note || null : null},
         updated_at = now()
       WHERE public_token = ${token}::uuid
         AND status IN ('draft', 'sent')
@@ -187,7 +214,7 @@ export async function acceptPublicQuote(request: Request) {
     if (updated.length === 0) {
       const latest = await selectPublicQuote(databaseUrl, token)
 
-      if (latest?.status === 'accepted') {
+      if (latest?.status === 'accepted' || latest?.status === 'rejected') {
         return Response.json(
           { quote: latest, existing: true },
           { headers: { 'Cache-Control': 'private, no-store' } },
@@ -200,10 +227,10 @@ export async function acceptPublicQuote(request: Request) {
       )
     }
 
-    const accepted = await selectPublicQuote(databaseUrl, token)
+    const responseQuote = await selectPublicQuote(databaseUrl, token)
 
     return Response.json(
-      { quote: accepted, existing: false },
+      { quote: responseQuote, existing: false },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
   } catch {

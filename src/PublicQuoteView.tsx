@@ -20,6 +20,8 @@ type PublicQuote = {
   suggested_unit_price: string
   total_price: string
   customer_responded_at: string | null
+  customer_response_reason: string | null
+  customer_response_note: string | null
   order_code: string | null
   created_at: string
 }
@@ -86,6 +88,9 @@ export default function PublicQuoteView({ token }: PublicQuoteViewProps) {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [message, setMessage] = useState('')
   const [confirming, setConfirming] = useState(false)
+  const [declining, setDeclining] = useState(false)
+  const [declineReason, setDeclineReason] = useState('')
+  const [declineNote, setDeclineNote] = useState('')
   const [accepting, setAccepting] = useState(false)
 
   useEffect(() => {
@@ -142,7 +147,7 @@ export default function PublicQuoteView({ token }: PublicQuoteViewProps) {
     )
   }, [quote])
 
-  async function acceptQuote() {
+  async function respondToQuote(decision: 'accept' | 'reject') {
     if (!quote || accepting) return
 
     setAccepting(true)
@@ -152,7 +157,12 @@ export default function PublicQuoteView({ token }: PublicQuoteViewProps) {
       const response = await fetch('/api/orders?action=quote-response', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({
+          token,
+          decision,
+          reason: decision === 'reject' ? declineReason : null,
+          note: decision === 'reject' ? declineNote : null,
+        }),
       })
 
       if (!response.ok) throw new Error(await responseMessage(response))
@@ -165,7 +175,12 @@ export default function PublicQuoteView({ token }: PublicQuoteViewProps) {
 
       setQuote(data.quote)
       setConfirming(false)
-      setMessage('Presupuesto aceptado correctamente.')
+      setDeclining(false)
+      setMessage(
+        decision === 'reject'
+          ? 'Gracias por contarnos. Tu respuesta quedó registrada.'
+          : 'Presupuesto aceptado correctamente.',
+      )
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : 'No pudimos registrar la aceptación.',
@@ -303,6 +318,62 @@ export default function PublicQuoteView({ token }: PublicQuoteViewProps) {
           </div>
         ) : null}
 
+        {declining && canAccept && (
+          <div className="public-quote-confirm public-quote-decline">
+            <div>
+              <span>Antes de cerrar</span>
+              <strong>¿Por qué no vas a avanzar?</strong>
+              <p>
+                Nos ayuda a mejorar futuros presupuestos. No modifica ningún otro dato.
+              </p>
+            </div>
+
+            <label>
+              Motivo
+              <select
+                value={declineReason}
+                onChange={(event) => setDeclineReason(event.target.value)}
+              >
+                <option value="">Elegir motivo</option>
+                <option value="price">El precio no me sirve</option>
+                <option value="timing">No llegamos con los tiempos</option>
+                <option value="cancelled">Ya no necesito el trabajo</option>
+                <option value="other">Otro motivo</option>
+              </select>
+            </label>
+
+            <label>
+              Comentario opcional
+              <textarea
+                rows={3}
+                maxLength={500}
+                value={declineNote}
+                onChange={(event) => setDeclineNote(event.target.value)}
+                placeholder="Si querés, contanos un poco más."
+              />
+            </label>
+
+            <div>
+              <button
+                className="button button-secondary"
+                type="button"
+                disabled={accepting}
+                onClick={() => setDeclining(false)}
+              >
+                Volver
+              </button>
+              <button
+                className="button button-primary"
+                type="button"
+                disabled={accepting || !declineReason}
+                onClick={() => void respondToQuote('reject')}
+              >
+                {accepting ? 'Registrando…' : 'Confirmar que no voy a avanzar'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {confirming && canAccept && (
           <div className="public-quote-confirm">
             <div>
@@ -327,7 +398,7 @@ export default function PublicQuoteView({ token }: PublicQuoteViewProps) {
                 className="button button-primary"
                 type="button"
                 disabled={accepting}
-                onClick={() => void acceptQuote()}
+                onClick={() => void respondToQuote('accept')}
               >
                 {accepting ? 'Registrando…' : 'Sí, aceptar presupuesto'}
               </button>
@@ -336,14 +407,23 @@ export default function PublicQuoteView({ token }: PublicQuoteViewProps) {
         )}
 
         <div className="public-quote-actions">
-          {canAccept && !confirming && (
-            <button
-              className="button button-primary"
-              type="button"
-              onClick={() => setConfirming(true)}
-            >
-              Aceptar presupuesto
-            </button>
+          {canAccept && !confirming && !declining && (
+            <>
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={() => setConfirming(true)}
+              >
+                Aceptar presupuesto
+              </button>
+              <button
+                className="button button-secondary"
+                type="button"
+                onClick={() => setDeclining(true)}
+              >
+                No voy a avanzar
+              </button>
+            </>
           )}
 
           {accepted && (

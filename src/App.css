@@ -2681,3 +2681,61 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ALIMAR QUOTE RESPONSE FEEDBACK 1A.33 */
+.public-quote-decline label {
+  display: grid;
+  gap: 6px;
+  color: #0c1014;
+  font-size: .7rem;
+  font-weight: 800;
+}
+
+.public-quote-decline select,
+.public-quote-decline textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(12,16,20,.12);
+  border-radius: 10px;
+  color: #0c1014;
+  background: #fffdf8;
+  font: inherit;
+}
+
+.public-quote-decline select {
+  min-height: 43px;
+  padding: 0 10px;
+}
+
+.public-quote-decline textarea {
+  padding: 10px;
+  resize: vertical;
+}
+
+.admin-quote-response-feedback {
+  display: grid;
+  gap: 4px;
+  padding: 10px 11px;
+  border: 1px solid rgba(181,126,62,.18);
+  border-radius: 10px;
+  background: rgba(181,126,62,.07);
+}
+
+.admin-quote-response-feedback strong {
+  font-size: .66rem;
+}
+
+.admin-quote-response-feedback span {
+  color: #8a5a2d;
+  font-size: .62rem;
+  font-weight: 800;
+}
+
+.admin-quote-response-feedback p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: .62rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}

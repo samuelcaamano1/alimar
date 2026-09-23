@@ -70,6 +70,12 @@ function formatRow(row: Record<string, unknown>) {
     order_code: row.order_code ? String(row.order_code) : null,
     sent_at: row.sent_at ? String(row.sent_at) : null,
     last_reminded_at: row.last_reminded_at ? String(row.last_reminded_at) : null,
+    customer_response_reason: row.customer_response_reason
+      ? String(row.customer_response_reason)
+      : null,
+    customer_response_note: row.customer_response_note
+      ? String(row.customer_response_note)
+      : null,
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
   }
@@ -109,6 +115,8 @@ export async function listAdminQuotes(databaseUrl: string) {
         linked_order.public_code AS order_code,
         quote.sent_at::text,
         quote.last_reminded_at::text,
+        quote.customer_response_reason,
+        quote.customer_response_note,
         quote.created_at::text,
         quote.updated_at::text
       FROM quotes quote

@@ -58,6 +58,8 @@ export type AdminQuote = {
   order_code: string | null
   sent_at: string | null
   last_reminded_at: string | null
+  customer_response_reason: string | null
+  customer_response_note: string | null
   created_at: string
   updated_at: string
 }
