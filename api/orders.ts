@@ -524,6 +524,7 @@ export async function POST(request: Request) {
           customer_email,
           customer_notes,
           known_total,
+          agreed_total,
           has_quote,
           source,
           whatsapp_message
@@ -538,6 +539,7 @@ export async function POST(request: Request) {
           ${customerEmail || null},
           ${customerNotes || null},
           ${knownTotal},
+          ${hasQuote ? null : knownTotal},
           ${hasQuote},
           'web',
           ${whatsappMessage}

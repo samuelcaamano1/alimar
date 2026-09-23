@@ -2,6 +2,13 @@ import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 import { createOrderFromQuote } from '../_lib/quote-orders.js'
 import {
+  createOrderPayment,
+  listRecentOrderPayments,
+  updateOrderAgreedTotal,
+  voidOrderPayment,
+  type AdminOrderPayment,
+} from '../_lib/order-payments.js'
+import {
   listAdminCustomRequests,
   updateAdminCustomRequest,
 } from '../_lib/custom-requests.js'
@@ -42,6 +49,7 @@ type OrderRow = {
   customer_email: string | null
   customer_notes: string | null
   known_total: string
+  agreed_total: string | null
   has_quote: boolean
   quote_code: string | null
   estimated_cost: string | null
@@ -172,6 +180,11 @@ export async function GET(request: Request) {
           customer_notes,
           known_total,
           has_quote,
+          quote_id,
+          actual_cost,
+          actual_cost_note,
+          actual_cost_updated_at,
+          agreed_total,
           created_at
         FROM orders
         ORDER BY created_at DESC
@@ -186,6 +199,7 @@ export async function GET(request: Request) {
         o.customer_email,
         o.customer_notes,
         o.known_total::text,
+        o.agreed_total::text,
         o.has_quote,
         CASE
           WHEN linked_quote.quote_number IS NULL THEN NULL
@@ -231,6 +245,8 @@ export async function GET(request: Request) {
       ORDER BY e.created_at DESC
     `) as EventRow[]
 
+    const paymentRows = await listRecentOrderPayments(databaseUrl)
+
     const orders = new Map<
       string,
       {
@@ -242,6 +258,11 @@ export async function GET(request: Request) {
         customer_email: string | null
         customer_notes: string | null
         known_total: string
+        agreed_total: string | null
+        paid_total: string
+        balance_due: string | null
+        payment_status: 'total_pending' | 'unpaid' | 'partial' | 'paid'
+        payments: AdminOrderPayment[]
         has_quote: boolean
         quote_code: string | null
         estimated_cost: string | null
@@ -276,6 +297,11 @@ export async function GET(request: Request) {
           customer_email: row.customer_email,
           customer_notes: row.customer_notes,
           known_total: row.known_total,
+          agreed_total: row.agreed_total,
+          paid_total: '0',
+          balance_due: row.agreed_total,
+          payment_status: row.agreed_total === null ? 'total_pending' : 'unpaid',
+          payments: [],
           has_quote: row.has_quote,
           quote_code: row.quote_code,
           estimated_cost: row.estimated_cost,
@@ -306,6 +332,37 @@ export async function GET(request: Request) {
 
     for (const event of events) {
       orders.get(event.order_id)?.events.push(event)
+    }
+
+    for (const payment of paymentRows) {
+      orders.get(payment.order_id)?.payments.push(payment)
+    }
+
+    for (const order of orders.values()) {
+      const paidTotal = order.payments
+        .filter((payment) => !payment.voided_at)
+        .reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+
+      order.paid_total = paidTotal.toFixed(2)
+
+      if (order.agreed_total === null) {
+        order.balance_due = null
+        order.payment_status = 'total_pending'
+        continue
+      }
+
+      const agreedTotal = Number(order.agreed_total)
+      const balance = Math.max(0, agreedTotal - paidTotal)
+
+      order.balance_due = balance.toFixed(2)
+
+      if (paidTotal <= 0.009) {
+        order.payment_status = 'unpaid'
+      } else if (balance > 0.009) {
+        order.payment_status = 'partial'
+      } else {
+        order.payment_status = 'paid'
+      }
     }
 
     return Response.json(
@@ -347,6 +404,14 @@ export async function PATCH(request: Request) {
 
   if (requestUrl.searchParams.get('action') === 'custom-requests') {
     return updateAdminCustomRequest(databaseUrl, body)
+  }
+
+  if (requestUrl.searchParams.get('action') === 'agreed-total') {
+    return updateOrderAgreedTotal(databaseUrl, body)
+  }
+
+  if (requestUrl.searchParams.get('action') === 'payment-void') {
+    return voidOrderPayment(databaseUrl, body)
   }
 
   if (requestUrl.searchParams.get('action') === 'actual-cost') {
@@ -531,13 +596,7 @@ export async function POST(request: Request) {
   }
 
   const requestUrl = new URL(request.url)
-
-  if (requestUrl.searchParams.get('action') !== 'from-quote') {
-    return Response.json(
-      { error: 'Invalid action' },
-      { status: 400, headers: { 'Cache-Control': 'no-store' } },
-    )
-  }
+  const action = requestUrl.searchParams.get('action')
 
   let body: Record<string, unknown>
 
@@ -545,6 +604,17 @@ export async function POST(request: Request) {
     body = (await request.json()) as Record<string, unknown>
   } catch {
     return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  }
+
+  if (action === 'payment') {
+    return createOrderPayment(databaseUrl, body)
+  }
+
+  if (action !== 'from-quote') {
+    return Response.json(
+      { error: 'Invalid action' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
   }
 
   const quoteId = typeof body.quoteId === 'string' ? body.quoteId.trim() : ''

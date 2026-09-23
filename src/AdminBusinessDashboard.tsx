@@ -10,6 +10,10 @@ type DashboardSummary = {
   month_actual_count: number
   month_actual_revenue: string
   month_actual_profit: string
+  payments_pending_count: number
+  outstanding_balance: string
+  month_collected: string
+  month_payment_count: number
 }
 
 type DashboardQuote = {
@@ -29,12 +33,22 @@ type DashboardOrder = {
   known_total: string
 }
 
+type DashboardPaymentOrder = {
+  id: string
+  public_code: string
+  customer_name: string
+  agreed_total: string
+  paid_total: string
+  balance_due: string
+}
+
 type DashboardResponse = {
   summary: DashboardSummary
   attention: {
     expiring_quotes: DashboardQuote[]
     accepted_quotes: DashboardQuote[]
     missing_cost_orders: DashboardOrder[]
+    pending_payments: DashboardPaymentOrder[]
   }
 }
 
@@ -119,11 +133,13 @@ export default function AdminBusinessDashboard() {
 
     window.addEventListener('alimar:orders-changed', refreshFromBusinessChange)
     window.addEventListener('alimar:quote-metrics-changed', refreshFromBusinessChange)
+    window.addEventListener('alimar:payments-changed', refreshFromBusinessChange)
     window.addEventListener('focus', refreshOnFocus)
 
     return () => {
       window.removeEventListener('alimar:orders-changed', refreshFromBusinessChange)
       window.removeEventListener('alimar:quote-metrics-changed', refreshFromBusinessChange)
+      window.removeEventListener('alimar:payments-changed', refreshFromBusinessChange)
       window.removeEventListener('focus', refreshOnFocus)
     }
   }, [loadDashboard])
@@ -135,7 +151,9 @@ export default function AdminBusinessDashboard() {
       data.summary.requests_pending +
       data.summary.quotes_expiring +
       data.summary.quotes_accepted_no_order +
-      data.summary.completed_missing_cost
+      data.summary.completed_missing_cost +
+      data.summary.payments_pending_count +
+      data.summary.payments_pending_count
     )
   }, [data])
 
@@ -277,9 +295,31 @@ export default function AdminBusinessDashboard() {
             </dl>
           </section>
 
+          <section className="admin-business-payments">
+            <div className="admin-business-payments-main">
+              <span>Cobros · este mes</span>
+              <strong>{money(data.summary.month_collected)}</strong>
+              <small>
+                {data.summary.month_payment_count} cobro(s) activo(s) registrados
+              </small>
+            </div>
+
+            <dl>
+              <div>
+                <dt>Saldo pendiente</dt>
+                <dd>{money(data.summary.outstanding_balance)}</dd>
+              </div>
+              <div>
+                <dt>Pedidos con saldo</dt>
+                <dd>{data.summary.payments_pending_count}</dd>
+              </div>
+            </dl>
+          </section>
+
           {(data.attention.expiring_quotes.length > 0 ||
             data.attention.accepted_quotes.length > 0 ||
-            data.attention.missing_cost_orders.length > 0) && (
+            data.attention.missing_cost_orders.length > 0 ||
+            data.attention.pending_payments.length > 0) && (
             <div className="admin-business-attention">
               {data.attention.expiring_quotes.length > 0 && (
                 <section>
@@ -326,6 +366,34 @@ export default function AdminBusinessDashboard() {
                         <small>{quote.title}</small>
                       </div>
                       <strong>{money(quote.total_price)}</strong>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {data.attention.pending_payments.length > 0 && (
+                <section>
+                  <div className="admin-business-attention-title">
+                    <strong>Pedidos con saldo pendiente</strong>
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection('.admin-orders-panel')}
+                    >
+                      Ir a cobros
+                    </button>
+                  </div>
+
+                  {data.attention.pending_payments.map((order) => (
+                    <div className="admin-business-attention-row" key={order.id}>
+                      <span>{order.public_code}</span>
+                      <div>
+                        <strong>{order.customer_name}</strong>
+                        <small>
+                          Cobrado {money(order.paid_total)} de{' '}
+                          {money(order.agreed_total)}
+                        </small>
+                      </div>
+                      <strong>{money(order.balance_due)}</strong>
                     </div>
                   ))}
                 </section>

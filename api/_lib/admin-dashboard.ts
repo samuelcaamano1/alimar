@@ -17,8 +17,13 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
   try {
     const sql = neon(databaseUrl)
 
-    const [summaryRows, expiringRows, acceptedRows, missingCostRows] =
-      await Promise.all([
+    const [
+      summaryRows,
+      expiringRows,
+      acceptedRows,
+      missingCostRows,
+      pendingPaymentRows,
+    ] = await Promise.all([
         sql`
           SELECT
             (
@@ -63,6 +68,55 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
               WHERE actual_cost IS NOT NULL
                 AND actual_cost_updated_at >= date_trunc('month', CURRENT_DATE)
             ) AS month_actual_count,
+            (
+              SELECT COUNT(*)::int
+              FROM orders order_row
+              LEFT JOIN LATERAL (
+                SELECT COALESCE(SUM(payment.amount), 0) AS paid_total
+                FROM order_payments payment
+                WHERE payment.order_id = order_row.id
+                  AND payment.voided_at IS NULL
+              ) payment_total ON true
+              WHERE order_row.status <> 'cancelled'
+                AND order_row.agreed_total IS NOT NULL
+                AND order_row.agreed_total - payment_total.paid_total > 0.009
+            ) AS payments_pending_count,
+            (
+              SELECT COALESCE(
+                SUM(
+                  GREATEST(
+                    order_row.agreed_total - payment_total.paid_total,
+                    0
+                  )
+                ),
+                0
+              )::text
+              FROM orders order_row
+              LEFT JOIN LATERAL (
+                SELECT COALESCE(SUM(payment.amount), 0) AS paid_total
+                FROM order_payments payment
+                WHERE payment.order_id = order_row.id
+                  AND payment.voided_at IS NULL
+              ) payment_total ON true
+              WHERE order_row.status <> 'cancelled'
+                AND order_row.agreed_total IS NOT NULL
+            ) AS outstanding_balance,
+            (
+              SELECT COALESCE(SUM(payment.amount), 0)::text
+              FROM order_payments payment
+              JOIN orders order_row ON order_row.id = payment.order_id
+              WHERE payment.voided_at IS NULL
+                AND order_row.status <> 'cancelled'
+                AND payment.paid_on >= date_trunc('month', CURRENT_DATE)::date
+            ) AS month_collected,
+            (
+              SELECT COUNT(*)::int
+              FROM order_payments payment
+              JOIN orders order_row ON order_row.id = payment.order_id
+              WHERE payment.voided_at IS NULL
+                AND order_row.status <> 'cancelled'
+                AND payment.paid_on >= date_trunc('month', CURRENT_DATE)::date
+            ) AS month_payment_count,
             (
               SELECT COALESCE(SUM(quote.total_price), 0)::text
               FROM orders linked_order
@@ -123,6 +177,35 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
           ORDER BY linked_order.updated_at ASC
           LIMIT 4
         `,
+        sql`
+          SELECT
+            order_row.id::text,
+            order_row.public_code,
+            order_row.customer_name,
+            order_row.agreed_total::text,
+            payment_total.paid_total::text,
+            GREATEST(
+              order_row.agreed_total - payment_total.paid_total,
+              0
+            )::text AS balance_due
+          FROM orders order_row
+          LEFT JOIN LATERAL (
+            SELECT COALESCE(SUM(payment.amount), 0) AS paid_total
+            FROM order_payments payment
+            WHERE payment.order_id = order_row.id
+              AND payment.voided_at IS NULL
+          ) payment_total ON true
+          WHERE order_row.status <> 'cancelled'
+            AND order_row.agreed_total IS NOT NULL
+            AND order_row.agreed_total - payment_total.paid_total > 0.009
+          ORDER BY
+            GREATEST(
+              order_row.agreed_total - payment_total.paid_total,
+              0
+            ) DESC,
+            order_row.updated_at ASC
+          LIMIT 4
+        `,
       ])
 
     const summaryRow = (summaryRows[0] ?? {}) as Record<string, unknown>
@@ -139,6 +222,10 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
           month_actual_count: number(summaryRow.month_actual_count),
           month_actual_revenue: String(summaryRow.month_actual_revenue ?? '0'),
           month_actual_profit: String(summaryRow.month_actual_profit ?? '0'),
+          payments_pending_count: number(summaryRow.payments_pending_count),
+          outstanding_balance: String(summaryRow.outstanding_balance ?? '0'),
+          month_collected: String(summaryRow.month_collected ?? '0'),
+          month_payment_count: number(summaryRow.month_payment_count),
         },
         attention: {
           expiring_quotes: (expiringRows as Record<string, unknown>[]).map((row) => ({
@@ -162,6 +249,14 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
             quote_code: code('PRE', row.quote_number),
             customer_name: String(row.customer_name ?? ''),
             known_total: String(row.known_total ?? '0'),
+          })),
+          pending_payments: (pendingPaymentRows as Record<string, unknown>[]).map((row) => ({
+            id: String(row.id ?? ''),
+            public_code: String(row.public_code ?? ''),
+            customer_name: String(row.customer_name ?? ''),
+            agreed_total: String(row.agreed_total ?? '0'),
+            paid_total: String(row.paid_total ?? '0'),
+            balance_due: String(row.balance_due ?? '0'),
           })),
         },
       },

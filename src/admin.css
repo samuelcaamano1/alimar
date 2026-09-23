@@ -6088,3 +6088,355 @@
     text-align: left;
   }
 }
+
+
+/* ALIMAR PAYMENTS AND BALANCES 1A.40 */
+.admin-order-payment-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.admin-order-payment-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid rgba(12,16,20,.08);
+  border-radius: 999px;
+  color: var(--admin-muted);
+  background: rgba(255,253,248,.65);
+  cursor: pointer;
+  font: inherit;
+  font-size: .56rem;
+  font-weight: 800;
+}
+
+.admin-order-payment-filters button.is-active {
+  color: var(--admin-blue-dark);
+  border-color: rgba(63,120,138,.22);
+  background: rgba(100,175,198,.11);
+}
+
+.admin-order-payment-filters strong {
+  color: inherit;
+}
+
+.admin-order-payments {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(12,16,20,.08);
+  border-radius: 12px;
+  background: rgba(255,253,248,.45);
+}
+
+.admin-order-payments.is-partial {
+  border-color: rgba(181,126,62,.2);
+  background: rgba(181,126,62,.045);
+}
+
+.admin-order-payments.is-paid {
+  border-color: rgba(65,143,98,.2);
+  background: rgba(65,143,98,.045);
+}
+
+.admin-order-payments-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-order-payments-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-order-payments-heading > div > span {
+  color: var(--admin-blue-dark);
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.admin-order-payments-heading > div > strong {
+  font-size: .68rem;
+}
+
+.admin-order-payment-status {
+  padding: 5px 7px;
+  border-radius: 999px;
+  color: var(--admin-blue-dark);
+  background: rgba(100,175,198,.1);
+  font-size: .52rem;
+  font-weight: 900;
+}
+
+.is-partial .admin-order-payment-status {
+  color: #8a5a2d;
+  background: rgba(181,126,62,.1);
+}
+
+.is-paid .admin-order-payment-status {
+  color: #286b4a;
+  background: rgba(65,143,98,.11);
+}
+
+.admin-order-payment-summary {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 7px;
+}
+
+.admin-order-payment-summary > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.52);
+}
+
+.admin-order-payment-summary span {
+  color: var(--admin-muted);
+  font-size: .52rem;
+}
+
+.admin-order-payment-summary strong {
+  overflow: hidden;
+  color: var(--admin-ink);
+  font-size: .68rem;
+  text-overflow: ellipsis;
+}
+
+.admin-order-agreed-total-form {
+  display: grid;
+  grid-template-columns: minmax(160px,.55fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.admin-order-agreed-total-form label,
+.admin-order-payment-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--admin-ink);
+  font-size: .56rem;
+  font-weight: 800;
+}
+
+.admin-order-agreed-total-form input,
+.admin-order-payment-form input,
+.admin-order-payment-form select,
+.admin-order-payment-void input {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border: 1px solid rgba(12,16,20,.1);
+  border-radius: 9px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.admin-order-payment-form {
+  display: grid;
+  grid-template-columns:
+    minmax(110px,.65fr)
+    minmax(120px,.7fr)
+    minmax(125px,.7fr)
+    minmax(130px,.8fr)
+    minmax(180px,1fr)
+    auto;
+  align-items: end;
+  gap: 7px;
+}
+
+.admin-order-payment-note {
+  min-width: 0;
+}
+
+.admin-order-payment-history {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid rgba(12,16,20,.065);
+}
+
+.admin-order-payment-history-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0 5px;
+}
+
+.admin-order-payment-history-title strong {
+  font-size: .59rem;
+}
+
+.admin-order-payment-history-title span {
+  color: var(--admin-muted);
+  font-size: .51rem;
+}
+
+.admin-order-payment-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(12,16,20,.045);
+}
+
+.admin-order-payment-row > div:first-child {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 8px;
+}
+
+.admin-order-payment-row > div:first-child strong {
+  color: #286b4a;
+  font-size: .62rem;
+}
+
+.admin-order-payment-row > div:first-child span,
+.admin-order-payment-row > div:first-child small {
+  color: var(--admin-muted);
+  font-size: .51rem;
+}
+
+.admin-order-payment-row.is-voided {
+  opacity: .58;
+}
+
+.admin-order-payment-row.is-voided > div:first-child strong {
+  color: var(--admin-muted);
+  text-decoration: line-through;
+}
+
+.admin-order-payment-void {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.admin-order-payment-void input {
+  min-width: 180px;
+}
+
+.admin-business-payments {
+  display: grid;
+  grid-template-columns: minmax(180px,.5fr) minmax(0,1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 11px;
+  border: 1px solid rgba(63,120,138,.16);
+  border-radius: 11px;
+  background: rgba(100,175,198,.05);
+}
+
+.admin-business-payments-main {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-business-payments-main span,
+.admin-business-payments-main small {
+  color: var(--admin-muted);
+  font-size: .54rem;
+}
+
+.admin-business-payments-main strong {
+  color: var(--admin-blue-dark);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.1rem;
+}
+
+.admin-business-payments dl {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 7px;
+  margin: 0;
+}
+
+.admin-business-payments dl > div {
+  display: grid;
+  gap: 2px;
+  padding: 7px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.5);
+}
+
+.admin-business-payments dt {
+  color: var(--admin-muted);
+  font-size: .51rem;
+}
+
+.admin-business-payments dd {
+  margin: 0;
+  color: var(--admin-blue-dark);
+  font-size: .65rem;
+  font-weight: 850;
+}
+
+@media (max-width: 1100px) {
+  .admin-order-payment-form {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+
+  .admin-order-payment-form > button {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-order-agreed-total-form,
+  .admin-business-payments {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-payment-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-order-payment-form > button {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-order-payments-heading,
+  .admin-order-payment-history-title,
+  .admin-order-payment-row {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .admin-order-payment-summary,
+  .admin-order-payment-form,
+  .admin-business-payments dl {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-payment-form > button {
+    grid-column: auto;
+  }
+
+  .admin-order-payment-void {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-order-payment-void input {
+    min-width: 0;
+  }
+}

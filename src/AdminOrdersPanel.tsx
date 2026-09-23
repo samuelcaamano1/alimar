@@ -47,6 +47,11 @@ type AdminOrder = {
   customer_email: string | null
   customer_notes: string | null
   known_total: string
+  agreed_total: string | null
+  paid_total: string
+  balance_due: string | null
+  payment_status: PaymentStatus
+  payments: AdminOrderPayment[]
   has_quote: boolean
   quote_code: string | null
   estimated_cost: string | null
@@ -61,6 +66,30 @@ type AdminOrder = {
 type OrdersResponse = { orders: AdminOrder[] }
 
 type DateFilter = 'all' | 'today' | '7d' | '30d'
+type PaymentMethod = 'cash' | 'transfer' | 'mercadopago' | 'card' | 'other'
+type PaymentStatus = 'total_pending' | 'unpaid' | 'partial' | 'paid'
+type PaymentFilter = 'all' | 'pending' | 'paid' | 'total_pending'
+
+type AdminOrderPayment = {
+  id: string
+  order_id: string
+  amount: string
+  payment_method: PaymentMethod
+  paid_on: string
+  reference: string | null
+  note: string | null
+  voided_at: string | null
+  void_reason: string | null
+  created_at: string
+}
+
+type PaymentDraft = {
+  amount: string
+  method: PaymentMethod
+  paidOn: string
+  reference: string
+  note: string
+}
 
 const statusLabels: Record<OrderStatus, string> = {
   new: 'Nuevo',
@@ -73,6 +102,21 @@ const statusLabels: Record<OrderStatus, string> = {
 }
 
 const statusOptions = Object.entries(statusLabels) as Array<[OrderStatus, string]>
+
+const paymentMethodLabels: Record<PaymentMethod, string> = {
+  cash: 'Efectivo',
+  transfer: 'Transferencia',
+  mercadopago: 'Mercado Pago',
+  card: 'Tarjeta',
+  other: 'Otro',
+}
+
+const paymentStatusLabels: Record<PaymentStatus, string> = {
+  total_pending: 'Falta total acordado',
+  unpaid: 'Sin cobrar',
+  partial: 'Cobro parcial',
+  paid: 'Pagado',
+}
 
 function money(value: string | null) {
   if (!value) return 'A consultar'
@@ -99,6 +143,21 @@ function dateTime(value: string) {
   return new Intl.DateTimeFormat('es-AR', {
     dateStyle: 'short',
     timeStyle: 'short',
+  }).format(date)
+}
+
+function todayInputValue() {
+  const now = new Date()
+  const offset = now.getTimezoneOffset()
+  return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10)
+}
+
+function dateOnly(value: string) {
+  const date = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat('es-AR', {
+    dateStyle: 'short',
   }).format(date)
 }
 
@@ -174,12 +233,20 @@ export default function AdminOrdersPanel() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | OrderStatus>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all')
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null)
   const [draftStatus, setDraftStatus] = useState<Record<string, OrderStatus>>({})
   const [draftNote, setDraftNote] = useState<Record<string, string>>({})
   const [draftActualCost, setDraftActualCost] = useState<Record<string, string>>({})
   const [draftActualCostNote, setDraftActualCostNote] = useState<Record<string, string>>({})
   const [savingActualCostId, setSavingActualCostId] = useState<string | null>(null)
+  const [draftAgreedTotal, setDraftAgreedTotal] = useState<Record<string, string>>({})
+  const [savingAgreedTotalId, setSavingAgreedTotalId] = useState<string | null>(null)
+  const [paymentDrafts, setPaymentDrafts] = useState<Record<string, PaymentDraft>>({})
+  const [savingPaymentId, setSavingPaymentId] = useState<string | null>(null)
+  const [voidingPaymentId, setVoidingPaymentId] = useState<string | null>(null)
+  const [voidReason, setVoidReason] = useState('')
+  const [voidSavingId, setVoidSavingId] = useState<string | null>(null)
 
   const applyOrders = useCallback((nextOrders: AdminOrder[]) => {
     setOrders(nextOrders)
@@ -198,6 +265,25 @@ export default function AdminOrdersPanel() {
       Object.fromEntries(
         nextOrders.map((order) => [order.id, order.actual_cost_note ?? '']),
       ) as Record<string, string>,
+    )
+    setDraftAgreedTotal(
+      Object.fromEntries(
+        nextOrders.map((order) => [order.id, order.agreed_total ?? '']),
+      ) as Record<string, string>,
+    )
+    setPaymentDrafts(
+      Object.fromEntries(
+        nextOrders.map((order) => [
+          order.id,
+          {
+            amount: '',
+            method: 'transfer',
+            paidOn: todayInputValue(),
+            reference: '',
+            note: '',
+          } satisfies PaymentDraft,
+        ]),
+      ) as Record<string, PaymentDraft>,
     )
     setState('ready')
   }, [])
@@ -261,6 +347,13 @@ export default function AdminOrdersPanel() {
         ['contacted', 'confirmed', 'in_progress'].includes(order.status),
       ).length,
       ready: orders.filter((order) => order.status === 'ready').length,
+      paymentPending: orders.filter(
+        (order) => order.payment_status === 'unpaid' || order.payment_status === 'partial',
+      ).length,
+      paid: orders.filter((order) => order.payment_status === 'paid').length,
+      totalPending: orders.filter(
+        (order) => order.payment_status === 'total_pending',
+      ).length,
     }),
     [orders],
   )
@@ -276,7 +369,13 @@ export default function AdminOrdersPanel() {
           ? ['contacted', 'confirmed', 'in_progress'].includes(order.status)
           : order.status === statusFilter)
 
-      if (!matchesStatus) return false
+      const matchesPayment =
+        paymentFilter === 'all' ||
+        (paymentFilter === 'pending'
+          ? order.payment_status === 'unpaid' || order.payment_status === 'partial'
+          : order.payment_status === paymentFilter)
+
+      if (!matchesStatus || !matchesPayment) return false
 
       if (dateStart !== null) {
         const createdAt = new Date(order.created_at).getTime()
@@ -306,7 +405,7 @@ export default function AdminOrdersPanel() {
 
       return haystack.includes(query)
     })
-  }, [dateFilter, orders, searchQuery, statusFilter])
+  }, [dateFilter, orders, paymentFilter, searchQuery, statusFilter])
 
   async function copyText(value: string, successMessage: string) {
     setMessage('')
@@ -351,6 +450,124 @@ export default function AdminOrdersPanel() {
       setMessage(error instanceof Error ? error.message : 'No se pudo actualizar el pedido.')
     } finally {
       setSavingOrderId(null)
+    }
+  }
+
+  async function saveAgreedTotal(order: AdminOrder) {
+    const raw = (draftAgreedTotal[order.id] ?? '').trim()
+    const agreedTotal = Number(raw.replace(',', '.'))
+
+    if (!raw || !Number.isFinite(agreedTotal) || agreedTotal <= 0) {
+      setMessage('Ingresá un total acordado mayor a cero.')
+      return
+    }
+
+    setSavingAgreedTotalId(order.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=agreed-total', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: order.id,
+          agreedTotal,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      await loadOrders()
+      window.dispatchEvent(new Event('alimar:payments-changed'))
+      setMessage(`Total acordado de ${order.public_code} actualizado.`)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el total acordado.',
+      )
+    } finally {
+      setSavingAgreedTotalId(null)
+    }
+  }
+
+  async function recordPayment(order: AdminOrder) {
+    const draft = paymentDrafts[order.id]
+    if (!draft) return
+
+    const amount = Number(draft.amount.trim().replace(',', '.'))
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setMessage('Ingresá un importe de cobro mayor a cero.')
+      return
+    }
+
+    setSavingPaymentId(order.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: order.id,
+          amount,
+          method: draft.method,
+          paidOn: draft.paidOn,
+          reference: draft.reference,
+          note: draft.note,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      await loadOrders()
+      window.dispatchEvent(new Event('alimar:payments-changed'))
+      setMessage(`Cobro de ${money(String(amount))} registrado en ${order.public_code}.`)
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : 'No se pudo registrar el cobro.',
+      )
+    } finally {
+      setSavingPaymentId(null)
+    }
+  }
+
+  async function voidPayment(order: AdminOrder, payment: AdminOrderPayment) {
+    const reason = voidReason.trim()
+
+    if (reason.length < 3) {
+      setMessage('Indicá por qué se anula el cobro.')
+      return
+    }
+
+    setVoidSavingId(payment.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=payment-void', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: order.id,
+          paymentId: payment.id,
+          reason,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      setVoidingPaymentId(null)
+      setVoidReason('')
+      await loadOrders()
+      window.dispatchEvent(new Event('alimar:payments-changed'))
+      setMessage(`Cobro de ${order.public_code} anulado.`)
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : 'No se pudo anular el cobro.',
+      )
+    } finally {
+      setVoidSavingId(null)
     }
   }
 
@@ -498,6 +715,37 @@ export default function AdminOrdersPanel() {
       </div>
 
       {message && <div className="admin-toast">{message}</div>}
+
+      <div className="admin-order-payment-filters">
+        <button
+          type="button"
+          className={paymentFilter === 'all' ? 'is-active' : ''}
+          onClick={() => setPaymentFilter('all')}
+        >
+          Todos <strong>{orderCounts.all}</strong>
+        </button>
+        <button
+          type="button"
+          className={paymentFilter === 'pending' ? 'is-active' : ''}
+          onClick={() => setPaymentFilter('pending')}
+        >
+          Saldo pendiente <strong>{orderCounts.paymentPending}</strong>
+        </button>
+        <button
+          type="button"
+          className={paymentFilter === 'paid' ? 'is-active' : ''}
+          onClick={() => setPaymentFilter('paid')}
+        >
+          Pagados <strong>{orderCounts.paid}</strong>
+        </button>
+        <button
+          type="button"
+          className={paymentFilter === 'total_pending' ? 'is-active' : ''}
+          onClick={() => setPaymentFilter('total_pending')}
+        >
+          Sin total <strong>{orderCounts.totalPending}</strong>
+        </button>
+      </div>
       {state === 'loading' && orders.length === 0 && <div className="admin-empty">Cargando pedidos…</div>}
       {state === 'error' && orders.length === 0 && <div className="admin-empty">No se pudieron cargar los pedidos.</div>}
       {state === 'ready' && visibleOrders.length === 0 && (
@@ -511,6 +759,17 @@ export default function AdminOrdersPanel() {
             const note = draftNote[order.id] ?? ''
             const saving = savingOrderId === order.id
             const savingActualCost = savingActualCostId === order.id
+            const savingAgreedTotal = savingAgreedTotalId === order.id
+            const savingPayment = savingPaymentId === order.id
+            const agreedTotal = numericAmount(order.agreed_total)
+            const balanceDue = numericAmount(order.balance_due)
+            const paymentDraft = paymentDrafts[order.id] ?? {
+              amount: '',
+              method: 'transfer' as PaymentMethod,
+              paidOn: todayInputValue(),
+              reference: '',
+              note: '',
+            }
             const estimatedCost = numericAmount(order.estimated_cost)
             const actualCost = numericAmount(order.actual_cost)
             const revenue = numericAmount(order.known_total)
@@ -620,7 +879,299 @@ export default function AdminOrdersPanel() {
                   <strong>{money(order.known_total)}</strong>
                 </div>
 
-                {order.quote_code && order.estimated_cost && (
+                              <section className={`admin-order-payments is-${order.payment_status}`}>
+                <div className="admin-order-payments-heading">
+                  <div>
+                    <span>Cobros y saldo</span>
+                    <strong>{paymentStatusLabels[order.payment_status]}</strong>
+                  </div>
+                  <span className="admin-order-payment-status">
+                    {paymentStatusLabels[order.payment_status]}
+                  </span>
+                </div>
+
+                <div className="admin-order-payment-summary">
+                  <div>
+                    <span>Total acordado</span>
+                    <strong>
+                      {order.agreed_total ? money(order.agreed_total) : 'Pendiente'}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Cobrado</span>
+                    <strong>{money(order.paid_total)}</strong>
+                  </div>
+                  <div>
+                    <span>Saldo</span>
+                    <strong>
+                      {order.balance_due === null ? '—' : money(order.balance_due)}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="admin-order-agreed-total-form">
+                  <label>
+                    Total acordado del pedido
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={draftAgreedTotal[order.id] ?? ''}
+                      onChange={(event) =>
+                        setDraftAgreedTotal((current) => ({
+                          ...current,
+                          [order.id]: event.target.value,
+                        }))
+                      }
+                      disabled={savingAgreedTotal || order.status === 'cancelled'}
+                      placeholder="Ej. 65000"
+                    />
+                  </label>
+                  <button
+                    className="admin-secondary"
+                    type="button"
+                    onClick={() => void saveAgreedTotal(order)}
+                    disabled={
+                      savingAgreedTotal ||
+                      order.status === 'cancelled' ||
+                      !(draftAgreedTotal[order.id] ?? '').trim() ||
+                      (agreedTotal !== null &&
+                        Math.abs(
+                          Number((draftAgreedTotal[order.id] ?? '0').replace(',', '.')) -
+                            agreedTotal,
+                        ) < 0.009)
+                    }
+                  >
+                    {savingAgreedTotal
+                      ? 'Guardando…'
+                      : order.agreed_total
+                        ? 'Actualizar total'
+                        : 'Definir total'}
+                  </button>
+                </div>
+
+                {order.agreed_total &&
+                  order.payment_status !== 'paid' &&
+                  order.status !== 'cancelled' && (
+                    <div className="admin-order-payment-form">
+                      <label>
+                        Importe
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          inputMode="decimal"
+                          value={paymentDraft.amount}
+                          placeholder={
+                            balanceDue !== null
+                              ? `Saldo ${money(String(balanceDue))}`
+                              : 'Importe'
+                          }
+                          onChange={(event) =>
+                            setPaymentDrafts((current) => ({
+                              ...current,
+                              [order.id]: {
+                                ...paymentDraft,
+                                amount: event.target.value,
+                              },
+                            }))
+                          }
+                          disabled={savingPayment}
+                        />
+                      </label>
+
+                      <label>
+                        Medio
+                        <select
+                          value={paymentDraft.method}
+                          onChange={(event) =>
+                            setPaymentDrafts((current) => ({
+                              ...current,
+                              [order.id]: {
+                                ...paymentDraft,
+                                method: event.target.value as PaymentMethod,
+                              },
+                            }))
+                          }
+                          disabled={savingPayment}
+                        >
+                          {(
+                            Object.entries(paymentMethodLabels) as Array<
+                              [PaymentMethod, string]
+                            >
+                          ).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        Fecha
+                        <input
+                          type="date"
+                          value={paymentDraft.paidOn}
+                          onChange={(event) =>
+                            setPaymentDrafts((current) => ({
+                              ...current,
+                              [order.id]: {
+                                ...paymentDraft,
+                                paidOn: event.target.value,
+                              },
+                            }))
+                          }
+                          disabled={savingPayment}
+                        />
+                      </label>
+
+                      <label>
+                        Referencia
+                        <input
+                          type="text"
+                          maxLength={120}
+                          value={paymentDraft.reference}
+                          placeholder="Opcional"
+                          onChange={(event) =>
+                            setPaymentDrafts((current) => ({
+                              ...current,
+                              [order.id]: {
+                                ...paymentDraft,
+                                reference: event.target.value,
+                              },
+                            }))
+                          }
+                          disabled={savingPayment}
+                        />
+                      </label>
+
+                      <label className="admin-order-payment-note">
+                        Nota
+                        <input
+                          type="text"
+                          maxLength={500}
+                          value={paymentDraft.note}
+                          placeholder="Ej. Seña del 50%"
+                          onChange={(event) =>
+                            setPaymentDrafts((current) => ({
+                              ...current,
+                              [order.id]: {
+                                ...paymentDraft,
+                                note: event.target.value,
+                              },
+                            }))
+                          }
+                          disabled={savingPayment}
+                        />
+                      </label>
+
+                      <button
+                        className="admin-primary"
+                        type="button"
+                        onClick={() => void recordPayment(order)}
+                        disabled={
+                          savingPayment ||
+                          !paymentDraft.amount.trim() ||
+                          !paymentDraft.paidOn
+                        }
+                      >
+                        {savingPayment ? 'Registrando…' : 'Registrar cobro'}
+                      </button>
+                    </div>
+                  )}
+
+                {order.payments.length > 0 && (
+                  <div className="admin-order-payment-history">
+                    <div className="admin-order-payment-history-title">
+                      <strong>Historial de cobros</strong>
+                      <span>
+                        {order.payments.filter((payment) => !payment.voided_at).length}
+                        {' '}activo(s)
+                      </span>
+                    </div>
+
+                    {order.payments.map((payment) => (
+                      <div
+                        className={`admin-order-payment-row${payment.voided_at ? ' is-voided' : ''}`}
+                        key={payment.id}
+                      >
+                        <div>
+                          <strong>{money(payment.amount)}</strong>
+                          <span>
+                            {paymentMethodLabels[payment.payment_method]} ·{' '}
+                            {dateOnly(payment.paid_on)}
+                          </span>
+                          {payment.reference && (
+                            <small>Ref. {payment.reference}</small>
+                          )}
+                          {payment.note && <small>{payment.note}</small>}
+                          {payment.voided_at && (
+                            <small>
+                              Anulado
+                              {payment.void_reason ? ` · ${payment.void_reason}` : ''}
+                            </small>
+                          )}
+                        </div>
+
+                        {!payment.voided_at && (
+                          <div className="admin-order-payment-void">
+                            {voidingPaymentId === payment.id ? (
+                              <>
+                                <input
+                                  type="text"
+                                  maxLength={500}
+                                  value={voidReason}
+                                  placeholder="Motivo de anulación"
+                                  onChange={(event) => setVoidReason(event.target.value)}
+                                  disabled={voidSavingId === payment.id}
+                                />
+                                <button
+                                  type="button"
+                                  className="admin-secondary"
+                                  onClick={() => {
+                                    setVoidingPaymentId(null)
+                                    setVoidReason('')
+                                  }}
+                                  disabled={voidSavingId === payment.id}
+                                >
+                                  Cancelar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-danger"
+                                  onClick={() => void voidPayment(order, payment)}
+                                  disabled={
+                                    voidSavingId === payment.id ||
+                                    voidReason.trim().length < 3
+                                  }
+                                >
+                                  {voidSavingId === payment.id
+                                    ? 'Anulando…'
+                                    : 'Confirmar'}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                className="admin-secondary"
+                                onClick={() => {
+                                  setVoidingPaymentId(payment.id)
+                                  setVoidReason('')
+                                }}
+                              >
+                                Anular
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+{order.quote_code && order.estimated_cost && (
                   <section className="admin-order-actual-cost">
                     <div className="admin-order-actual-cost-heading">
                       <div>

@@ -167,6 +167,7 @@ export async function createOrderFromQuote(
           customer_phone,
           customer_notes,
           known_total,
+          agreed_total,
           has_quote,
           source,
           whatsapp_message
@@ -179,6 +180,7 @@ export async function createOrderFromQuote(
           ${customerName},
           ${customerPhone},
           ${notes},
+          ${totalPrice},
           ${totalPrice},
           false,
           'quote',
