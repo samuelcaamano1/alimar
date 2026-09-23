@@ -96,6 +96,13 @@ function formatCommercialMetrics(row: Record<string, unknown>) {
     converted_value: String(row.converted_value ?? '0'),
     converted_real_cost: String(row.converted_real_cost ?? '0'),
     converted_profit: String(row.converted_profit ?? '0'),
+    actual_revenue: String(row.actual_revenue ?? '0'),
+    actual_estimated_cost: String(row.actual_estimated_cost ?? '0'),
+    actual_cost_total: String(row.actual_cost_total ?? '0'),
+    actual_profit: String(row.actual_profit ?? '0'),
+    actual_overrun_count: Number(row.actual_overrun_count ?? 0),
+    actual_saving_count: Number(row.actual_saving_count ?? 0),
+    actual_on_target_count: Number(row.actual_on_target_count ?? 0),
     average_accepted_ticket: String(row.average_accepted_ticket ?? '0'),
     reject_price_count: Number(row.reject_price_count ?? 0),
     reject_timing_count: Number(row.reject_timing_count ?? 0),
@@ -153,6 +160,38 @@ async function commercialMetrics(
               FILTER (WHERE linked_order.id IS NOT NULL),
             0
           )::text AS converted_profit,
+          COALESCE(
+            SUM(quote.total_price)
+              FILTER (WHERE linked_order.actual_cost IS NOT NULL),
+            0
+          )::text AS actual_revenue,
+          COALESCE(
+            SUM(quote.real_cost)
+              FILTER (WHERE linked_order.actual_cost IS NOT NULL),
+            0
+          )::text AS actual_estimated_cost,
+          COALESCE(
+            SUM(linked_order.actual_cost)
+              FILTER (WHERE linked_order.actual_cost IS NOT NULL),
+            0
+          )::text AS actual_cost_total,
+          COALESCE(
+            SUM(quote.total_price - linked_order.actual_cost)
+              FILTER (WHERE linked_order.actual_cost IS NOT NULL),
+            0
+          )::text AS actual_profit,
+          COUNT(*) FILTER (
+            WHERE linked_order.actual_cost IS NOT NULL
+              AND linked_order.actual_cost > quote.real_cost
+          )::int AS actual_overrun_count,
+          COUNT(*) FILTER (
+            WHERE linked_order.actual_cost IS NOT NULL
+              AND linked_order.actual_cost < quote.real_cost
+          )::int AS actual_saving_count,
+          COUNT(*) FILTER (
+            WHERE linked_order.actual_cost IS NOT NULL
+              AND linked_order.actual_cost = quote.real_cost
+          )::int AS actual_on_target_count,
           COALESCE(
             AVG(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
             0
@@ -219,6 +258,38 @@ async function commercialMetrics(
               FILTER (WHERE linked_order.id IS NOT NULL),
             0
           )::text AS converted_profit,
+          COALESCE(
+            SUM(quote.total_price)
+              FILTER (WHERE linked_order.actual_cost IS NOT NULL),
+            0
+          )::text AS actual_revenue,
+          COALESCE(
+            SUM(quote.real_cost)
+              FILTER (WHERE linked_order.actual_cost IS NOT NULL),
+            0
+          )::text AS actual_estimated_cost,
+          COALESCE(
+            SUM(linked_order.actual_cost)
+              FILTER (WHERE linked_order.actual_cost IS NOT NULL),
+            0
+          )::text AS actual_cost_total,
+          COALESCE(
+            SUM(quote.total_price - linked_order.actual_cost)
+              FILTER (WHERE linked_order.actual_cost IS NOT NULL),
+            0
+          )::text AS actual_profit,
+          COUNT(*) FILTER (
+            WHERE linked_order.actual_cost IS NOT NULL
+              AND linked_order.actual_cost > quote.real_cost
+          )::int AS actual_overrun_count,
+          COUNT(*) FILTER (
+            WHERE linked_order.actual_cost IS NOT NULL
+              AND linked_order.actual_cost < quote.real_cost
+          )::int AS actual_saving_count,
+          COUNT(*) FILTER (
+            WHERE linked_order.actual_cost IS NOT NULL
+              AND linked_order.actual_cost = quote.real_cost
+          )::int AS actual_on_target_count,
           COALESCE(
             AVG(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
             0

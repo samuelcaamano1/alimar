@@ -79,6 +79,13 @@ type QuoteCommercialMetrics = {
   converted_value: string
   converted_real_cost: string
   converted_profit: string
+  actual_revenue: string
+  actual_estimated_cost: string
+  actual_cost_total: string
+  actual_profit: string
+  actual_overrun_count: number
+  actual_saving_count: number
+  actual_on_target_count: number
   average_accepted_ticket: string
   reject_price_count: number
   reject_timing_count: number
@@ -205,6 +212,17 @@ function quoteResponseReasonLabel(value: string | null) {
     default:
       return 'Sin motivo'
   }
+}
+
+function costVariancePercent(estimatedValue: string, actualValue: string) {
+  const estimated = Number(estimatedValue)
+  const actual = Number(actualValue)
+
+  if (!Number.isFinite(estimated) || estimated <= 0 || !Number.isFinite(actual)) {
+    return null
+  }
+
+  return ((actual - estimated) / estimated) * 100
 }
 
 function grossMargin(revenueValue: string, costValue: string) {
@@ -551,6 +569,18 @@ export default function AdminCostCalculator({
     ? grossMargin(
         activeQuoteMetrics.converted_value,
         activeQuoteMetrics.converted_real_cost,
+      )
+    : null
+  const actualClosedMargin = activeQuoteMetrics
+    ? grossMargin(
+        activeQuoteMetrics.actual_revenue,
+        activeQuoteMetrics.actual_cost_total,
+      )
+    : null
+  const actualCostVariance = activeQuoteMetrics
+    ? costVariancePercent(
+        activeQuoteMetrics.actual_estimated_cost,
+        activeQuoteMetrics.actual_cost_total,
       )
     : null
 
@@ -2219,6 +2249,87 @@ export default function AdminCostCalculator({
                         En los PED sin costo real todavía se usa la estimación congelada del PRE.
                       </small>
                     </div>
+                  )}
+
+                  {activeQuoteMetrics.converted_actual_cost_count > 0 && (
+                    <section className="admin-quote-real-profitability">
+                      <div className="admin-quote-real-profitability-heading">
+                        <div>
+                          <span>Rentabilidad real cerrada</span>
+                          <strong>
+                            Solo PED con costo real cargado
+                          </strong>
+                        </div>
+                        <small>
+                          {activeQuoteMetrics.converted_actual_cost_count} pedido(s) con costo final.
+                        </small>
+                      </div>
+
+                      <div className="admin-quote-real-profitability-grid">
+                        <div>
+                          <span>Ingreso real analizado</span>
+                          <strong>
+                            {money(Number(activeQuoteMetrics.actual_revenue))}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Costo estimado de esos PED</span>
+                          <strong>
+                            {money(Number(activeQuoteMetrics.actual_estimated_cost))}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Costo real final</span>
+                          <strong>
+                            {money(Number(activeQuoteMetrics.actual_cost_total))}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Ganancia final</span>
+                          <strong>
+                            {money(Number(activeQuoteMetrics.actual_profit))}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Margen real</span>
+                          <strong>
+                            {actualClosedMargin === null
+                              ? '—'
+                              : String(Math.round(actualClosedMargin)) + '%'}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Desvío de costo</span>
+                          <strong>
+                            {actualCostVariance === null
+                              ? '—'
+                              : (actualCostVariance > 0 ? '+' : '') +
+                                String(Math.round(actualCostVariance)) +
+                                '%'}
+                          </strong>
+                        </div>
+                      </div>
+
+                      <div className="admin-quote-real-cost-outcomes">
+                        <span>
+                          Sobre estimación
+                          <strong>{activeQuoteMetrics.actual_overrun_count}</strong>
+                        </span>
+                        <span>
+                          Bajo estimación
+                          <strong>{activeQuoteMetrics.actual_saving_count}</strong>
+                        </span>
+                        <span>
+                          Exactos
+                          <strong>{activeQuoteMetrics.actual_on_target_count}</strong>
+                        </span>
+                      </div>
+                    </section>
                   )}
                 </div>
 
