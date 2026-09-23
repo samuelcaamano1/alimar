@@ -13,6 +13,7 @@ import AdminCostCalculator from './AdminCostCalculator'
 import AdminCustomRequests, { type CustomRequest } from './AdminCustomRequests'
 import AdminBusinessDashboard from './AdminBusinessDashboard'
 import AdminCustomersPanel from './AdminCustomersPanel'
+import AdminCustomExamples from './AdminCustomExamples'
 import AdminCategoriesPanel from './AdminCategoriesPanel'
 import AdminProductVariants from './AdminProductVariants'
 import AdminProductGallery from './AdminProductGallery'
@@ -583,6 +584,12 @@ export default function AdminApp() {
           </button>
           <button
             type="button"
+            onClick={() => scrollAdminSection('.admin-custom-examples')}
+          >
+            Inspiración
+          </button>
+          <button
+            type="button"
             onClick={() => scrollAdminSection('.admin-cost-calculator')}
           >
             Presupuestos
@@ -610,6 +617,8 @@ export default function AdminApp() {
         <AdminBusinessDashboard />
 
         <AdminCustomersPanel />
+
+        <AdminCustomExamples />
 
         <AdminCostCalculator
           quoteSource={quoteSource}

@@ -15,7 +15,10 @@ export type CustomRequest = {
   dimensions: string | null
   theme: string | null
   description: string
+  example_id: string | null
+  example_title: string | null
   reference_url: string | null
+  reference_image_url: string | null
   quote_id: string | null
   created_at: string
   updated_at: string
@@ -252,6 +255,13 @@ export default function AdminCustomRequests({
                 <span>{dateTimeLabel(request.created_at)}</span>
               </div>
 
+              {request.example_title && (
+                <div className="admin-custom-request-example-title">
+                  <span>Ejemplo elegido</span>
+                  <strong>{request.example_title}</strong>
+                </div>
+              )}
+
               <p>{request.description}</p>
 
               {(request.dimensions || request.theme) && (
@@ -261,9 +271,24 @@ export default function AdminCustomRequests({
                 </div>
               )}
 
+              {request.reference_image_url && (
+                <a
+                  className="admin-custom-request-reference-image"
+                  href={request.reference_image_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img
+                    src={request.reference_image_url}
+                    alt="Referencia enviada por el cliente"
+                  />
+                  <span>Ver imagen de referencia ↗</span>
+                </a>
+              )}
+
               {request.reference_url && (
                 <a href={request.reference_url} target="_blank" rel="noreferrer">
-                  Ver referencia ↗
+                  Ver link de referencia ↗
                 </a>
               )}
             </div>

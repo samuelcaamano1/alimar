@@ -56,6 +56,9 @@ type AdminOrder = {
   production_priority: ProductionPriority
   delivery_note: string | null
   schedule_updated_at: string | null
+  production_stage: ProductionStage
+  production_stage_note: string | null
+  production_stage_updated_at: string | null
   has_quote: boolean
   quote_code: string | null
   estimated_cost: string | null
@@ -74,6 +77,14 @@ type PaymentMethod = 'cash' | 'transfer' | 'mercadopago' | 'card' | 'other'
 type PaymentStatus = 'total_pending' | 'unpaid' | 'partial' | 'paid'
 type PaymentFilter = 'all' | 'pending' | 'paid' | 'total_pending'
 type ProductionPriority = 'low' | 'normal' | 'high' | 'urgent'
+type ProductionStage =
+  | 'not_started'
+  | 'design'
+  | 'awaiting_approval'
+  | 'materials'
+  | 'production'
+  | 'finishing'
+  | 'ready_for_delivery'
 
 type AdminOrderPayment = {
   id: string
@@ -135,6 +146,16 @@ const productionPriorityWeight: Record<ProductionPriority, number> = {
   normal: 1,
   high: 2,
   urgent: 3,
+}
+
+const productionStageLabels: Record<ProductionStage, string> = {
+  not_started: 'Sin iniciar',
+  design: 'Diseño / armado',
+  awaiting_approval: 'Esperando aprobación',
+  materials: 'Preparando materiales',
+  production: 'En producción',
+  finishing: 'Terminaciones',
+  ready_for_delivery: 'Listo para entregar',
 }
 
 function money(value: string | null) {
@@ -312,6 +333,12 @@ export default function AdminOrdersPanel() {
   const [draftDeliveryNote, setDraftDeliveryNote] =
     useState<Record<string, string>>({})
   const [savingScheduleId, setSavingScheduleId] = useState<string | null>(null)
+  const [draftProductionStage, setDraftProductionStage] =
+    useState<Record<string, ProductionStage>>({})
+  const [draftProductionStageNote, setDraftProductionStageNote] =
+    useState<Record<string, string>>({})
+  const [savingProductionStageId, setSavingProductionStageId] =
+    useState<string | null>(null)
 
   const applyOrders = useCallback((nextOrders: AdminOrder[]) => {
     setOrders(nextOrders)
@@ -349,6 +376,16 @@ export default function AdminOrdersPanel() {
     setDraftDeliveryNote(
       Object.fromEntries(
         nextOrders.map((order) => [order.id, order.delivery_note ?? '']),
+      ) as Record<string, string>,
+    )
+    setDraftProductionStage(
+      Object.fromEntries(
+        nextOrders.map((order) => [order.id, order.production_stage]),
+      ) as Record<string, ProductionStage>,
+    )
+    setDraftProductionStageNote(
+      Object.fromEntries(
+        nextOrders.map((order) => [order.id, order.production_stage_note ?? '']),
       ) as Record<string, string>,
     )
     setPaymentDrafts(
@@ -615,6 +652,41 @@ export default function AdminOrdersPanel() {
       )
     } finally {
       setSavingScheduleId(null)
+    }
+  }
+
+  async function saveProductionStage(order: AdminOrder) {
+    const stage =
+      draftProductionStage[order.id] ?? order.production_stage
+    const note = (draftProductionStageNote[order.id] ?? '').trim()
+
+    setSavingProductionStageId(order.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=production-stage', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: order.id,
+          stage,
+          note,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      await loadOrders()
+      window.dispatchEvent(new Event('alimar:production-stage-changed'))
+      setMessage(`Etapa de ${order.public_code} actualizada.`)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar la etapa de producción.',
+      )
+    } finally {
+      setSavingProductionStageId(null)
     }
   }
 
@@ -990,6 +1062,12 @@ export default function AdminOrdersPanel() {
             const savingAgreedTotal = savingAgreedTotalId === order.id
             const savingPayment = savingPaymentId === order.id
           const savingSchedule = savingScheduleId === order.id
+          const savingProductionStage =
+            savingProductionStageId === order.id
+          const productionStage =
+            draftProductionStage[order.id] ?? order.production_stage
+          const productionStageNote =
+            draftProductionStageNote[order.id] ?? ''
           const promisedFor = draftPromisedFor[order.id] ?? ''
           const productionPriority =
             draftProductionPriority[order.id] ?? order.production_priority
@@ -1192,6 +1270,102 @@ export default function AdminOrdersPanel() {
                                   >
                                     {savingSchedule ? 'Guardando…' : 'Guardar planificación'}
                                   </button>
+                                </div>
+
+                                <div className="admin-order-production-stage">
+                                  <div className="admin-order-production-stage-heading">
+                                    <div>
+                                      <span>Etapa actual</span>
+                                      <strong>
+                                        {productionStageLabels[order.production_stage]}
+                                      </strong>
+                                    </div>
+
+                                    {order.production_stage_updated_at && (
+                                      <small>
+                                        Actualizada{' '}
+                                        {dateTime(order.production_stage_updated_at)}
+                                      </small>
+                                    )}
+                                  </div>
+
+                                  <div className="admin-order-production-stage-form">
+                                    <label>
+                                      Etapa
+                                      <select
+                                        value={productionStage}
+                                        onChange={(event) =>
+                                          setDraftProductionStage((current) => ({
+                                            ...current,
+                                            [order.id]:
+                                              event.target.value as ProductionStage,
+                                          }))
+                                        }
+                                        disabled={
+                                          savingProductionStage ||
+                                          !['confirmed', 'in_progress', 'ready'].includes(
+                                            order.status,
+                                          )
+                                        }
+                                      >
+                                        {(
+                                          Object.entries(productionStageLabels) as Array<
+                                            [ProductionStage, string]
+                                          >
+                                        ).map(([value, label]) => (
+                                          <option key={value} value={value}>
+                                            {label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+
+                                    <label className="admin-order-production-stage-note">
+                                      Nota interna
+                                      <input
+                                        type="text"
+                                        maxLength={500}
+                                        value={productionStageNote}
+                                        placeholder="Ej. esperando logo / falta pintar / listo para retirar"
+                                        onChange={(event) =>
+                                          setDraftProductionStageNote((current) => ({
+                                            ...current,
+                                            [order.id]: event.target.value,
+                                          }))
+                                        }
+                                        disabled={
+                                          savingProductionStage ||
+                                          !['confirmed', 'in_progress', 'ready'].includes(
+                                            order.status,
+                                          )
+                                        }
+                                      />
+                                    </label>
+
+                                    <button
+                                      className="admin-secondary"
+                                      type="button"
+                                      onClick={() => void saveProductionStage(order)}
+                                      disabled={
+                                        savingProductionStage ||
+                                        !['confirmed', 'in_progress', 'ready'].includes(
+                                          order.status,
+                                        )
+                                      }
+                                    >
+                                      {savingProductionStage
+                                        ? 'Guardando…'
+                                        : 'Guardar etapa'}
+                                    </button>
+                                  </div>
+
+                                  {!['confirmed', 'in_progress', 'ready'].includes(
+                                    order.status,
+                                  ) && (
+                                    <small>
+                                      El seguimiento fino se habilita al confirmar el pedido.
+                                    </small>
+                                  )}
                                 </div>
 
                                 {order.schedule_updated_at && (

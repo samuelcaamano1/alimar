@@ -4,6 +4,15 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const PRIORITIES = new Set(['low', 'normal', 'high', 'urgent'])
+const PRODUCTION_STAGES = new Set([
+  'not_started',
+  'design',
+  'awaiting_approval',
+  'materials',
+  'production',
+  'finishing',
+  'ready_for_delivery',
+])
 
 type OrderStatus =
   | 'new'
@@ -15,12 +24,30 @@ type OrderStatus =
   | 'cancelled'
 
 type ProductionPriority = 'low' | 'normal' | 'high' | 'urgent'
+type ProductionStage =
+  | 'not_started'
+  | 'design'
+  | 'awaiting_approval'
+  | 'materials'
+  | 'production'
+  | 'finishing'
+  | 'ready_for_delivery'
 
 const priorityLabels: Record<ProductionPriority, string> = {
   low: 'Baja',
   normal: 'Normal',
   high: 'Alta',
   urgent: 'Urgente',
+}
+
+const productionStageLabels: Record<ProductionStage, string> = {
+  not_started: 'Sin iniciar',
+  design: 'Diseño / armado',
+  awaiting_approval: 'Esperando aprobación',
+  materials: 'Preparando materiales',
+  production: 'En producción',
+  finishing: 'Terminaciones',
+  ready_for_delivery: 'Listo para entregar',
 }
 
 function text(value: unknown, max: number) {
@@ -216,6 +243,114 @@ export async function updateOrderSchedule(
   } catch {
     return Response.json(
       { error: 'No se pudo guardar la planificación del pedido.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+
+export async function updateOrderProductionStage(
+  databaseUrl: string,
+  body: Record<string, unknown>,
+) {
+  const id = text(body.id, 40)
+  const stage = text(body.stage, 24) as ProductionStage
+  const note = text(body.note, 500)
+
+  if (!UUID_RE.test(id)) {
+    return Response.json({ error: 'Pedido inválido.' }, { status: 400 })
+  }
+
+  if (!PRODUCTION_STAGES.has(stage)) {
+    return Response.json({ error: 'Etapa de producción inválida.' }, { status: 400 })
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+
+    const rows = await sql`
+      SELECT status, production_stage, production_stage_note
+      FROM orders
+      WHERE id = ${id}::uuid
+      LIMIT 1
+    `
+
+    if (rows.length === 0) {
+      return Response.json({ error: 'Pedido no encontrado.' }, { status: 404 })
+    }
+
+    const current = rows[0] as Record<string, unknown>
+    const status = String(current.status ?? '') as OrderStatus
+
+    if (!['confirmed', 'in_progress', 'ready'].includes(status)) {
+      return Response.json(
+        {
+          error:
+            status === 'cancelled'
+              ? 'No se puede actualizar producción en un pedido cancelado.'
+              : 'Confirmá el pedido antes de iniciar el seguimiento de producción.',
+        },
+        { status: 409 },
+      )
+    }
+
+    const previousStage = String(
+      current.production_stage ?? 'not_started',
+    ) as ProductionStage
+    const previousNote = current.production_stage_note
+      ? String(current.production_stage_note)
+      : ''
+
+    if (previousStage === stage && previousNote === note) {
+      return Response.json(
+        { ok: true, unchanged: true, stage, note },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const eventNote = [
+      `Etapa: ${productionStageLabels[stage]}`,
+      note,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+      .slice(0, 300)
+
+    await sql.transaction([
+      sql`
+        UPDATE orders
+        SET
+          production_stage = ${stage},
+          production_stage_note = ${note || null},
+          production_stage_updated_at = now(),
+          updated_at = now()
+        WHERE id = ${id}::uuid
+      `,
+      sql`
+        INSERT INTO order_events (
+          order_id,
+          event_type,
+          from_status,
+          to_status,
+          note
+        )
+        VALUES (
+          ${id}::uuid,
+          'production_stage_updated',
+          ${status},
+          ${status},
+          ${eventNote}
+        )
+      `,
+    ])
+
+    return Response.json(
+      { ok: true, stage, note },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudo actualizar la etapa de producción.' },
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }

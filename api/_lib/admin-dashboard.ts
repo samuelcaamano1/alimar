@@ -84,6 +84,30 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
             (
               SELECT COUNT(*)::int
               FROM orders
+              WHERE status IN ('confirmed', 'in_progress', 'ready')
+                AND production_stage = 'design'
+            ) AS production_stage_design,
+            (
+              SELECT COUNT(*)::int
+              FROM orders
+              WHERE status IN ('confirmed', 'in_progress', 'ready')
+                AND production_stage = 'awaiting_approval'
+            ) AS production_stage_approval,
+            (
+              SELECT COUNT(*)::int
+              FROM orders
+              WHERE status IN ('confirmed', 'in_progress', 'ready')
+                AND production_stage IN ('materials', 'production', 'finishing')
+            ) AS production_stage_making,
+            (
+              SELECT COUNT(*)::int
+              FROM orders
+              WHERE status IN ('confirmed', 'in_progress', 'ready')
+                AND production_stage = 'ready_for_delivery'
+            ) AS production_stage_ready,
+            (
+              SELECT COUNT(*)::int
+              FROM orders
               WHERE quote_id IS NOT NULL
                 AND status = 'completed'
                 AND actual_cost IS NULL
@@ -272,6 +296,10 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
           production_today: number(summaryRow.production_today),
           production_week: number(summaryRow.production_week),
           production_unscheduled: number(summaryRow.production_unscheduled),
+          production_stage_design: number(summaryRow.production_stage_design),
+          production_stage_approval: number(summaryRow.production_stage_approval),
+          production_stage_making: number(summaryRow.production_stage_making),
+          production_stage_ready: number(summaryRow.production_stage_ready),
           completed_missing_cost: number(summaryRow.completed_missing_cost),
           month_actual_count: number(summaryRow.month_actual_count),
           month_actual_revenue: String(summaryRow.month_actual_revenue ?? '0'),

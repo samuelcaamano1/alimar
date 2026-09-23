@@ -9,6 +9,7 @@ import {
   recoveryWhatsappMessage,
   type RecoveredOrder,
 } from './orderRecovery'
+import { compressImageFile } from './imageDataUrl'
 import './App.css'
 
 type CatalogVariant = {
@@ -81,28 +82,23 @@ type CustomRequestSuccess = {
 }
 
 type CustomRequestType = 'paper' | '3d' | 'event' | 'design' | 'other'
-type CustomRequestExampleKey =
-  | 'tattoo-paper'
-  | 'birthday'
-  | 'invitations'
-  | 'stickers'
-  | 'boxes'
-  | 'signs'
-  | '3d'
-  | 'other'
+type CustomRequestExampleKey = string
 
 type CustomRequestExample = {
+  id?: string
   key: CustomRequestExampleKey
   title: string
   hint: string
   requestType: CustomRequestType
   art: string
+  imageUrl?: string | null
+  imageAlt?: string | null
   sizePlaceholder: string
   themePlaceholder: string
   descriptionPlaceholder: string
 }
 
-const customRequestExamples: CustomRequestExample[] = [
+const fallbackCustomRequestExamples: CustomRequestExample[] = [
   {
     key: 'tattoo-paper',
     title: 'Papel para tatuajes',
@@ -396,6 +392,11 @@ function StorefrontApp() {
     useState<CustomRequestSuccess | null>(null)
   const [selectedCustomRequestExampleKey, setSelectedCustomRequestExampleKey] =
     useState<CustomRequestExampleKey | null>(null)
+  const [customRequestExamples, setCustomRequestExamples] =
+    useState<CustomRequestExample[]>(fallbackCustomRequestExamples)
+  const [customReferenceImageUrl, setCustomReferenceImageUrl] = useState('')
+  const [customReferenceImageName, setCustomReferenceImageName] = useState('')
+  const [customReferenceImageBusy, setCustomReferenceImageBusy] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -587,11 +588,84 @@ function StorefrontApp() {
     setCart((current) => current.filter((item) => cartItemKey(item) !== itemKey))
   }
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadCustomExamples() {
+      try {
+        const response = await fetch('/api/catalog?view=custom-examples', {
+          cache: 'no-store',
+        })
+
+        if (!response.ok) return
+
+        const data = (await response.json()) as {
+          examples?: CustomRequestExample[]
+        }
+
+        if (!cancelled && Array.isArray(data.examples) && data.examples.length > 0) {
+          setCustomRequestExamples(data.examples)
+        }
+      } catch {
+        // The seeded fallback remains available if the gallery cannot be loaded.
+      }
+    }
+
+    void loadCustomExamples()
+
+    function refreshCustomExamples() {
+      void loadCustomExamples()
+    }
+
+    window.addEventListener('alimar:custom-examples-changed', refreshCustomExamples)
+
+    return () => {
+      cancelled = true
+      window.removeEventListener(
+        'alimar:custom-examples-changed',
+        refreshCustomExamples,
+      )
+    }
+  }, [])
+
   function openCustomRequest() {
     setCustomRequestId(crypto.randomUUID())
     setCustomRequestMessage('')
     setCustomRequestSuccess(null)
+    setSelectedCustomRequestExampleKey(null)
+    setCustomReferenceImageUrl('')
+    setCustomReferenceImageName('')
     setCustomRequestOpen(true)
+  }
+
+  async function chooseCustomReferenceImage(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file) return
+
+    setCustomReferenceImageBusy(true)
+    setCustomRequestMessage('')
+
+    try {
+      const imageUrl = await compressImageFile(file, {
+        maxDimension: 1280,
+        maxDataUrlLength: 900_000,
+      })
+
+      setCustomReferenceImageUrl(imageUrl)
+      setCustomReferenceImageName(file.name)
+    } catch (error) {
+      setCustomRequestMessage(
+        error instanceof Error
+          ? error.message
+          : 'No pudimos preparar la imagen de referencia.',
+      )
+    } finally {
+      setCustomReferenceImageBusy(false)
+    }
   }
 
   async function submitCustomRequest(event: FormEvent<HTMLFormElement>) {
@@ -603,9 +677,7 @@ function StorefrontApp() {
     const selectedExample = customRequestExamples.find(
       (example) => example.key === selectedCustomRequestExampleKey,
     )
-    const requestDescription = selectedExample
-      ? `Ejemplo elegido: ${selectedExample.title}\n\n${rawDescription}`
-      : rawDescription
+    const requestDescription = rawDescription
 
     setCustomRequestBusy(true)
     setCustomRequestMessage('')
@@ -619,12 +691,15 @@ function StorefrontApp() {
           customerName: form.get('customerName'),
           customerPhone: form.get('customerPhone'),
           requestType: selectedExample?.requestType ?? form.get('requestType'),
+          exampleId: selectedExample?.id ?? null,
+          exampleTitle: selectedExample?.title ?? null,
           quantity: form.get('quantity'),
           neededDate: form.get('neededDate'),
           dimensions: form.get('dimensions'),
           theme: form.get('theme'),
           description: requestDescription,
           referenceUrl: form.get('referenceUrl'),
+          referenceImageUrl: customReferenceImageUrl || null,
         }),
       })
 
@@ -647,6 +722,8 @@ function StorefrontApp() {
         whatsappMessage: data.whatsappMessage,
       })
       setCustomRequestMessage('')
+      setCustomReferenceImageUrl('')
+      setCustomReferenceImageName('')
       formElement.reset()
     } catch (error) {
       setCustomRequestMessage(
@@ -1007,14 +1084,25 @@ function StorefrontApp() {
                 selectedCustomRequestExample ? (
                   <form className="custom-request-form" onSubmit={submitCustomRequest}>
                     <div className="custom-request-selected-example">
-                      <div
-                        className={`custom-request-example-art is-${selectedCustomRequestExample.art}`}
-                        aria-hidden="true"
-                      >
-                        <span />
-                        <span />
-                        <i />
-                      </div>
+                      {selectedCustomRequestExample.imageUrl ? (
+                        <img
+                          className="custom-request-example-image"
+                          src={selectedCustomRequestExample.imageUrl}
+                          alt={
+                            selectedCustomRequestExample.imageAlt ||
+                            selectedCustomRequestExample.title
+                          }
+                        />
+                      ) : (
+                        <div
+                          className={`custom-request-example-art is-${selectedCustomRequestExample.art}`}
+                          aria-hidden="true"
+                        >
+                          <span />
+                          <span />
+                          <i />
+                        </div>
+                      )}
 
                       <div>
                         <span>Elegiste algo parecido a</span>
@@ -1083,8 +1171,52 @@ function StorefrontApp() {
                         />
                       </label>
 
+                      <div className="custom-request-span-2 custom-request-reference-upload">
+                        <div>
+                          <strong>¿Tenés una foto de referencia?</strong>
+                          <span>Podés subir una sola imagen. La reducimos antes de enviarla.</span>
+                        </div>
+
+                        <label className="button button-secondary">
+                          {customReferenceImageBusy
+                            ? 'Preparando imagen…'
+                            : customReferenceImageUrl
+                              ? 'Cambiar imagen'
+                              : 'Subir imagen'}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={(event) =>
+                              void chooseCustomReferenceImage(event)
+                            }
+                            disabled={customReferenceImageBusy}
+                          />
+                        </label>
+
+                        {customReferenceImageUrl && (
+                          <div className="custom-request-reference-preview">
+                            <img
+                              src={customReferenceImageUrl}
+                              alt="Referencia que vas a enviar"
+                            />
+                            <div>
+                              <span>{customReferenceImageName || 'Imagen preparada'}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCustomReferenceImageUrl('')
+                                  setCustomReferenceImageName('')
+                                }}
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       <label className="custom-request-span-2">
-                        ¿Viste algo parecido? Pegá el link <span className="custom-request-optional">opcional</span>
+                        ¿Viste algo parecido online? Pegá el link <span className="custom-request-optional">opcional</span>
                         <input
                           name="referenceUrl"
                           type="url"
@@ -1152,14 +1284,22 @@ function StorefrontApp() {
                           key={example.key}
                           onClick={() => setSelectedCustomRequestExampleKey(example.key)}
                         >
-                          <div
-                            className={`custom-request-example-art is-${example.art}`}
-                            aria-hidden="true"
-                          >
-                            <span />
-                            <span />
-                            <i />
-                          </div>
+                          {example.imageUrl ? (
+                            <img
+                              className="custom-request-example-image"
+                              src={example.imageUrl}
+                              alt={example.imageAlt || example.title}
+                            />
+                          ) : (
+                            <div
+                              className={`custom-request-example-art is-${example.art}`}
+                              aria-hidden="true"
+                            >
+                              <span />
+                              <span />
+                              <i />
+                            </div>
+                          )}
                           <div>
                             <strong>{example.title}</strong>
                             <span>{example.hint}</span>

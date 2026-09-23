@@ -3,6 +3,11 @@ import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 import { getAdminBusinessDashboard } from '../_lib/admin-dashboard.js'
 import { getAdminCustomers } from '../_lib/admin-customers.js'
 import {
+  createAdminCustomRequestExample,
+  listAdminCustomRequestExamples,
+  updateAdminCustomRequestExample,
+} from '../_lib/custom-request-examples.js'
+import {
   createAdminQuote,
   listAdminQuotes,
   updateAdminQuote,
@@ -63,6 +68,10 @@ export async function GET(request: Request) {
 
   if (action === 'customers') {
     return getAdminCustomers(databaseUrl, requestUrl)
+  }
+
+  if (action === 'custom-examples') {
+    return listAdminCustomRequestExamples(databaseUrl)
   }
 
   try {
@@ -138,7 +147,11 @@ async function adminMutationContext(request: Request) {
   const requestUrl = new URL(request.url)
   const action = requestUrl.searchParams.get('action')
 
-  if (action !== 'cost-resources' && action !== 'quotes') {
+  if (
+    action !== 'cost-resources' &&
+    action !== 'quotes' &&
+    action !== 'custom-examples'
+  ) {
     return {
       error: Response.json(
         { error: 'Invalid action' },
@@ -166,6 +179,10 @@ export async function POST(request: Request) {
     return createAdminQuote(context.databaseUrl, body)
   }
 
+  if (context.action === 'custom-examples') {
+    return createAdminCustomRequestExample(context.databaseUrl, body)
+  }
+
   return createCostResource(context.databaseUrl, body)
 }
 
@@ -183,6 +200,14 @@ export async function PATCH(request: Request) {
 
   if (context.action === 'quotes') {
     return updateAdminQuote(
+      context.databaseUrl,
+      context.requestUrl.searchParams.get('id') ?? '',
+      body,
+    )
+  }
+
+  if (context.action === 'custom-examples') {
+    return updateAdminCustomRequestExample(
       context.databaseUrl,
       context.requestUrl.searchParams.get('id') ?? '',
       body,

@@ -7362,3 +7362,482 @@
     transition: none;
   }
 }
+
+
+/* ALIMAR PERSONALIZED SUITE ADMIN 1A.45-47 */
+.admin-custom-examples {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-custom-examples-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.admin-custom-examples-heading > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-custom-examples-heading h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.25rem;
+}
+
+.admin-custom-examples-heading p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: .66rem;
+  line-height: 1.45;
+}
+
+.admin-custom-examples-heading > div:last-child {
+  display: grid;
+  justify-items: end;
+}
+
+.admin-custom-examples-heading > div:last-child strong {
+  color: var(--admin-blue-dark);
+  font-size: 1.1rem;
+}
+
+.admin-custom-examples-heading > div:last-child span {
+  color: var(--admin-muted);
+  font-size: .51rem;
+}
+
+.admin-custom-examples-layout {
+  display: grid;
+  grid-template-columns: minmax(270px,.65fr) minmax(0,1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.admin-custom-examples-list {
+  display: grid;
+  gap: 6px;
+  max-height: 720px;
+  overflow: auto;
+  padding-right: 3px;
+}
+
+.admin-custom-example-card {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(12,16,20,.075);
+  border-radius: 11px;
+  background: rgba(255,255,255,.38);
+}
+
+.admin-custom-example-card.is-selected {
+  border-color: rgba(63,120,138,.28);
+  background: rgba(100,175,198,.075);
+}
+
+.admin-custom-example-card.is-hidden {
+  opacity: .62;
+}
+
+.admin-custom-example-card.is-new {
+  grid-template-columns: auto minmax(0,1fr);
+  align-items: center;
+  width: 100%;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.admin-custom-example-card.is-new > span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  color: var(--admin-blue-dark);
+  background: rgba(100,175,198,.1);
+  font-size: 1.1rem;
+}
+
+.admin-custom-example-card.is-new strong,
+.admin-custom-example-card.is-new small {
+  grid-column: 2;
+}
+
+.admin-custom-example-card.is-new strong {
+  font-size: .62rem;
+}
+
+.admin-custom-example-card.is-new small {
+  color: var(--admin-muted);
+  font-size: .5rem;
+}
+
+.admin-custom-example-select {
+  display: grid;
+  grid-template-columns: 84px minmax(0,1fr);
+  gap: 9px;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.admin-custom-example-select img,
+.admin-custom-example-select .custom-request-example-art {
+  width: 84px;
+  height: 72px;
+  min-height: 72px;
+  object-fit: cover;
+  border-radius: 9px;
+}
+
+.admin-custom-example-select > div:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-custom-example-select strong,
+.admin-custom-example-select small,
+.admin-custom-example-select span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-custom-example-select strong {
+  font-size: .61rem;
+  white-space: nowrap;
+}
+
+.admin-custom-example-select small {
+  color: var(--admin-muted);
+  font-size: .49rem;
+  line-height: 1.35;
+}
+
+.admin-custom-example-select span {
+  color: var(--admin-blue-dark);
+  font-size: .47rem;
+  font-weight: 800;
+}
+
+.admin-custom-example-actions {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.admin-custom-example-actions button {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(12,16,20,.08);
+  border-radius: 8px;
+  color: var(--admin-muted);
+  background: rgba(255,255,255,.7);
+  cursor: pointer;
+  font: inherit;
+  font-size: .49rem;
+  font-weight: 800;
+}
+
+.admin-custom-example-editor {
+  display: grid;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid rgba(12,16,20,.075);
+  border-radius: 12px;
+  background: rgba(255,255,255,.36);
+}
+
+.admin-custom-example-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-custom-example-editor-head > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-custom-example-editor-head span {
+  color: var(--admin-muted);
+  font-size: .5rem;
+}
+
+.admin-custom-example-editor-head strong {
+  overflow: hidden;
+  font-size: .68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-custom-example-active {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .54rem;
+  font-weight: 800;
+}
+
+.admin-custom-example-preview {
+  display: grid;
+  grid-template-columns: minmax(180px,.7fr) minmax(0,1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-custom-example-preview > img,
+.admin-custom-example-preview > .custom-request-example-art {
+  width: 100%;
+  height: 180px;
+  min-height: 180px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #f3e8cf;
+}
+
+.admin-custom-example-preview > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.admin-custom-example-preview label {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.admin-custom-example-preview label input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.admin-custom-example-fields {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+
+.admin-custom-example-fields label {
+  display: grid;
+  gap: 5px;
+  color: var(--admin-ink);
+  font-size: .55rem;
+  font-weight: 800;
+}
+
+.admin-custom-example-fields input,
+.admin-custom-example-fields select,
+.admin-custom-example-fields textarea {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+  padding: 8px 9px;
+  border: 1px solid rgba(12,16,20,.1);
+  border-radius: 9px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+  resize: vertical;
+}
+
+.admin-custom-example-span-2 {
+  grid-column: span 2;
+}
+
+.admin-custom-example-save {
+  justify-self: end;
+}
+
+.admin-custom-request-example-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: rgba(100,175,198,.07);
+}
+
+.admin-custom-request-example-title span {
+  color: var(--admin-muted);
+  font-size: .49rem;
+}
+
+.admin-custom-request-example-title strong {
+  color: var(--admin-blue-dark);
+  font-size: .57rem;
+}
+
+.admin-custom-request-reference-image {
+  display: grid;
+  grid-template-columns: 76px minmax(0,1fr);
+  gap: 8px;
+  align-items: center;
+  width: min(360px,100%);
+  padding: 6px;
+  border: 1px solid rgba(12,16,20,.07);
+  border-radius: 9px;
+  color: var(--admin-blue-dark);
+  background: rgba(255,255,255,.45);
+  text-decoration: none;
+  font-size: .52rem;
+  font-weight: 800;
+}
+
+.admin-custom-request-reference-image img {
+  width: 76px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 7px;
+}
+
+.admin-order-production-stage {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(12,16,20,.07);
+}
+
+.admin-order-production-stage-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-order-production-stage-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-order-production-stage-heading span,
+.admin-order-production-stage-heading small {
+  color: var(--admin-muted);
+  font-size: .5rem;
+}
+
+.admin-order-production-stage-heading strong {
+  color: var(--admin-blue-dark);
+  font-size: .61rem;
+}
+
+.admin-order-production-stage-form {
+  display: grid;
+  grid-template-columns: minmax(150px,.75fr) minmax(220px,1.4fr) auto;
+  align-items: end;
+  gap: 7px;
+}
+
+.admin-order-production-stage-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--admin-ink);
+  font-size: .54rem;
+  font-weight: 800;
+}
+
+.admin-order-production-stage-form input,
+.admin-order-production-stage-form select {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border: 1px solid rgba(12,16,20,.1);
+  border-radius: 9px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.admin-business-production-stages {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.admin-business-production-stages span {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 6px 7px;
+  border-radius: 8px;
+  color: var(--admin-muted);
+  background: rgba(255,255,255,.5);
+  font-size: .49rem;
+}
+
+.admin-business-production-stages strong {
+  color: var(--admin-blue-dark);
+}
+
+.admin-custom-examples,
+.admin-custom-requests,
+.admin-orders-panel {
+  scroll-margin-top: 78px;
+}
+
+@media (max-width: 900px) {
+  .admin-custom-examples-layout,
+  .admin-custom-example-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-custom-examples-list {
+    max-height: 430px;
+  }
+
+  .admin-order-production-stage-form,
+  .admin-business-production-stages {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .admin-order-production-stage-form > button {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-custom-examples-heading,
+  .admin-custom-example-editor-head,
+  .admin-order-production-stage-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-custom-example-fields,
+  .admin-order-production-stage-form,
+  .admin-business-production-stages {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-custom-example-span-2,
+  .admin-order-production-stage-form > button {
+    grid-column: auto;
+  }
+
+  .admin-custom-example-preview > img,
+  .admin-custom-example-preview > .custom-request-example-art {
+    height: 150px;
+    min-height: 150px;
+  }
+}

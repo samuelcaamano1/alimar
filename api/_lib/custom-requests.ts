@@ -45,6 +45,16 @@ function validReferenceUrl(value: string) {
   }
 }
 
+function validReferenceImage(value: string) {
+  if (!value) return true
+  if (value.length > 1_000_000) return false
+  if (/^https:\/\/[^\s]+$/i.test(value)) return true
+
+  return /^data:image\/(?:png|jpeg|jpg|webp);base64,[a-z0-9+/=\r\n]+$/i.test(
+    value,
+  )
+}
+
 function sameOrigin(request: Request) {
   const origin = request.headers.get('origin')
   if (!origin) return true
@@ -70,6 +80,8 @@ function publicCode(number: unknown) {
 function buildWhatsappMessage(args: {
   code: string
   name: string
+  exampleTitle: string | null
+  hasReferenceImage: boolean
   requestType: string
   quantity: number | null
   neededDate: string | null
@@ -82,8 +94,10 @@ function buildWhatsappMessage(args: {
     `Trabajo: ${typeLabel(args.requestType)}`,
   ]
 
+  if (args.exampleTitle) lines.push(`Ejemplo: ${args.exampleTitle}`)
   if (args.quantity !== null) lines.push(`Cantidad aproximada: ${args.quantity}`)
   if (args.neededDate) lines.push(`Lo necesito para: ${args.neededDate}`)
+  if (args.hasReferenceImage) lines.push('Adjunté una imagen de referencia en la solicitud.')
 
   lines.push('', 'Idea:', args.description, '', 'La solicitud ya quedó registrada en la web.')
 
@@ -103,7 +117,12 @@ function formatRow(row: Record<string, unknown>) {
     dimensions: row.dimensions ? String(row.dimensions) : null,
     theme: row.theme ? String(row.theme) : null,
     description: String(row.description ?? ''),
+    example_id: row.example_id ? String(row.example_id) : null,
+    example_title: row.example_title ? String(row.example_title) : null,
     reference_url: row.reference_url ? String(row.reference_url) : null,
+    reference_image_url: row.reference_image_url
+      ? String(row.reference_image_url)
+      : null,
     quote_id: row.quote_id ? String(row.quote_id) : null,
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
@@ -146,7 +165,13 @@ export async function createPublicCustomRequest(request: Request) {
   const dimensions = text(body.dimensions, 120) || null
   const theme = text(body.theme, 240) || null
   const description = text(body.description, 3000)
+  const exampleId = text(body.exampleId, 40) || null
+  const incomingExampleTitle = text(body.exampleTitle, 100) || null
   const referenceUrl = text(body.referenceUrl, 500) || null
+  const referenceImageUrl =
+    typeof body.referenceImageUrl === 'string'
+      ? body.referenceImageUrl.trim()
+      : ''
 
   if (!UUID_RE.test(requestId)) {
     return Response.json({ error: 'Identificador de solicitud inválido.' }, { status: 400 })
@@ -186,8 +211,44 @@ export async function createPublicCustomRequest(request: Request) {
     )
   }
 
+  if (exampleId && !UUID_RE.test(exampleId)) {
+    return Response.json({ error: 'Ejemplo personalizado inválido.' }, { status: 400 })
+  }
+
+  if (referenceImageUrl && !validReferenceImage(referenceImageUrl)) {
+    return Response.json(
+      { error: 'Referencia visual inválida. Usá JPG, PNG o WebP menor a 1 MB.' },
+      { status: 400 },
+    )
+  }
+
   try {
     const sql = neon(databaseUrl)
+
+    let resolvedRequestType = requestType
+    let resolvedExampleTitle = incomingExampleTitle
+    let resolvedExampleId = exampleId
+
+    if (exampleId) {
+      const exampleRows = await sql`
+        SELECT id::text, title, request_type
+        FROM custom_request_examples
+        WHERE id = ${exampleId}::uuid
+          AND active = true
+        LIMIT 1
+      `
+
+      if (exampleRows.length === 0) {
+        return Response.json(
+          { error: 'Ese ejemplo ya no está disponible. Elegí otro.' },
+          { status: 409, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+
+      resolvedRequestType = String(exampleRows[0].request_type)
+      resolvedExampleTitle = String(exampleRows[0].title)
+      resolvedExampleId = String(exampleRows[0].id)
+    }
 
     const existing = await sql`
       SELECT request_number
@@ -205,7 +266,9 @@ export async function createPublicCustomRequest(request: Request) {
           whatsappMessage: buildWhatsappMessage({
             code,
             name: customerName,
-            requestType,
+            exampleTitle: resolvedExampleTitle,
+            hasReferenceImage: Boolean(referenceImageUrl),
+            requestType: resolvedRequestType,
             quantity: quantity ?? null,
             neededDate: neededDate ?? null,
             description,
@@ -226,19 +289,25 @@ export async function createPublicCustomRequest(request: Request) {
         dimensions,
         theme,
         description,
-        reference_url
+        example_id,
+        example_title,
+        reference_url,
+        reference_image_url
       )
       VALUES (
         ${requestId}::uuid,
         ${customerName},
         ${customerPhone},
-        ${requestType},
+        ${resolvedRequestType},
         ${quantity},
         ${neededDate},
         ${dimensions},
         ${theme},
         ${description},
-        ${referenceUrl}
+        ${resolvedExampleId}::uuid,
+        ${resolvedExampleTitle},
+        ${referenceUrl},
+        ${referenceImageUrl || null}
       )
       RETURNING request_number
     `
@@ -249,9 +318,11 @@ export async function createPublicCustomRequest(request: Request) {
       {
         requestCode: code,
         whatsappMessage: buildWhatsappMessage({
-          code,
-          name: customerName,
-          requestType,
+            code,
+            name: customerName,
+            exampleTitle: resolvedExampleTitle,
+            hasReferenceImage: Boolean(referenceImageUrl),
+            requestType: resolvedRequestType,
           quantity: quantity ?? null,
           neededDate: neededDate ?? null,
           description,
@@ -284,7 +355,10 @@ export async function listAdminCustomRequests(databaseUrl: string) {
         dimensions,
         theme,
         description,
+        example_id::text,
+        example_title,
         reference_url,
+        reference_image_url,
         quote_id::text,
         created_at::text,
         updated_at::text
@@ -339,7 +413,10 @@ export async function updateAdminCustomRequest(
         dimensions,
         theme,
         description,
+        example_id::text,
+        example_title,
         reference_url,
+        reference_image_url,
         quote_id::text,
         created_at::text,
         updated_at::text

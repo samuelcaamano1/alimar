@@ -3114,3 +3114,111 @@
 @media (prefers-reduced-motion: reduce) {
   .custom-request-example { transition: none; }
 }
+
+
+/* ALIMAR PERSONALIZED SUITE 1A.45-47 */
+.custom-request-example-image {
+  width: 100%;
+  height: 100%;
+  min-height: 92px;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.custom-request-reference-upload {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed rgba(12,16,20,.16);
+  border-radius: 14px;
+  background: rgba(255,255,255,.5);
+}
+
+.custom-request-reference-upload > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.custom-request-reference-upload strong {
+  color: #0c1014;
+  font-size: .82rem;
+}
+
+.custom-request-reference-upload > div:first-child > span {
+  color: rgba(12,16,20,.62);
+  font-size: .7rem;
+  line-height: 1.4;
+}
+
+.custom-request-reference-upload label {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.custom-request-reference-upload label input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.custom-request-reference-preview {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 82px minmax(0,1fr);
+  gap: 10px;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid rgba(12,16,20,.07);
+}
+
+.custom-request-reference-preview img {
+  width: 82px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #f3e8cf;
+}
+
+.custom-request-reference-preview > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+}
+
+.custom-request-reference-preview span {
+  max-width: 100%;
+  overflow: hidden;
+  color: rgba(12,16,20,.65);
+  font-size: .68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-request-reference-preview button {
+  border: 0;
+  padding: 0;
+  color: #3f788a;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+@media (max-width: 650px) {
+  .custom-request-reference-upload {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .custom-request-reference-preview {
+    grid-column: auto;
+  }
+}

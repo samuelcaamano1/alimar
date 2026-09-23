@@ -10,6 +10,10 @@ type DashboardSummary = {
   production_today: number
   production_week: number
   production_unscheduled: number
+  production_stage_design: number
+  production_stage_approval: number
+  production_stage_making: number
+  production_stage_ready: number
   completed_missing_cost: number
   month_actual_count: number
   month_actual_revenue: string
@@ -172,6 +176,10 @@ export default function AdminBusinessDashboard() {
     window.addEventListener('alimar:quote-metrics-changed', refreshFromBusinessChange)
     window.addEventListener('alimar:payments-changed', refreshFromBusinessChange)
     window.addEventListener('alimar:schedule-changed', refreshFromBusinessChange)
+    window.addEventListener(
+      'alimar:production-stage-changed',
+      refreshFromBusinessChange,
+    )
     window.addEventListener('focus', refreshOnFocus)
 
     return () => {
@@ -179,6 +187,10 @@ export default function AdminBusinessDashboard() {
       window.removeEventListener('alimar:quote-metrics-changed', refreshFromBusinessChange)
       window.removeEventListener('alimar:payments-changed', refreshFromBusinessChange)
       window.removeEventListener('alimar:schedule-changed', refreshFromBusinessChange)
+      window.removeEventListener(
+        'alimar:production-stage-changed',
+        refreshFromBusinessChange,
+      )
       window.removeEventListener('focus', refreshOnFocus)
     }
   }, [loadDashboard])
@@ -372,6 +384,23 @@ export default function AdminBusinessDashboard() {
                 <span>Sin fecha</span>
                 <strong>{data.summary.production_unscheduled}</strong>
               </div>
+            </div>
+
+            <div className="admin-business-production-stages">
+              <span>
+                Diseño <strong>{data.summary.production_stage_design}</strong>
+              </span>
+              <span>
+                Esperando aprobación{' '}
+                <strong>{data.summary.production_stage_approval}</strong>
+              </span>
+              <span>
+                Produciendo{' '}
+                <strong>{data.summary.production_stage_making}</strong>
+              </span>
+              <span>
+                Listos <strong>{data.summary.production_stage_ready}</strong>
+              </span>
             </div>
           </section>
 
