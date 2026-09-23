@@ -81,6 +81,107 @@ function formatRow(row: Record<string, unknown>) {
   }
 }
 
+function formatCommercialMetrics(row: Record<string, unknown>) {
+  return {
+    total_count: Number(row.total_count ?? 0),
+    sent_count: Number(row.sent_count ?? 0),
+    accepted_count: Number(row.accepted_count ?? 0),
+    rejected_count: Number(row.rejected_count ?? 0),
+    converted_count: Number(row.converted_count ?? 0),
+    quoted_value: String(row.quoted_value ?? '0'),
+    accepted_value: String(row.accepted_value ?? '0'),
+    average_accepted_ticket: String(row.average_accepted_ticket ?? '0'),
+    reject_price_count: Number(row.reject_price_count ?? 0),
+    reject_timing_count: Number(row.reject_timing_count ?? 0),
+    reject_cancelled_count: Number(row.reject_cancelled_count ?? 0),
+    reject_other_count: Number(row.reject_other_count ?? 0),
+  }
+}
+
+async function commercialMetrics(
+  databaseUrl: string,
+  period: 'month' | 'all',
+) {
+  const sql = neon(databaseUrl)
+
+  const rows = period === 'month'
+    ? await sql`
+        SELECT
+          COUNT(*)::int AS total_count,
+          COUNT(*) FILTER (WHERE quote.status = 'sent')::int AS sent_count,
+          COUNT(*) FILTER (WHERE quote.status = 'accepted')::int AS accepted_count,
+          COUNT(*) FILTER (WHERE quote.status = 'rejected')::int AS rejected_count,
+          COUNT(linked_order.id)::int AS converted_count,
+          COALESCE(SUM(quote.total_price), 0)::text AS quoted_value,
+          COALESCE(
+            SUM(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
+            0
+          )::text AS accepted_value,
+          COALESCE(
+            AVG(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
+            0
+          )::text AS average_accepted_ticket,
+          COUNT(*) FILTER (
+            WHERE quote.status = 'rejected'
+              AND quote.customer_response_reason = 'price'
+          )::int AS reject_price_count,
+          COUNT(*) FILTER (
+            WHERE quote.status = 'rejected'
+              AND quote.customer_response_reason = 'timing'
+          )::int AS reject_timing_count,
+          COUNT(*) FILTER (
+            WHERE quote.status = 'rejected'
+              AND quote.customer_response_reason = 'cancelled'
+          )::int AS reject_cancelled_count,
+          COUNT(*) FILTER (
+            WHERE quote.status = 'rejected'
+              AND quote.customer_response_reason = 'other'
+          )::int AS reject_other_count
+        FROM quotes quote
+        LEFT JOIN orders linked_order ON linked_order.quote_id = quote.id
+        WHERE quote.created_at >= date_trunc('month', CURRENT_DATE)
+      `
+    : await sql`
+        SELECT
+          COUNT(*)::int AS total_count,
+          COUNT(*) FILTER (WHERE quote.status = 'sent')::int AS sent_count,
+          COUNT(*) FILTER (WHERE quote.status = 'accepted')::int AS accepted_count,
+          COUNT(*) FILTER (WHERE quote.status = 'rejected')::int AS rejected_count,
+          COUNT(linked_order.id)::int AS converted_count,
+          COALESCE(SUM(quote.total_price), 0)::text AS quoted_value,
+          COALESCE(
+            SUM(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
+            0
+          )::text AS accepted_value,
+          COALESCE(
+            AVG(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
+            0
+          )::text AS average_accepted_ticket,
+          COUNT(*) FILTER (
+            WHERE quote.status = 'rejected'
+              AND quote.customer_response_reason = 'price'
+          )::int AS reject_price_count,
+          COUNT(*) FILTER (
+            WHERE quote.status = 'rejected'
+              AND quote.customer_response_reason = 'timing'
+          )::int AS reject_timing_count,
+          COUNT(*) FILTER (
+            WHERE quote.status = 'rejected'
+              AND quote.customer_response_reason = 'cancelled'
+          )::int AS reject_cancelled_count,
+          COUNT(*) FILTER (
+            WHERE quote.status = 'rejected'
+              AND quote.customer_response_reason = 'other'
+          )::int AS reject_other_count
+        FROM quotes quote
+        LEFT JOIN orders linked_order ON linked_order.quote_id = quote.id
+      `
+
+  return formatCommercialMetrics(
+    (rows[0] ?? {}) as Record<string, unknown>,
+  )
+}
+
 export async function listAdminQuotes(databaseUrl: string) {
   try {
     const sql = neon(databaseUrl)
@@ -125,6 +226,11 @@ export async function listAdminQuotes(databaseUrl: string) {
       LIMIT 100
     `
 
+    const [monthMetrics, allMetrics] = await Promise.all([
+      commercialMetrics(databaseUrl, 'month'),
+      commercialMetrics(databaseUrl, 'all'),
+    ])
+
     return Response.json(
       {
         quotes: rows.map((row) =>
@@ -133,6 +239,10 @@ export async function listAdminQuotes(databaseUrl: string) {
             status: (row as Record<string, unknown>).effective_status,
           }),
         ),
+        metrics: {
+          month: monthMetrics,
+          all: allMetrics,
+        },
       },
       { headers: { 'Cache-Control': 'no-store' } },
     )

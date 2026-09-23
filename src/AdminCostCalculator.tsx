@@ -63,6 +63,27 @@ type GuidedJobType = 'paper-print' | '3d-print' | 'manual'
 type WizardStep = 1 | 2 | 3
 type PrintSides = 'single' | 'double'
 type QuoteFocusFilter = 'all' | 'waiting' | 'expiring' | 'accepted' | 'expired'
+type QuoteMetricPeriod = 'month' | 'all'
+
+type QuoteCommercialMetrics = {
+  total_count: number
+  sent_count: number
+  accepted_count: number
+  rejected_count: number
+  converted_count: number
+  quoted_value: string
+  accepted_value: string
+  average_accepted_ticket: string
+  reject_price_count: number
+  reject_timing_count: number
+  reject_cancelled_count: number
+  reject_other_count: number
+}
+
+type QuoteCommercialMetricSet = {
+  month: QuoteCommercialMetrics
+  all: QuoteCommercialMetrics
+}
 
 type GuidedCost = {
   key: string
@@ -178,6 +199,13 @@ function quoteResponseReasonLabel(value: string | null) {
     default:
       return 'Sin motivo'
   }
+}
+
+function acceptanceRate(metrics: QuoteCommercialMetrics) {
+  const decided = metrics.accepted_count + metrics.rejected_count
+  if (decided <= 0) return null
+
+  return (metrics.accepted_count / decided) * 100
 }
 
 function daysUntil(value: string | null) {
@@ -331,6 +359,8 @@ export default function AdminCostCalculator({
   const [quoteSearch, setQuoteSearch] = useState('')
   const [quoteStatusFilter, setQuoteStatusFilter] = useState<'all' | QuoteStatus>('all')
   const [quoteFocusFilter, setQuoteFocusFilter] = useState<QuoteFocusFilter>('all')
+  const [quoteMetricPeriod, setQuoteMetricPeriod] = useState<QuoteMetricPeriod>('month')
+  const [quoteMetrics, setQuoteMetrics] = useState<QuoteCommercialMetricSet | null>(null)
   const [selectedQuote, setSelectedQuote] = useState<AdminQuote | null>(null)
   const [saveQuoteOpen, setSaveQuoteOpen] = useState(false)
   const [quoteSaving, setQuoteSaving] = useState(false)
@@ -398,8 +428,12 @@ export default function AdminCostCalculator({
 
       if (!response.ok) throw new Error(await responseMessage(response))
 
-      const data = (await response.json()) as { quotes: AdminQuote[] }
+      const data = (await response.json()) as {
+        quotes: AdminQuote[]
+        metrics: QuoteCommercialMetricSet
+      }
       setQuotes(data.quotes)
+      setQuoteMetrics(data.metrics)
       setQuoteState('ready')
     } catch (error) {
       setMessage(
@@ -471,6 +505,11 @@ export default function AdminCostCalculator({
     })
   }, [categoryFilter, resourceSearch, resources])
 
+
+  const activeQuoteMetrics = quoteMetrics?.[quoteMetricPeriod] ?? null
+  const activeAcceptanceRate = activeQuoteMetrics
+    ? acceptanceRate(activeQuoteMetrics)
+    : null
 
   const quoteFollowUpCounts = useMemo(() => {
     const waiting = quotes.filter((quote) => quote.status === 'sent').length
@@ -1971,6 +2010,104 @@ export default function AdminCostCalculator({
             <button className="admin-primary" type="button" onClick={() => setView('calculator')}>
               + Nuevo presupuesto
             </button>
+          </div>
+
+          <div className="admin-quote-commercial-summary">
+            <div className="admin-quote-commercial-summary-heading">
+              <div>
+                <span className="admin-cost-eyebrow">Resumen comercial</span>
+                <strong>Cómo están funcionando tus presupuestos</strong>
+              </div>
+
+              <div className="admin-quote-period-toggle" aria-label="Período de métricas">
+                <button
+                  type="button"
+                  className={quoteMetricPeriod === 'month' ? 'is-active' : ''}
+                  onClick={() => setQuoteMetricPeriod('month')}
+                >
+                  Este mes
+                </button>
+                <button
+                  type="button"
+                  className={quoteMetricPeriod === 'all' ? 'is-active' : ''}
+                  onClick={() => setQuoteMetricPeriod('all')}
+                >
+                  Histórico
+                </button>
+              </div>
+            </div>
+
+            {activeQuoteMetrics ? (
+              <>
+                <div className="admin-quote-commercial-grid">
+                  <div>
+                    <span>Presupuestos</span>
+                    <strong>{activeQuoteMetrics.total_count}</strong>
+                    <small>
+                      {quoteMetricPeriod === 'month'
+                        ? 'creados este mes'
+                        : 'guardados en total'}
+                    </small>
+                  </div>
+
+                  <div>
+                    <span>Valor presupuestado</span>
+                    <strong>{money(Number(activeQuoteMetrics.quoted_value))}</strong>
+                    <small>suma de precios finales</small>
+                  </div>
+
+                  <div>
+                    <span>Aceptados</span>
+                    <strong>{activeQuoteMetrics.accepted_count}</strong>
+                    <small>{money(Number(activeQuoteMetrics.accepted_value))} aceptados</small>
+                  </div>
+
+                  <div>
+                    <span>Tasa de aceptación</span>
+                    <strong>
+                      {activeAcceptanceRate === null
+                        ? '—'
+                        : String(Math.round(activeAcceptanceRate)) + '%'}
+                    </strong>
+                    <small>aceptados / respuestas definitivas</small>
+                  </div>
+
+                  <div>
+                    <span>Convertidos a pedido</span>
+                    <strong>{activeQuoteMetrics.converted_count}</strong>
+                    <small>presupuestos con PED vinculado</small>
+                  </div>
+
+                  <div>
+                    <span>Ticket aceptado promedio</span>
+                    <strong>
+                      {activeQuoteMetrics.accepted_count > 0
+                        ? money(Number(activeQuoteMetrics.average_accepted_ticket))
+                        : '—'}
+                    </strong>
+                    <small>promedio de presupuestos aceptados</small>
+                  </div>
+                </div>
+
+                {activeQuoteMetrics.rejected_count > 0 && (
+                  <div className="admin-quote-rejection-insights">
+                    <span>No avanzaron ({activeQuoteMetrics.rejected_count})</span>
+                    <div>
+                      <small>Precio <strong>{activeQuoteMetrics.reject_price_count}</strong></small>
+                      <small>Tiempos <strong>{activeQuoteMetrics.reject_timing_count}</strong></small>
+                      <small>
+                        Ya no lo necesita <strong>{activeQuoteMetrics.reject_cancelled_count}</strong>
+                      </small>
+                      <small>Otro <strong>{activeQuoteMetrics.reject_other_count}</strong></small>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="admin-quote-commercial-loading">
+                Cargando métricas…
+              </div>
+            )}
           </div>
 
           <div className="admin-quote-follow-up">
