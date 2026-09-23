@@ -3222,3 +3222,147 @@
     grid-column: auto;
   }
 }
+
+
+/* ALIMAR PEDIDO PERSONALIZADO 1A.48 */
+.catalog-custom-order {
+  display: grid;
+  grid-template-columns: minmax(0,1.35fr) minmax(260px,.65fr);
+  gap: 20px;
+  align-items: center;
+  margin: 22px 0 28px;
+  padding: clamp(18px,3vw,30px);
+  border: 1px solid rgba(100,175,198,.3);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(100,175,198,.16), transparent 34%),
+    linear-gradient(135deg, rgba(243,232,207,.98), rgba(255,250,239,.96));
+  color: #0c1014;
+}
+
+.catalog-custom-order-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.catalog-custom-order-copy .eyebrow {
+  margin: 0;
+  color: #3f788a;
+}
+
+.catalog-custom-order-copy h3 {
+  max-width: 650px;
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.55rem,3vw,2.45rem);
+  line-height: .98;
+}
+
+.catalog-custom-order-copy > p:last-child {
+  max-width: 720px;
+  margin: 0;
+  color: rgba(12,16,20,.7);
+  font-size: .9rem;
+  line-height: 1.55;
+}
+
+.catalog-custom-order-action {
+  display: grid;
+  gap: 10px;
+  justify-items: stretch;
+}
+
+.catalog-custom-order-action > span {
+  color: rgba(12,16,20,.62);
+  font-size: .72rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.catalog-custom-order-action .button {
+  width: 100%;
+  justify-content: center;
+}
+
+.custom-request-direct-start {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  gap: 13px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid rgba(100,175,198,.36);
+  border-radius: 16px;
+  color: #0c1014;
+  background:
+    linear-gradient(135deg, rgba(100,175,198,.13), rgba(243,232,207,.48));
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.custom-request-direct-start:hover,
+.custom-request-direct-start:focus-visible {
+  border-color: rgba(100,175,198,.62);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.custom-request-direct-start-icon {
+  display: grid;
+  place-items: center;
+  width: 45px;
+  height: 45px;
+  border-radius: 14px;
+  color: #f3e8cf;
+  background: #0c1014;
+  font-size: 1rem;
+}
+
+.custom-request-direct-start > div {
+  display: grid;
+  gap: 4px;
+}
+
+.custom-request-direct-start strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.02rem;
+}
+
+.custom-request-direct-start > div > span {
+  color: rgba(12,16,20,.66);
+  font-size: .75rem;
+  line-height: 1.45;
+}
+
+.custom-request-direct-start > i {
+  color: #3f788a;
+  font-size: 1.2rem;
+  font-style: normal;
+}
+
+@media (max-width: 760px) {
+  .catalog-custom-order {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-custom-order-action > span {
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .catalog-custom-order {
+    margin-inline: -2px;
+    border-radius: 16px;
+  }
+
+  .custom-request-direct-start {
+    grid-template-columns: auto minmax(0,1fr);
+  }
+
+  .custom-request-direct-start > i {
+    grid-column: 2;
+  }
+}

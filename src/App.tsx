@@ -181,6 +181,22 @@ const fallbackCustomRequestExamples: CustomRequestExample[] = [
   },
 ]
 
+const DIRECT_CUSTOM_REQUEST_KEY = '__direct__'
+
+const directCustomRequestExample: CustomRequestExample = {
+  key: DIRECT_CUSTOM_REQUEST_KEY,
+  title: 'Tu propia idea',
+  hint:
+    'No hace falta elegir un producto ni un ejemplo. Contanos qué necesitás y lo cotizamos.',
+  requestType: 'other',
+  art: 'idea',
+  sizePlaceholder: 'Si sabés el tamaño, contanos más o menos cuál',
+  themePlaceholder: 'Colores, estilo o referencias que te gusten',
+  descriptionPlaceholder:
+    'Contanos qué querés hacer como se lo explicarías a alguien por WhatsApp.',
+}
+
+
 const CART_STORAGE_KEY = 'alimar-cart-v1'
 
 function loadStoredCart(): CartItem[] {
@@ -674,9 +690,13 @@ function StorefrontApp() {
     const formElement = event.currentTarget
     const form = new FormData(formElement)
     const rawDescription = String(form.get('description') ?? '').trim()
-    const selectedExample = customRequestExamples.find(
-      (example) => example.key === selectedCustomRequestExampleKey,
-    )
+    const isDirectCustomRequest =
+      selectedCustomRequestExampleKey === DIRECT_CUSTOM_REQUEST_KEY
+    const selectedExample = isDirectCustomRequest
+      ? directCustomRequestExample
+      : customRequestExamples.find(
+          (example) => example.key === selectedCustomRequestExampleKey,
+        )
     const requestDescription = rawDescription
 
     setCustomRequestBusy(true)
@@ -691,8 +711,10 @@ function StorefrontApp() {
           customerName: form.get('customerName'),
           customerPhone: form.get('customerPhone'),
           requestType: selectedExample?.requestType ?? form.get('requestType'),
-          exampleId: selectedExample?.id ?? null,
-          exampleTitle: selectedExample?.title ?? null,
+          exampleId: isDirectCustomRequest ? null : selectedExample?.id ?? null,
+          exampleTitle: isDirectCustomRequest
+            ? null
+            : selectedExample?.title ?? null,
           quantity: form.get('quantity'),
           neededDate: form.get('neededDate'),
           dimensions: form.get('dimensions'),
@@ -821,7 +843,7 @@ function StorefrontApp() {
                 type="button"
                 onClick={openCustomRequest}
               >
-                Quiero algo personalizado
+                Pedido Personalizado
                 <span aria-hidden="true">✦</span>
               </button>
             </div>
@@ -869,6 +891,30 @@ function StorefrontApp() {
             </p>
           </div>
 
+          <aside className="catalog-custom-order" id="pedido-personalizado">
+            <div className="catalog-custom-order-copy">
+              <p className="eyebrow">Pedido Personalizado</p>
+              <h3>¿No encontrás exactamente lo que querés?</h3>
+              <p>
+                No necesitás elegir un producto del catálogo ni tomar esos precios como
+                referencia. Contanos tu idea, podés adjuntar una foto y después te preparamos
+                un presupuesto para ese trabajo.
+              </p>
+            </div>
+
+            <div className="catalog-custom-order-action">
+              <span>Sin precio prefijado · se cotiza según tu idea</span>
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={openCustomRequest}
+              >
+                Armar Pedido Personalizado
+                <span aria-hidden="true">✦</span>
+              </button>
+            </div>
+          </aside>
+
           <div className="service-grid">
             {serviceLines.map((service) => (
               <article className="service-card" key={service.number}>
@@ -887,10 +933,11 @@ function StorefrontApp() {
           <div className="section-heading">
             <div>
               <p className="eyebrow">Catálogo</p>
-              <h2>Elegí tu próximo detalle.</h2>
+              <h2>Productos con precio publicado.</h2>
             </div>
             <p>
-              El catálogo se conecta directamente con nuestra base de productos.
+              Los precios de esta sección corresponden únicamente a los productos publicados.
+              Si querés algo distinto o hecho desde cero, usá Pedido Personalizado.
             </p>
           </div>
 
@@ -1005,15 +1052,15 @@ function StorefrontApp() {
             <li>
               <span>01</span>
               <div>
-                <strong>Elegís</strong>
-                <p>Explorás el catálogo y seleccionás lo que querés.</p>
+                <strong>Elegís o contás</strong>
+                <p>Comprás un producto publicado o arrancás un Pedido Personalizado desde tu propia idea.</p>
               </div>
             </li>
             <li>
               <span>02</span>
               <div>
-                <strong>Personalizás</strong>
-                <p>Nos contás los detalles necesarios para preparar tu pedido.</p>
+                <strong>Definimos</strong>
+                <p>Nos pasás cantidad, fecha, estilo y referencias. Si es a medida, primero lo cotizamos.</p>
               </div>
             </li>
             <li>
@@ -1036,11 +1083,12 @@ function StorefrontApp() {
             >
               <header className="custom-request-header">
                 <div>
-                  <p className="eyebrow">Proyecto a medida</p>
-                  <h2 id="custom-request-title">Elegí algo parecido a tu idea.</h2>
+                  <p className="eyebrow">Pedido Personalizado</p>
+                  <h2 id="custom-request-title">Contanos qué querés hacer.</h2>
                   <p>
-                    No hace falta saber tamaños de papel ni nombres técnicos. Elegí un ejemplo y
-                    después contanos con tus palabras para preparar el presupuesto.
+                    Podés empezar directamente desde tu idea o mirar ejemplos para inspirarte.
+                    No hace falta elegir un producto ni saber palabras técnicas. El precio se define
+                    después de revisar tu pedido y preparar el presupuesto.
                   </p>
                 </div>
 
@@ -1056,7 +1104,7 @@ function StorefrontApp() {
 
               {customRequestSuccess ? (
                 <div className="custom-request-success">
-                  <span>Solicitud recibida</span>
+                  <span>Pedido Personalizado recibido</span>
                   <strong>{customRequestSuccess.requestCode}</strong>
                   <p>
                     Ya quedó registrada en Alimar. Podés continuar por WhatsApp usando el mismo código.
@@ -1105,7 +1153,12 @@ function StorefrontApp() {
                       )}
 
                       <div>
-                        <span>Elegiste algo parecido a</span>
+                        <span>
+                          {selectedCustomRequestExampleKey ===
+                          DIRECT_CUSTOM_REQUEST_KEY
+                            ? 'Pedido Personalizado'
+                            : 'Elegiste algo parecido a'}
+                        </span>
                         <strong>{selectedCustomRequestExample.title}</strong>
                         <small>{selectedCustomRequestExample.hint}</small>
                       </div>
@@ -1114,7 +1167,9 @@ function StorefrontApp() {
                         type="button"
                         onClick={() => setSelectedCustomRequestExampleKey(null)}
                       >
-                        Cambiar ejemplo
+                        {selectedCustomRequestExampleKey === DIRECT_CUSTOM_REQUEST_KEY
+                          ? 'Ver ejemplos'
+                          : 'Cambiar ejemplo'}
                       </button>
                     </div>
 
@@ -1262,22 +1317,46 @@ function StorefrontApp() {
                         type="submit"
                         disabled={customRequestBusy}
                       >
-                        {customRequestBusy ? 'Enviando…' : 'Enviar mi idea'}
+                        {customRequestBusy ? 'Enviando…' : 'Enviar Pedido Personalizado'}
                       </button>
                     </footer>
                   </form>
                 ) : (
                   <div className="custom-request-picker">
+                    <button
+                      className="custom-request-direct-start"
+                      type="button"
+                      onClick={() =>
+                        setSelectedCustomRequestExampleKey(
+                          DIRECT_CUSTOM_REQUEST_KEY,
+                        )
+                      }
+                    >
+                      <span className="custom-request-direct-start-icon" aria-hidden="true">
+                        ✦
+                      </span>
+                      <div>
+                        <strong>Empezar desde mi idea</strong>
+                        <span>
+                          No hace falta elegir ningún producto ni ejemplo. Contanos qué
+                          necesitás y lo cotizamos especialmente para vos.
+                        </span>
+                      </div>
+                      <i aria-hidden="true">→</i>
+                    </button>
+
                     <div className="custom-request-picker-copy">
-                      <strong>¿Qué se parece más a lo que querés?</strong>
+                      <strong>O mirá ejemplos para inspirarte</strong>
                       <p>
-                        No hace falta saber el tamaño exacto, qué papel lleva ni usar palabras técnicas.
-                        Elegí algo parecido y después contanos la idea como la explicarías por WhatsApp.
+                        Si algo se parece a lo que imaginaste, elegilo para orientarnos. Es sólo
+                        una referencia: no significa que tenga ese precio ni que tenga que ser igual.
                       </p>
                     </div>
 
                     <div className="custom-request-example-grid">
-                      {customRequestExamples.map((example) => (
+                      {customRequestExamples
+                        .filter((example) => example.key !== 'other')
+                        .map((example) => (
                         <button
                           className="custom-request-example"
                           type="button"
