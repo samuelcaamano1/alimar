@@ -52,6 +52,10 @@ type AdminOrder = {
   balance_due: string | null
   payment_status: PaymentStatus
   payments: AdminOrderPayment[]
+  promised_for: string | null
+  production_priority: ProductionPriority
+  delivery_note: string | null
+  schedule_updated_at: string | null
   has_quote: boolean
   quote_code: string | null
   estimated_cost: string | null
@@ -69,6 +73,7 @@ type DateFilter = 'all' | 'today' | '7d' | '30d'
 type PaymentMethod = 'cash' | 'transfer' | 'mercadopago' | 'card' | 'other'
 type PaymentStatus = 'total_pending' | 'unpaid' | 'partial' | 'paid'
 type PaymentFilter = 'all' | 'pending' | 'paid' | 'total_pending'
+type ProductionPriority = 'low' | 'normal' | 'high' | 'urgent'
 
 type AdminOrderPayment = {
   id: string
@@ -118,6 +123,20 @@ const paymentStatusLabels: Record<PaymentStatus, string> = {
   paid: 'Pagado',
 }
 
+const productionPriorityLabels: Record<ProductionPriority, string> = {
+  low: 'Baja',
+  normal: 'Normal',
+  high: 'Alta',
+  urgent: 'Urgente',
+}
+
+const productionPriorityWeight: Record<ProductionPriority, number> = {
+  low: 0,
+  normal: 1,
+  high: 2,
+  urgent: 3,
+}
+
 function money(value: string | null) {
   if (!value) return 'A consultar'
   const amount = Number(value)
@@ -159,6 +178,46 @@ function dateOnly(value: string) {
   return new Intl.DateTimeFormat('es-AR', {
     dateStyle: 'short',
   }).format(date)
+}
+
+function promisedDaysFromToday(value: string | null) {
+  if (!value) return null
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return null
+
+  const dueDay = Math.floor(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) /
+      86_400_000,
+  )
+  const now = new Date()
+  const today = Math.floor(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86_400_000,
+  )
+
+  return dueDay - today
+}
+
+function promisedTimingLabel(value: string | null) {
+  const days = promisedDaysFromToday(value)
+
+  if (days === null) return 'Sin fecha'
+  if (days < 0) return `Atrasado ${Math.abs(days)} día(s)`
+  if (days === 0) return 'Entrega hoy'
+  if (days === 1) return 'Entrega mañana'
+  if (days <= 7) return `Entrega en ${days} días`
+  return dateOnly(value || '')
+}
+
+function productionBucket(order: AdminOrder) {
+  if (!['confirmed', 'in_progress', 'ready'].includes(order.status)) return 9
+
+  const days = promisedDaysFromToday(order.promised_for)
+  if (days === null) return 4
+  if (days < 0) return 0
+  if (days === 0) return 1
+  if (days <= 7) return 2
+  return 3
 }
 
 function dateFilterStart(filter: DateFilter) {
@@ -247,6 +306,12 @@ export default function AdminOrdersPanel() {
   const [voidingPaymentId, setVoidingPaymentId] = useState<string | null>(null)
   const [voidReason, setVoidReason] = useState('')
   const [voidSavingId, setVoidSavingId] = useState<string | null>(null)
+  const [draftPromisedFor, setDraftPromisedFor] = useState<Record<string, string>>({})
+  const [draftProductionPriority, setDraftProductionPriority] =
+    useState<Record<string, ProductionPriority>>({})
+  const [draftDeliveryNote, setDraftDeliveryNote] =
+    useState<Record<string, string>>({})
+  const [savingScheduleId, setSavingScheduleId] = useState<string | null>(null)
 
   const applyOrders = useCallback((nextOrders: AdminOrder[]) => {
     setOrders(nextOrders)
@@ -269,6 +334,21 @@ export default function AdminOrdersPanel() {
     setDraftAgreedTotal(
       Object.fromEntries(
         nextOrders.map((order) => [order.id, order.agreed_total ?? '']),
+      ) as Record<string, string>,
+    )
+    setDraftPromisedFor(
+      Object.fromEntries(
+        nextOrders.map((order) => [order.id, order.promised_for ?? '']),
+      ) as Record<string, string>,
+    )
+    setDraftProductionPriority(
+      Object.fromEntries(
+        nextOrders.map((order) => [order.id, order.production_priority]),
+      ) as Record<string, ProductionPriority>,
+    )
+    setDraftDeliveryNote(
+      Object.fromEntries(
+        nextOrders.map((order) => [order.id, order.delivery_note ?? '']),
       ) as Record<string, string>,
     )
     setPaymentDrafts(
@@ -355,6 +435,54 @@ export default function AdminOrdersPanel() {
         (order) => order.payment_status === 'total_pending',
       ).length,
     }),
+    [orders],
+  )
+
+  const productionCounts = useMemo(() => {
+    const active = orders.filter((order) =>
+      ['confirmed', 'in_progress', 'ready'].includes(order.status),
+    )
+
+    return {
+      active: active.length,
+      overdue: active.filter(
+        (order) => (promisedDaysFromToday(order.promised_for) ?? 1) < 0,
+      ).length,
+      today: active.filter(
+        (order) => promisedDaysFromToday(order.promised_for) === 0,
+      ).length,
+      week: active.filter((order) => {
+        const days = promisedDaysFromToday(order.promised_for)
+        return days !== null && days > 0 && days <= 7
+      }).length,
+      unscheduled: active.filter((order) => !order.promised_for).length,
+    }
+  }, [orders])
+
+  const productionQueue = useMemo(
+    () =>
+      orders
+        .filter((order) =>
+          ['confirmed', 'in_progress', 'ready'].includes(order.status),
+        )
+        .slice()
+        .sort((left, right) => {
+          const bucketDifference = productionBucket(left) - productionBucket(right)
+          if (bucketDifference !== 0) return bucketDifference
+
+          const priorityDifference =
+            productionPriorityWeight[right.production_priority] -
+            productionPriorityWeight[left.production_priority]
+          if (priorityDifference !== 0) return priorityDifference
+
+          if (left.promised_for && right.promised_for) {
+            const dateDifference = left.promised_for.localeCompare(right.promised_for)
+            if (dateDifference !== 0) return dateDifference
+          }
+
+          return left.created_at.localeCompare(right.created_at)
+        })
+        .slice(0, 8),
     [orders],
   )
 
@@ -450,6 +578,43 @@ export default function AdminOrdersPanel() {
       setMessage(error instanceof Error ? error.message : 'No se pudo actualizar el pedido.')
     } finally {
       setSavingOrderId(null)
+    }
+  }
+
+  async function saveSchedule(order: AdminOrder) {
+    const promisedFor = (draftPromisedFor[order.id] ?? '').trim()
+    const priority =
+      draftProductionPriority[order.id] ?? order.production_priority
+    const note = (draftDeliveryNote[order.id] ?? '').trim()
+
+    setSavingScheduleId(order.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=schedule', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: order.id,
+          promisedFor: promisedFor || null,
+          priority,
+          note,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      await loadOrders()
+      window.dispatchEvent(new Event('alimar:schedule-changed'))
+      setMessage(`Planificación de ${order.public_code} actualizada.`)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar la planificación.',
+      )
+    } finally {
+      setSavingScheduleId(null)
     }
   }
 
@@ -746,6 +911,69 @@ export default function AdminOrdersPanel() {
           Sin total <strong>{orderCounts.totalPending}</strong>
         </button>
       </div>
+
+      <section className="admin-production-queue">
+        <div className="admin-production-queue-heading">
+          <div>
+            <span>Cola de producción</span>
+            <strong>{productionCounts.active} pedido(s) activos</strong>
+          </div>
+          <small>
+            Confirmados, en proceso y listos, ordenados por urgencia de entrega.
+          </small>
+        </div>
+
+        <div className="admin-production-queue-stats">
+          <span className={productionCounts.overdue > 0 ? 'is-alert' : ''}>
+            Atrasados <strong>{productionCounts.overdue}</strong>
+          </span>
+          <span className={productionCounts.today > 0 ? 'is-today' : ''}>
+            Hoy <strong>{productionCounts.today}</strong>
+          </span>
+          <span>
+            Próximos 7 días <strong>{productionCounts.week}</strong>
+          </span>
+          <span className={productionCounts.unscheduled > 0 ? 'is-warning' : ''}>
+            Sin fecha <strong>{productionCounts.unscheduled}</strong>
+          </span>
+        </div>
+
+        {productionQueue.length > 0 ? (
+          <div className="admin-production-queue-list">
+            {productionQueue.map((order) => (
+              <div
+                className={`admin-production-queue-row is-${order.production_priority}`}
+                key={order.id}
+              >
+                <span>{order.public_code}</span>
+                <div>
+                  <strong>{order.customer_name}</strong>
+                  <small>
+                    {statusLabels[order.status]} ·{' '}
+                    {productionPriorityLabels[order.production_priority]}
+                  </small>
+                </div>
+                <strong>{promisedTimingLabel(order.promised_for)}</strong>
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById(`order-${order.id}`)
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }
+                >
+                  Ver PED
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <small className="admin-production-queue-empty">
+            No hay pedidos confirmados o en producción.
+          </small>
+        )}
+      </section>
+
       {state === 'loading' && orders.length === 0 && <div className="admin-empty">Cargando pedidos…</div>}
       {state === 'error' && orders.length === 0 && <div className="admin-empty">No se pudieron cargar los pedidos.</div>}
       {state === 'ready' && visibleOrders.length === 0 && (
@@ -761,6 +989,11 @@ export default function AdminOrdersPanel() {
             const savingActualCost = savingActualCostId === order.id
             const savingAgreedTotal = savingAgreedTotalId === order.id
             const savingPayment = savingPaymentId === order.id
+          const savingSchedule = savingScheduleId === order.id
+          const promisedFor = draftPromisedFor[order.id] ?? ''
+          const productionPriority =
+            draftProductionPriority[order.id] ?? order.production_priority
+          const deliveryNote = draftDeliveryNote[order.id] ?? ''
             const agreedTotal = numericAmount(order.agreed_total)
             const balanceDue = numericAmount(order.balance_due)
             const paymentDraft = paymentDrafts[order.id] ?? {
@@ -791,7 +1024,11 @@ export default function AdminOrdersPanel() {
                 : null
 
             return (
-              <article className="admin-order-card" key={order.id}>
+              <article
+              className="admin-order-card"
+              id={`order-${order.id}`}
+              key={order.id}
+            >
                 <div className="admin-order-top">
                   <div>
                     <span className="admin-order-code">{order.public_code}</span>
@@ -878,6 +1115,91 @@ export default function AdminOrdersPanel() {
                   <span>Subtotal conocido</span>
                   <strong>{money(order.known_total)}</strong>
                 </div>
+
+                              <section className={`admin-order-schedule is-${order.production_priority}`}>
+                                <div className="admin-order-schedule-heading">
+                                  <div>
+                                    <span>Producción y entrega</span>
+                                    <strong>{promisedTimingLabel(order.promised_for)}</strong>
+                                  </div>
+                                  <span className={`admin-order-priority is-${order.production_priority}`}>
+                                    Prioridad {productionPriorityLabels[order.production_priority]}
+                                  </span>
+                                </div>
+
+                                <div className="admin-order-schedule-form">
+                                  <label>
+                                    Fecha prometida
+                                    <input
+                                      type="date"
+                                      value={promisedFor}
+                                      onChange={(event) =>
+                                        setDraftPromisedFor((current) => ({
+                                          ...current,
+                                          [order.id]: event.target.value,
+                                        }))
+                                      }
+                                      disabled={savingSchedule || order.status === 'cancelled'}
+                                    />
+                                  </label>
+
+                                  <label>
+                                    Prioridad
+                                    <select
+                                      value={productionPriority}
+                                      onChange={(event) =>
+                                        setDraftProductionPriority((current) => ({
+                                          ...current,
+                                          [order.id]: event.target.value as ProductionPriority,
+                                        }))
+                                      }
+                                      disabled={savingSchedule || order.status === 'cancelled'}
+                                    >
+                                      {(
+                                        Object.entries(productionPriorityLabels) as Array<
+                                          [ProductionPriority, string]
+                                        >
+                                      ).map(([value, label]) => (
+                                        <option key={value} value={value}>
+                                          {label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                  <label className="admin-order-schedule-note">
+                                    Nota de entrega
+                                    <input
+                                      type="text"
+                                      maxLength={500}
+                                      value={deliveryNote}
+                                      placeholder="Ej. Retira por la tarde / llevar al salón"
+                                      onChange={(event) =>
+                                        setDraftDeliveryNote((current) => ({
+                                          ...current,
+                                          [order.id]: event.target.value,
+                                        }))
+                                      }
+                                      disabled={savingSchedule || order.status === 'cancelled'}
+                                    />
+                                  </label>
+
+                                  <button
+                                    className="admin-primary"
+                                    type="button"
+                                    onClick={() => void saveSchedule(order)}
+                                    disabled={savingSchedule || order.status === 'cancelled'}
+                                  >
+                                    {savingSchedule ? 'Guardando…' : 'Guardar planificación'}
+                                  </button>
+                                </div>
+
+                                {order.schedule_updated_at && (
+                                  <small className="admin-order-schedule-updated">
+                                    Planificación actualizada {dateTime(order.schedule_updated_at)}
+                                  </small>
+                                )}
+                              </section>
 
                               <section className={`admin-order-payments is-${order.payment_status}`}>
                 <div className="admin-order-payments-heading">

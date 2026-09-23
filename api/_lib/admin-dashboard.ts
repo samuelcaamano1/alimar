@@ -23,6 +23,7 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
       acceptedRows,
       missingCostRows,
       pendingPaymentRows,
+      deliveryRows,
     ] = await Promise.all([
         sql`
           SELECT
@@ -55,6 +56,31 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
               FROM orders
               WHERE status IN ('new', 'contacted', 'confirmed', 'in_progress', 'ready')
             ) AS orders_open,
+            (
+              SELECT COUNT(*)::int
+              FROM orders
+              WHERE status IN ('confirmed', 'in_progress', 'ready')
+                AND promised_for < CURRENT_DATE
+            ) AS production_overdue,
+            (
+              SELECT COUNT(*)::int
+              FROM orders
+              WHERE status IN ('confirmed', 'in_progress', 'ready')
+                AND promised_for = CURRENT_DATE
+            ) AS production_today,
+            (
+              SELECT COUNT(*)::int
+              FROM orders
+              WHERE status IN ('confirmed', 'in_progress', 'ready')
+                AND promised_for > CURRENT_DATE
+                AND promised_for <= CURRENT_DATE + 7
+            ) AS production_week,
+            (
+              SELECT COUNT(*)::int
+              FROM orders
+              WHERE status IN ('confirmed', 'in_progress', 'ready')
+                AND promised_for IS NULL
+            ) AS production_unscheduled,
             (
               SELECT COUNT(*)::int
               FROM orders
@@ -206,6 +232,30 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
             order_row.updated_at ASC
           LIMIT 4
         `,
+        sql`
+          SELECT
+            id::text,
+            public_code,
+            customer_name,
+            status,
+            promised_for::text,
+            production_priority,
+            delivery_note
+          FROM orders
+          WHERE status IN ('confirmed', 'in_progress', 'ready')
+            AND promised_for IS NOT NULL
+            AND promised_for <= CURRENT_DATE + 7
+          ORDER BY
+            promised_for ASC,
+            CASE production_priority
+              WHEN 'urgent' THEN 0
+              WHEN 'high' THEN 1
+              WHEN 'normal' THEN 2
+              ELSE 3
+            END,
+            updated_at ASC
+          LIMIT 6
+        `,
       ])
 
     const summaryRow = (summaryRows[0] ?? {}) as Record<string, unknown>
@@ -218,6 +268,10 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
           quotes_expiring: number(summaryRow.quotes_expiring),
           quotes_accepted_no_order: number(summaryRow.quotes_accepted_no_order),
           orders_open: number(summaryRow.orders_open),
+          production_overdue: number(summaryRow.production_overdue),
+          production_today: number(summaryRow.production_today),
+          production_week: number(summaryRow.production_week),
+          production_unscheduled: number(summaryRow.production_unscheduled),
           completed_missing_cost: number(summaryRow.completed_missing_cost),
           month_actual_count: number(summaryRow.month_actual_count),
           month_actual_revenue: String(summaryRow.month_actual_revenue ?? '0'),
@@ -257,6 +311,15 @@ export async function getAdminBusinessDashboard(databaseUrl: string) {
             agreed_total: String(row.agreed_total ?? '0'),
             paid_total: String(row.paid_total ?? '0'),
             balance_due: String(row.balance_due ?? '0'),
+          })),
+          delivery_orders: (deliveryRows as Record<string, unknown>[]).map((row) => ({
+            id: String(row.id ?? ''),
+            public_code: String(row.public_code ?? ''),
+            customer_name: String(row.customer_name ?? ''),
+            status: String(row.status ?? ''),
+            promised_for: String(row.promised_for ?? ''),
+            production_priority: String(row.production_priority ?? 'normal'),
+            delivery_note: row.delivery_note ? String(row.delivery_note) : null,
           })),
         },
       },

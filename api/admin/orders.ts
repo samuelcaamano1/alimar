@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 import { createOrderFromQuote } from '../_lib/quote-orders.js'
+import { updateOrderSchedule } from '../_lib/order-schedule.js'
 import {
   createOrderPayment,
   listRecentOrderPayments,
@@ -50,6 +51,10 @@ type OrderRow = {
   customer_notes: string | null
   known_total: string
   agreed_total: string | null
+  promised_for: string | null
+  production_priority: 'low' | 'normal' | 'high' | 'urgent'
+  delivery_note: string | null
+  schedule_updated_at: string | null
   has_quote: boolean
   quote_code: string | null
   estimated_cost: string | null
@@ -185,6 +190,10 @@ export async function GET(request: Request) {
           actual_cost_note,
           actual_cost_updated_at,
           agreed_total,
+          promised_for,
+          production_priority,
+          delivery_note,
+          schedule_updated_at,
           created_at
         FROM orders
         ORDER BY created_at DESC
@@ -200,6 +209,10 @@ export async function GET(request: Request) {
         o.customer_notes,
         o.known_total::text,
         o.agreed_total::text,
+        o.promised_for::text,
+        o.production_priority,
+        o.delivery_note,
+        o.schedule_updated_at::text,
         o.has_quote,
         CASE
           WHEN linked_quote.quote_number IS NULL THEN NULL
@@ -259,6 +272,10 @@ export async function GET(request: Request) {
         customer_notes: string | null
         known_total: string
         agreed_total: string | null
+        promised_for: string | null
+        production_priority: 'low' | 'normal' | 'high' | 'urgent'
+        delivery_note: string | null
+        schedule_updated_at: string | null
         paid_total: string
         balance_due: string | null
         payment_status: 'total_pending' | 'unpaid' | 'partial' | 'paid'
@@ -298,6 +315,10 @@ export async function GET(request: Request) {
           customer_notes: row.customer_notes,
           known_total: row.known_total,
           agreed_total: row.agreed_total,
+          promised_for: row.promised_for,
+          production_priority: row.production_priority,
+          delivery_note: row.delivery_note,
+          schedule_updated_at: row.schedule_updated_at,
           paid_total: '0',
           balance_due: row.agreed_total,
           payment_status: row.agreed_total === null ? 'total_pending' : 'unpaid',
@@ -404,6 +425,10 @@ export async function PATCH(request: Request) {
 
   if (requestUrl.searchParams.get('action') === 'custom-requests') {
     return updateAdminCustomRequest(databaseUrl, body)
+  }
+
+  if (requestUrl.searchParams.get('action') === 'schedule') {
+    return updateOrderSchedule(databaseUrl, body)
   }
 
   if (requestUrl.searchParams.get('action') === 'agreed-total') {

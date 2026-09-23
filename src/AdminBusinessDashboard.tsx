@@ -6,6 +6,10 @@ type DashboardSummary = {
   quotes_expiring: number
   quotes_accepted_no_order: number
   orders_open: number
+  production_overdue: number
+  production_today: number
+  production_week: number
+  production_unscheduled: number
   completed_missing_cost: number
   month_actual_count: number
   month_actual_revenue: string
@@ -33,6 +37,16 @@ type DashboardOrder = {
   known_total: string
 }
 
+type DashboardDeliveryOrder = {
+  id: string
+  public_code: string
+  customer_name: string
+  status: string
+  promised_for: string
+  production_priority: string
+  delivery_note: string | null
+}
+
 type DashboardPaymentOrder = {
   id: string
   public_code: string
@@ -49,6 +63,7 @@ type DashboardResponse = {
     accepted_quotes: DashboardQuote[]
     missing_cost_orders: DashboardOrder[]
     pending_payments: DashboardPaymentOrder[]
+    delivery_orders: DashboardDeliveryOrder[]
   }
 }
 
@@ -72,6 +87,28 @@ function dateLabel(value: string | null | undefined) {
     day: '2-digit',
     month: '2-digit',
   }).format(date)
+}
+
+function deliveryTimingLabel(value: string) {
+  if (!value) return 'Sin fecha'
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return dateLabel(value)
+
+  const dueDay = Math.floor(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) /
+      86_400_000,
+  )
+  const now = new Date()
+  const today = Math.floor(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86_400_000,
+  )
+  const days = dueDay - today
+
+  if (days < 0) return `Atrasado ${Math.abs(days)} día(s)`
+  if (days === 0) return 'Hoy'
+  if (days === 1) return 'Mañana'
+  return `En ${days} días`
 }
 
 async function responseMessage(response: Response) {
@@ -134,12 +171,14 @@ export default function AdminBusinessDashboard() {
     window.addEventListener('alimar:orders-changed', refreshFromBusinessChange)
     window.addEventListener('alimar:quote-metrics-changed', refreshFromBusinessChange)
     window.addEventListener('alimar:payments-changed', refreshFromBusinessChange)
+    window.addEventListener('alimar:schedule-changed', refreshFromBusinessChange)
     window.addEventListener('focus', refreshOnFocus)
 
     return () => {
       window.removeEventListener('alimar:orders-changed', refreshFromBusinessChange)
       window.removeEventListener('alimar:quote-metrics-changed', refreshFromBusinessChange)
       window.removeEventListener('alimar:payments-changed', refreshFromBusinessChange)
+      window.removeEventListener('alimar:schedule-changed', refreshFromBusinessChange)
       window.removeEventListener('focus', refreshOnFocus)
     }
   }, [loadDashboard])
@@ -153,6 +192,9 @@ export default function AdminBusinessDashboard() {
       data.summary.quotes_accepted_no_order +
       data.summary.completed_missing_cost +
       data.summary.payments_pending_count +
+      data.summary.production_overdue +
+      data.summary.production_today +
+      data.summary.production_unscheduled +
       data.summary.payments_pending_count
     )
   }, [data])
@@ -295,6 +337,44 @@ export default function AdminBusinessDashboard() {
             </dl>
           </section>
 
+          <section className="admin-business-production">
+            <div className="admin-business-production-heading">
+              <div>
+                <span>Producción y entregas</span>
+                <strong>
+                  {data.summary.production_overdue > 0
+                    ? `${data.summary.production_overdue} atrasado(s)`
+                    : 'Agenda de producción'}
+                </strong>
+              </div>
+              <button
+                type="button"
+                onClick={() => scrollToSection('.admin-orders-panel')}
+              >
+                Ir a Pedidos
+              </button>
+            </div>
+
+            <div className="admin-business-production-grid">
+              <div className={data.summary.production_overdue > 0 ? 'is-alert' : ''}>
+                <span>Atrasados</span>
+                <strong>{data.summary.production_overdue}</strong>
+              </div>
+              <div className={data.summary.production_today > 0 ? 'is-today' : ''}>
+                <span>Entregan hoy</span>
+                <strong>{data.summary.production_today}</strong>
+              </div>
+              <div>
+                <span>Próximos 7 días</span>
+                <strong>{data.summary.production_week}</strong>
+              </div>
+              <div className={data.summary.production_unscheduled > 0 ? 'is-warning' : ''}>
+                <span>Sin fecha</span>
+                <strong>{data.summary.production_unscheduled}</strong>
+              </div>
+            </div>
+          </section>
+
           <section className="admin-business-payments">
             <div className="admin-business-payments-main">
               <span>Cobros · este mes</span>
@@ -319,7 +399,8 @@ export default function AdminBusinessDashboard() {
           {(data.attention.expiring_quotes.length > 0 ||
             data.attention.accepted_quotes.length > 0 ||
             data.attention.missing_cost_orders.length > 0 ||
-            data.attention.pending_payments.length > 0) && (
+            data.attention.pending_payments.length > 0 ||
+            data.attention.delivery_orders.length > 0) && (
             <div className="admin-business-attention">
               {data.attention.expiring_quotes.length > 0 && (
                 <section>
@@ -366,6 +447,38 @@ export default function AdminBusinessDashboard() {
                         <small>{quote.title}</small>
                       </div>
                       <strong>{money(quote.total_price)}</strong>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {data.attention.delivery_orders.length > 0 && (
+                <section>
+                  <div className="admin-business-attention-title">
+                    <strong>Entregas próximas y atrasadas</strong>
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection('.admin-orders-panel')}
+                    >
+                      Ver producción
+                    </button>
+                  </div>
+
+                  {data.attention.delivery_orders.map((order) => (
+                    <div className="admin-business-attention-row" key={order.id}>
+                      <span>{order.public_code}</span>
+                      <div>
+                        <strong>{order.customer_name}</strong>
+                        <small>
+                          {order.production_priority === 'urgent'
+                            ? 'Urgente · '
+                            : order.production_priority === 'high'
+                              ? 'Alta · '
+                              : ''}
+                          {deliveryTimingLabel(order.promised_for)}
+                        </small>
+                      </div>
+                      <strong>{dateLabel(order.promised_for)}</strong>
                     </div>
                   ))}
                 </section>
