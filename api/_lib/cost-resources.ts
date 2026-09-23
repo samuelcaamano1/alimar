@@ -77,10 +77,24 @@ function parseResource(body: Record<string, unknown>) {
   const name = text(body.name, 120)
   const category = text(body.category, 24)
   const detail = text(body.detail, 160) || null
-  const unit = category === 'ink' ? 'print' : text(body.unit, 20)
+  const unit =
+    category === 'ink'
+      ? 'print'
+      : category === 'labor'
+        ? 'hour'
+        : text(body.unit, 20)
+
   const purchasePrice = positiveDecimal(body.purchasePrice)
-  const packageQuantity = positiveDecimal(body.packageQuantity)
-  const wastePercent = percent(body.wastePercent)
+  const packageQuantity =
+    category === 'labor'
+      ? 1
+      : positiveDecimal(body.packageQuantity)
+
+  const wastePercent =
+    category === 'labor'
+      ? 0
+      : percent(body.wastePercent)
+
   const notes = text(body.notes, 280) || null
 
   if (name.length < 2) {
@@ -96,7 +110,15 @@ function parseResource(body: Record<string, unknown>) {
   }
 
   if (purchasePrice === null) {
-    return Response.json({ error: 'Ingresá un precio de compra válido.' }, { status: 400 })
+    return Response.json(
+      {
+        error:
+          category === 'labor'
+            ? 'Ingresá un valor por hora válido.'
+            : 'Ingresá un precio de compra válido.',
+      },
+      { status: 400 },
+    )
   }
 
   if (packageQuantity === null) {
@@ -133,6 +155,7 @@ function parseResource(body: Record<string, unknown>) {
 export async function listCostResources(databaseUrl: string) {
   try {
     const sql = neon(databaseUrl)
+
     const resources = await sql`
       SELECT
         id::text,

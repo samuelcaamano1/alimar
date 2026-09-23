@@ -50,8 +50,8 @@ type Draft = {
 }
 
 type GuidedJobType = 'paper-print' | '3d-print' | 'manual'
-
 type WizardStep = 1 | 2 | 3
+type PrintSides = 'single' | 'double'
 
 type GuidedCost = {
   key: string
@@ -59,6 +59,9 @@ type GuidedCost = {
   detail: string
   total: number
 }
+
+const LIGHT_PERCENT = 10
+const WEAR_PERCENT = 20
 
 const categoryLabels: Record<CostCategory, string> = {
   paper: 'Papel',
@@ -107,10 +110,11 @@ function defaultUnitForCategory(category: CostCategory): CostUnit {
       return 'g'
     case 'paint':
       return 'ml'
+    case 'labor':
+      return 'hour'
     case 'energy':
       return 'kwh'
     case 'machine':
-    case 'labor':
       return 'hour'
     default:
       return 'unit'
@@ -128,7 +132,22 @@ function money(value: number) {
 }
 
 function number(value: string) {
-  const normalized = value.trim().replace(/\s+/g, '').replace(',', '.')
+  const raw = value.trim().replace(/\s+/g, '')
+  if (!raw) return 0
+
+  let normalized = raw
+
+  if (raw.includes(',') && raw.includes('.')) {
+    normalized =
+      raw.lastIndexOf(',') > raw.lastIndexOf('.')
+        ? raw.replace(/\./g, '').replace(',', '.')
+        : raw.replace(/,/g, '')
+  } else if (raw.includes(',')) {
+    normalized = raw.replace(',', '.')
+  } else if (/^\d{1,3}(?:\.\d{3})+$/.test(raw)) {
+    normalized = raw.replace(/\./g, '')
+  }
+
   const parsed = Number(normalized)
   return Number.isFinite(parsed) ? parsed : 0
 }
@@ -141,16 +160,12 @@ function roundUp(value: number, step: number) {
 
 function convertUsage(amount: number, from: CostUnit, to: CostUnit) {
   if (from === to) return amount
-
   if (from === 'g' && to === 'kg') return amount / 1000
   if (from === 'kg' && to === 'g') return amount * 1000
-
   if (from === 'ml' && to === 'l') return amount / 1000
   if (from === 'l' && to === 'ml') return amount * 1000
-
   if (from === 'minute' && to === 'hour') return amount / 60
   if (from === 'hour' && to === 'minute') return amount * 60
-
   return amount
 }
 
@@ -165,6 +180,19 @@ async function responseMessage(response: Response) {
 
 function draftFromResource(resource: CostResource): Draft {
   const needsInkYield = resource.category === 'ink' && resource.unit !== 'print'
+
+  if (resource.category === 'labor') {
+    return {
+      name: resource.name,
+      category: 'labor',
+      detail: resource.detail ?? '',
+      unit: 'hour',
+      purchasePrice: resource.effective_unit_cost || resource.purchase_price,
+      packageQuantity: '1',
+      wastePercent: '0',
+      notes: resource.notes ?? '',
+    }
+  }
 
   return {
     name: resource.name,
@@ -183,10 +211,10 @@ function payloadFromDraft(draft: Draft) {
     name: draft.name,
     category: draft.category,
     detail: draft.detail,
-    unit: draft.unit,
+    unit: draft.category === 'labor' ? 'hour' : draft.unit,
     purchasePrice: draft.purchasePrice,
-    packageQuantity: draft.packageQuantity,
-    wastePercent: draft.wastePercent,
+    packageQuantity: draft.category === 'labor' ? '1' : draft.packageQuantity,
+    wastePercent: draft.category === 'labor' ? '0' : draft.wastePercent,
     notes: draft.notes,
   }
 }
@@ -202,24 +230,22 @@ export default function AdminCostCalculator() {
   const [resourceSearch, setResourceSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<'all' | CostCategory>('all')
 
-  const [productionQuantity, setProductionQuantity] = useState('1')
-  const [overheadPercent, setOverheadPercent] = useState('10')
-  const [profitPercent, setProfitPercent] = useState('40')
-  const [roundingStep, setRoundingStep] = useState('100')
   const [quoteOpen, setQuoteOpen] = useState(false)
   const [wizardStep, setWizardStep] = useState<WizardStep>(1)
   const [jobType, setJobType] = useState<GuidedJobType>('paper-print')
+  const [quantity, setQuantity] = useState('1')
+  const [profitPercent, setProfitPercent] = useState('40')
+  const [roundingStep, setRoundingStep] = useState('100')
 
   const [paperResourceId, setPaperResourceId] = useState('')
-  const [sheetsPerUnit, setSheetsPerUnit] = useState('1')
   const [inkResourceId, setInkResourceId] = useState('')
-  const [printsPerUnit, setPrintsPerUnit] = useState('1')
+  const [printSides, setPrintSides] = useState<PrintSides>('single')
 
   const [filamentResourceId, setFilamentResourceId] = useState('')
-  const [gramsPerUnit, setGramsPerUnit] = useState('20')
+  const [gramsPerPiece, setGramsPerPiece] = useState('20')
   const [paintEnabled, setPaintEnabled] = useState(false)
   const [paintResourceId, setPaintResourceId] = useState('')
-  const [paintMlPerUnit, setPaintMlPerUnit] = useState('2')
+  const [paintMlPerPiece, setPaintMlPerPiece] = useState('2')
 
   const [manualResourceId, setManualResourceId] = useState('')
   const [manualUsagePerUnit, setManualUsagePerUnit] = useState('1')
@@ -227,13 +253,8 @@ export default function AdminCostCalculator() {
   const [manualExtraResourceId, setManualExtraResourceId] = useState('')
   const [manualExtraUsagePerUnit, setManualExtraUsagePerUnit] = useState('1')
 
-  const [machineResourceId, setMachineResourceId] = useState('')
-  const [machineTimePerUnit, setMachineTimePerUnit] = useState('')
-  const [energyResourceId, setEnergyResourceId] = useState('')
-  const [energyKwhPerHour, setEnergyKwhPerHour] = useState('')
-  const [laborResourceId, setLaborResourceId] = useState('')
-  const [laborMinutes, setLaborMinutes] = useState('')
-  const [laborScope, setLaborScope] = useState<'unit' | 'job'>('job')
+  const [workerResourceId, setWorkerResourceId] = useState('')
+  const [projectHours, setProjectHours] = useState('1')
 
   const loadResources = useCallback(async () => {
     setState('loading')
@@ -297,9 +318,22 @@ export default function AdminCostCalculator() {
     })
   }, [categoryFilter, resourceSearch, resources])
 
+  const paperResources = resources.filter((resource) => resource.category === 'paper')
+  const inkResources = resources.filter((resource) => resource.category === 'ink')
+  const filamentResources = resources.filter((resource) => resource.category === 'filament')
+  const paintResources = resources.filter((resource) => resource.category === 'paint')
+  const workerResources = resources.filter((resource) => resource.category === 'labor')
+  const manualMaterialResources = resources.filter((resource) =>
+    ['paper', 'paint', 'consumable', 'other', 'filament'].includes(resource.category),
+  )
+
+  const selectedManualResource =
+    resources.find((resource) => resource.id === manualResourceId) ?? null
+  const selectedManualExtraResource =
+    resources.find((resource) => resource.id === manualExtraResourceId) ?? null
+
   const guidedCalculation = useMemo(() => {
-    const quantity = Math.max(1, Math.floor(number(productionQuantity) || 1))
-    const overhead = Math.max(0, number(overheadPercent))
+    const finalQuantity = Math.max(1, Math.floor(number(quantity) || 1))
     const profit = Math.max(0, number(profitPercent))
     const rounding = Math.max(1, number(roundingStep) || 1)
     const costs: GuidedCost[] = []
@@ -337,32 +371,32 @@ export default function AdminCostCalculator() {
     }
 
     if (jobType === 'paper-print') {
-      const sheets = Math.max(0, number(sheetsPerUnit))
-      const prints = Math.max(0, number(printsPerUnit))
+      const impressionsPerSheet = printSides === 'double' ? 2 : 1
 
       addCost({
         key: 'paper',
         label: 'Papel',
         resourceId: paperResourceId,
-        amount: sheets,
+        amount: finalQuantity,
         inputUnit: 'sheet',
-        multiplier: quantity,
-        detail: `${sheets || 0} hoja(s) × ${quantity} unidad(es)`,
+        detail: `${finalQuantity} hoja(s)`,
       })
 
       addCost({
         key: 'ink',
         label: 'Tinta',
         resourceId: inkResourceId,
-        amount: prints,
+        amount: finalQuantity * impressionsPerSheet,
         inputUnit: 'print',
-        multiplier: quantity,
-        detail: `${prints || 0} impresión(es) × ${quantity} unidad(es)`,
+        detail:
+          printSides === 'double'
+            ? `${finalQuantity} hoja(s) × 2 caras = ${finalQuantity * 2} impresiones`
+            : `${finalQuantity} hoja(s) = ${finalQuantity} impresiones`,
       })
     }
 
     if (jobType === '3d-print') {
-      const grams = Math.max(0, number(gramsPerUnit))
+      const grams = Math.max(0, number(gramsPerPiece))
 
       addCost({
         key: 'filament',
@@ -370,12 +404,12 @@ export default function AdminCostCalculator() {
         resourceId: filamentResourceId,
         amount: grams,
         inputUnit: 'g',
-        multiplier: quantity,
-        detail: `${grams || 0} g × ${quantity} pieza(s)`,
+        multiplier: finalQuantity,
+        detail: `${grams || 0} g × ${finalQuantity} pieza(s)`,
       })
 
       if (paintEnabled) {
-        const paintMl = Math.max(0, number(paintMlPerUnit))
+        const paintMl = Math.max(0, number(paintMlPerPiece))
 
         addCost({
           key: 'paint',
@@ -383,8 +417,8 @@ export default function AdminCostCalculator() {
           resourceId: paintResourceId,
           amount: paintMl,
           inputUnit: 'ml',
-          multiplier: quantity,
-          detail: `${paintMl || 0} ml × ${quantity} pieza(s)`,
+          multiplier: finalQuantity,
+          detail: `${paintMl || 0} ml × ${finalQuantity} pieza(s)`,
         })
       }
     }
@@ -400,8 +434,8 @@ export default function AdminCostCalculator() {
           resourceId: mainResource.id,
           amount: mainUsage,
           inputUnit: mainResource.unit,
-          multiplier: quantity,
-          detail: `${mainUsage || 0} ${unitLabels[mainResource.unit]} × ${quantity} unidad(es)`,
+          multiplier: finalQuantity,
+          detail: `${mainUsage || 0} ${unitLabels[mainResource.unit]} × ${finalQuantity} unidad(es)`,
         })
       }
 
@@ -416,112 +450,67 @@ export default function AdminCostCalculator() {
             resourceId: extraResource.id,
             amount: extraUsage,
             inputUnit: extraResource.unit,
-            multiplier: quantity,
-            detail: `${extraUsage || 0} ${unitLabels[extraResource.unit]} × ${quantity} unidad(es)`,
+            multiplier: finalQuantity,
+            detail: `${extraUsage || 0} ${unitLabels[extraResource.unit]} × ${finalQuantity} unidad(es)`,
           })
         }
       }
     }
 
-    const machineValue = Math.max(0, number(machineTimePerUnit))
-    const machineHours =
-      jobType === '3d-print'
-        ? machineValue
-        : machineValue / 60
-
-    if (machineResourceId && machineHours > 0) {
-      addCost({
-        key: 'machine',
-        label: jobType === '3d-print' ? 'Impresora 3D' : 'Máquina / impresión',
-        resourceId: machineResourceId,
-        amount: machineHours,
-        inputUnit: 'hour',
-        multiplier: quantity,
-        detail:
-          jobType === '3d-print'
-            ? `${machineValue} h × ${quantity} pieza(s)`
-            : `${machineValue} min × ${quantity} unidad(es)`,
-      })
-    }
-
-    const energyRate = Math.max(0, number(energyKwhPerHour))
-    if (energyResourceId && machineHours > 0 && energyRate > 0) {
-      const totalKwh = energyRate * machineHours * quantity
-
-      addCost({
-        key: 'energy',
-        label: 'Energía',
-        resourceId: energyResourceId,
-        amount: totalKwh,
-        inputUnit: 'kwh',
-        detail: `${energyRate} kWh/h × ${(machineHours * quantity).toFixed(2)} h`,
-      })
-    }
-
-    const laborValue = Math.max(0, number(laborMinutes))
-    if (laborResourceId && laborValue > 0) {
+    const hours = Math.max(0, number(projectHours))
+    if (workerResourceId && hours > 0) {
       addCost({
         key: 'labor',
-        label: 'Trabajo / tiempo',
-        resourceId: laborResourceId,
-        amount: laborValue,
-        inputUnit: 'minute',
-        multiplier: laborScope === 'unit' ? quantity : 1,
-        detail:
-          laborScope === 'unit'
-            ? `${laborValue} min × ${quantity} unidad(es)`
-            : `${laborValue} min del trabajo completo`,
+        label: 'Trabajo',
+        resourceId: workerResourceId,
+        amount: hours,
+        inputUnit: 'hour',
+        detail: `${hours} hora(s) del proyecto completo`,
       })
     }
 
     const directCost = costs.reduce((sum, item) => sum + item.total, 0)
-    const overheadCost = directCost * (overhead / 100)
-    const productionCost = directCost + overheadCost
-    const rawSaleTotal = productionCost * (1 + profit / 100)
-    const rawSalePerUnit = rawSaleTotal / quantity
+    const lightCost = directCost * (LIGHT_PERCENT / 100)
+    const wearCost = directCost * (WEAR_PERCENT / 100)
+    const realCost = directCost + lightCost + wearCost
+    const rawSaleTotal = realCost * (1 + profit / 100)
+    const rawSalePerUnit = rawSaleTotal / finalQuantity
     const suggestedPerUnit = roundUp(rawSalePerUnit, rounding)
-    const suggestedTotal = suggestedPerUnit * quantity
+    const suggestedTotal = suggestedPerUnit * finalQuantity
 
     return {
-      quantity,
-      overhead,
+      quantity: finalQuantity,
       profit,
       costs,
       directCost,
-      overheadCost,
-      productionCost,
-      costPerUnit: productionCost / quantity,
+      lightCost,
+      wearCost,
+      realCost,
+      costPerUnit: realCost / finalQuantity,
       suggestedPerUnit,
       suggestedTotal,
     }
   }, [
-    energyKwhPerHour,
-    energyResourceId,
     filamentResourceId,
-    gramsPerUnit,
+    gramsPerPiece,
     inkResourceId,
     jobType,
-    laborMinutes,
-    laborResourceId,
-    laborScope,
-    machineResourceId,
-    machineTimePerUnit,
     manualExtraEnabled,
     manualExtraResourceId,
     manualExtraUsagePerUnit,
     manualResourceId,
     manualUsagePerUnit,
-    overheadPercent,
     paintEnabled,
-    paintMlPerUnit,
+    paintMlPerPiece,
     paintResourceId,
     paperResourceId,
-    printsPerUnit,
-    productionQuantity,
+    printSides,
     profitPercent,
+    projectHours,
+    quantity,
     resources,
     roundingStep,
-    sheetsPerUnit,
+    workerResourceId,
   ])
 
   function updateDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
@@ -535,9 +524,7 @@ export default function AdminCostCalculator() {
     if (paintResourceId === resourceId) setPaintResourceId('')
     if (manualResourceId === resourceId) setManualResourceId('')
     if (manualExtraResourceId === resourceId) setManualExtraResourceId('')
-    if (machineResourceId === resourceId) setMachineResourceId('')
-    if (energyResourceId === resourceId) setEnergyResourceId('')
-    if (laborResourceId === resourceId) setLaborResourceId('')
+    if (workerResourceId === resourceId) setWorkerResourceId('')
   }
 
   async function submitResource(event: FormEvent<HTMLFormElement>) {
@@ -586,6 +573,7 @@ export default function AdminCostCalculator() {
       if (!response.ok) throw new Error(await responseMessage(response))
 
       clearResourceSelection(resource.id)
+
       if (editingId === resource.id) {
         setEditingId(null)
         setDraft(emptyDraft)
@@ -607,45 +595,30 @@ export default function AdminCostCalculator() {
   function openQuote(type: GuidedJobType) {
     setJobType(type)
     setWizardStep(1)
-    setProductionQuantity('1')
-
-    setSheetsPerUnit('1')
-    setPrintsPerUnit('1')
-    setGramsPerUnit('20')
+    setQuantity('1')
+    setProfitPercent('40')
+    setRoundingStep('100')
+    setPrintSides('single')
+    setGramsPerPiece('20')
     setPaintEnabled(false)
-    setPaintMlPerUnit('2')
+    setPaintMlPerPiece('2')
     setManualUsagePerUnit('1')
     setManualExtraEnabled(false)
     setManualExtraResourceId('')
     setManualExtraUsagePerUnit('1')
-    setMachineTimePerUnit('')
-    setEnergyKwhPerHour('')
-    setLaborMinutes('')
-    setLaborScope('job')
+    setProjectHours('1')
 
-    if (type === 'paper-print') {
-      setPaperResourceId(firstResourceId('paper'))
-      setInkResourceId(firstResourceId('ink'))
-      setMachineResourceId('')
-    }
+    setPaperResourceId(firstResourceId('paper'))
+    setInkResourceId(firstResourceId('ink'))
+    setFilamentResourceId(firstResourceId('filament'))
+    setPaintResourceId(firstResourceId('paint'))
+    setWorkerResourceId(firstResourceId('labor'))
 
-    if (type === '3d-print') {
-      setFilamentResourceId(firstResourceId('filament'))
-      setPaintResourceId(firstResourceId('paint'))
-      setMachineResourceId(firstResourceId('machine'))
-    }
+    const firstMaterial = resources.find((resource) =>
+      ['paper', 'paint', 'consumable', 'other', 'filament'].includes(resource.category),
+    )
+    setManualResourceId(firstMaterial?.id ?? '')
 
-    if (type === 'manual') {
-      const firstMaterial = resources.find((resource) =>
-        ['paper', 'paint', 'consumable', 'other', 'filament'].includes(resource.category),
-      )
-
-      setManualResourceId(firstMaterial?.id ?? '')
-      setMachineResourceId('')
-    }
-
-    setEnergyResourceId(firstResourceId('energy'))
-    setLaborResourceId(firstResourceId('labor'))
     setQuoteOpen(true)
   }
 
@@ -654,45 +627,33 @@ export default function AdminCostCalculator() {
     setWizardStep(1)
   }
 
-  function goToCostData() {
+  function goToCostData(messageText: string) {
     setQuoteOpen(false)
     setView('data')
-    setMessage('Cargá o actualizá tus costos y después volvé a Presupuesto rápido.')
+    setMessage(messageText)
   }
-
-  const paperResources = resources.filter((resource) => resource.category === 'paper')
-  const inkResources = resources.filter((resource) => resource.category === 'ink')
-  const filamentResources = resources.filter((resource) => resource.category === 'filament')
-  const paintResources = resources.filter((resource) => resource.category === 'paint')
-  const machineResources = resources.filter((resource) => resource.category === 'machine')
-  const energyResources = resources.filter((resource) => resource.category === 'energy')
-  const laborResources = resources.filter((resource) => resource.category === 'labor')
-  const manualMaterialResources = resources.filter((resource) =>
-    ['paper', 'paint', 'consumable', 'other', 'filament'].includes(resource.category),
-  )
-
-  const selectedManualResource =
-    resources.find((resource) => resource.id === manualResourceId) ?? null
-  const selectedManualExtraResource =
-    resources.find((resource) => resource.id === manualExtraResourceId) ?? null
 
   const stepTwoReady =
     jobType === 'paper-print'
       ? Boolean(
           paperResourceId &&
           inkResourceId &&
-          number(sheetsPerUnit) > 0 &&
-          number(printsPerUnit) > 0,
+          workerResourceId &&
+          number(projectHours) > 0,
         )
       : jobType === '3d-print'
         ? Boolean(
             filamentResourceId &&
-            number(gramsPerUnit) > 0 &&
-            (!paintEnabled || (paintResourceId && number(paintMlPerUnit) > 0)),
+            workerResourceId &&
+            number(gramsPerPiece) > 0 &&
+            number(projectHours) > 0 &&
+            (!paintEnabled || (paintResourceId && number(paintMlPerPiece) > 0)),
           )
         : Boolean(
             manualResourceId &&
+            workerResourceId &&
             number(manualUsagePerUnit) > 0 &&
+            number(projectHours) > 0 &&
             (!manualExtraEnabled ||
               (manualExtraResourceId && number(manualExtraUsagePerUnit) > 0)),
           )
@@ -704,6 +665,20 @@ export default function AdminCostCalculator() {
         ? 'Impresión 3D'
         : 'Manualidad / armado'
 
+  const quantityTitle =
+    jobType === 'paper-print'
+      ? '¿Cuántas hojas vas a imprimir?'
+      : jobType === '3d-print'
+        ? '¿Cuántas piezas vas a hacer?'
+        : '¿Cuántas unidades vas a hacer?'
+
+  const quantityLabel =
+    jobType === 'paper-print'
+      ? 'Cantidad de hojas'
+      : jobType === '3d-print'
+        ? 'Cantidad de piezas'
+        : 'Cantidad de unidades'
+
   return (
     <section className="admin-panel admin-cost-calculator">
       <div className="admin-cost-heading-v2">
@@ -711,12 +686,14 @@ export default function AdminCostCalculator() {
           <span className="admin-cost-eyebrow">Costos & rentabilidad</span>
           <h2>Presupuesto rápido</h2>
           <p>
-            Elegí qué tipo de trabajo vas a hacer y la calculadora te pregunta solamente lo necesario.
+            Elegí el tipo de trabajo, sus materiales y una persona. Luz y desgaste se calculan
+            automáticamente.
           </p>
 
           <div className="admin-cost-heading-meta">
             <span>{resources.length} datos cargados</span>
-            <span>Cálculo privado del admin</span>
+            <span>Luz +{LIGHT_PERCENT}%</span>
+            <span>Desgaste +{WEAR_PERCENT}%</span>
           </div>
         </div>
 
@@ -741,16 +718,15 @@ export default function AdminCostCalculator() {
       {message && <div className="admin-toast admin-cost-message">{message}</div>}
 
       {view === 'calculator' ? (
-        <div className="admin-guided-calculator">
+        <div className="admin-budget-home">
           {resources.length === 0 ? (
             <div className="admin-cost-empty admin-cost-empty-hero">
               <div className="admin-cost-empty-icon" aria-hidden="true">+</div>
               <div className="admin-cost-empty-copy">
                 <span className="admin-cost-empty-kicker">Primero tu base de costos</span>
-                <strong>Cargá tus materiales una vez y después presupuestá en segundos.</strong>
+                <strong>Cargá materiales y personas una vez; después presupuestá en segundos.</strong>
                 <p>
-                  Papeles, tintas, filamentos, energía, horas de máquina y mano de obra quedan
-                  guardados para reutilizarlos en cada cálculo.
+                  Papel, tinta, filamento, pintura y el valor/hora de Samuel, Stefania o quien trabaje.
                 </p>
               </div>
               <button className="admin-primary" type="button" onClick={() => setView('data')}>
@@ -759,14 +735,11 @@ export default function AdminCostCalculator() {
             </div>
           ) : (
             <>
-              <div className="admin-guided-intro">
+              <div className="admin-budget-intro">
                 <div>
                   <span className="admin-cost-eyebrow">Nuevo presupuesto</span>
-                  <h3>¿Qué vas a fabricar?</h3>
-                  <p>
-                    No agregues costos uno por uno. Elegí el tipo de trabajo y te guiamos con
-                    los materiales que normalmente necesita.
-                  </p>
+                  <h3>¿Qué trabajo vas a calcular?</h3>
+                  <p>La calculadora muestra solamente lo necesario para ese tipo de proyecto.</p>
                 </div>
 
                 <button className="admin-secondary" type="button" onClick={() => setView('data')}>
@@ -774,72 +747,70 @@ export default function AdminCostCalculator() {
                 </button>
               </div>
 
-              <div className="admin-guided-job-grid">
+              <div className="admin-budget-job-grid">
                 <button
+                  className="admin-budget-job"
                   type="button"
-                  className="admin-guided-job-card"
                   onClick={() => openQuote('paper-print')}
                 >
-                  <span className="admin-guided-job-icon">01</span>
+                  <span>01</span>
                   <strong>Impresión en papel</strong>
-                  <p>Papel + tinta + tiempo de impresión + energía + trabajo manual.</p>
-                  <small>
-                    {paperResources.length} papeles · {inkResources.length} tintas disponibles
-                  </small>
-                  <span className="admin-guided-job-action">Calcular →</span>
+                  <p>Papel + tinta automática por cara + una persona + luz y desgaste.</p>
+                  <small>{paperResources.length} papeles · {inkResources.length} tintas</small>
+                  <b>Calcular →</b>
                 </button>
 
                 <button
+                  className="admin-budget-job"
                   type="button"
-                  className="admin-guided-job-card"
                   onClick={() => openQuote('3d-print')}
                 >
-                  <span className="admin-guided-job-icon">02</span>
+                  <span>02</span>
                   <strong>Impresión 3D</strong>
-                  <p>Filamento + horas de máquina + energía + acrílico opcional + acabado.</p>
-                  <small>
-                    {filamentResources.length} filamentos · {machineResources.length} costos de máquina
-                  </small>
-                  <span className="admin-guided-job-action">Calcular →</span>
+                  <p>Filamento + pintura opcional + una persona + luz y desgaste.</p>
+                  <small>{filamentResources.length} filamentos · {paintResources.length} pinturas</small>
+                  <b>Calcular →</b>
                 </button>
 
                 <button
+                  className="admin-budget-job"
                   type="button"
-                  className="admin-guided-job-card"
                   onClick={() => openQuote('manual')}
                 >
-                  <span className="admin-guided-job-icon">03</span>
+                  <span>03</span>
                   <strong>Manualidad / armado</strong>
-                  <p>Material principal + material extra + tiempo de trabajo + herramienta.</p>
-                  <small>{manualMaterialResources.length} materiales compatibles</small>
-                  <span className="admin-guided-job-action">Calcular →</span>
+                  <p>Material principal + extra opcional + una persona + luz y desgaste.</p>
+                  <small>{manualMaterialResources.length} materiales disponibles</small>
+                  <b>Calcular →</b>
                 </button>
               </div>
 
-              <div className="admin-guided-how">
-                <div><span>1</span><strong>Elegís el trabajo</strong><small>Solo mostramos costos relacionados.</small></div>
-                <div><span>2</span><strong>Indicás qué consume</strong><small>Por unidad, pieza o trabajo completo.</small></div>
-                <div><span>3</span><strong>Ves el precio</strong><small>Con costo real, indirectos y recargo.</small></div>
+              <div className="admin-budget-rule">
+                <strong>Regla automática de Alimar</strong>
+                <span>
+                  Costo directo + {LIGHT_PERCENT}% de luz + {WEAR_PERCENT}% de desgaste.
+                  Después se aplica el recargo/ganancia que elijas.
+                </span>
               </div>
             </>
           )}
 
           {quoteOpen && (
-            <div className="admin-quote-overlay" role="presentation">
+            <div className="admin-budget-overlay" role="presentation">
               <section
-                className="admin-quote-modal"
+                className="admin-budget-modal"
                 role="dialog"
                 aria-modal="true"
-                aria-labelledby="admin-quote-title"
+                aria-labelledby="admin-budget-title"
               >
-                <header className="admin-quote-header">
+                <header className="admin-budget-header">
                   <div>
                     <span>Presupuesto guiado · Paso {wizardStep} de 3</span>
-                    <h3 id="admin-quote-title">{jobTitle}</h3>
+                    <h3 id="admin-budget-title">{jobTitle}</h3>
                   </div>
                   <button
-                    className="admin-quote-close"
                     type="button"
+                    className="admin-budget-close"
                     onClick={closeQuote}
                     aria-label="Cerrar presupuesto"
                   >
@@ -847,109 +818,92 @@ export default function AdminCostCalculator() {
                   </button>
                 </header>
 
-                <div className="admin-quote-progress" aria-hidden="true">
+                <div className="admin-budget-progress" aria-hidden="true">
                   <span className={wizardStep >= 1 ? 'is-active' : ''} />
                   <span className={wizardStep >= 2 ? 'is-active' : ''} />
                   <span className={wizardStep >= 3 ? 'is-active' : ''} />
                 </div>
 
-                <div className="admin-quote-body">
+                <div className="admin-budget-body">
                   {wizardStep === 1 && (
-                    <div className="admin-quote-step admin-quote-step-start">
-                      <div className="admin-quote-step-copy">
+                    <div className="admin-budget-step admin-budget-step-quantity">
+                      <div className="admin-budget-copy">
                         <span className="admin-cost-eyebrow">Paso 1</span>
-                        <h4>¿Cuántas unidades vas a hacer?</h4>
+                        <h4>{quantityTitle}</h4>
                         <p>
-                          Primero definimos la cantidad. En el siguiente paso te preguntamos
-                          cuánto material usa una sola unidad.
+                          Esta cantidad multiplica los materiales. Las horas de la persona son
+                          del proyecto completo y no se multiplican por cantidad.
                         </p>
                       </div>
 
-                      <label className="admin-quote-quantity">
-                        Cantidad
+                      <label className="admin-budget-quantity">
+                        {quantityLabel}
                         <input
                           type="number"
                           min={1}
                           step={1}
-                          value={productionQuantity}
-                          onChange={(event) => setProductionQuantity(event.target.value)}
+                          value={quantity}
+                          onChange={(event) => setQuantity(event.target.value)}
                           autoFocus
                         />
-                        <small>
-                          {jobType === '3d-print' ? 'Cantidad de piezas 3D.' : 'Cantidad final que vas a entregar.'}
-                        </small>
                       </label>
-
-                      <div className="admin-quote-example">
-                        <strong>Cómo funciona</strong>
-                        <span>
-                          Si hacés {Math.max(1, Math.floor(number(productionQuantity) || 1))} unidades,
-                          la calculadora multiplica automáticamente los consumos “por unidad”.
-                        </span>
-                      </div>
                     </div>
                   )}
 
                   {wizardStep === 2 && (
-                    <div className="admin-quote-step">
-                      <div className="admin-quote-step-copy">
+                    <div className="admin-budget-step">
+                      <div className="admin-budget-copy">
                         <span className="admin-cost-eyebrow">Paso 2</span>
-                        <h4>¿Qué consume una unidad?</h4>
+                        <h4>Materiales y trabajo</h4>
                         <p>
-                          Completá solamente lo que realmente usa este trabajo. Los campos
-                          opcionales pueden quedar vacíos.
+                          Elegí los costos reales. Luz y desgaste no se cargan: se agregan
+                          automáticamente en el resultado.
                         </p>
                       </div>
 
                       {jobType === 'paper-print' && (
-                        <div className="admin-quote-material-pair">
-                          <div className="admin-quote-resource-card">
-                            <span className="admin-quote-resource-number">1</span>
+                        <div className="admin-budget-card-grid">
+                          <div className="admin-budget-cost-card">
+                            <span className="admin-budget-card-number">1</span>
                             <div>
                               <strong>Papel</strong>
-                              <small>Cada unidad necesita un papel o fracción de hoja.</small>
+                              <small>Se cobra una hoja por cada hoja indicada en el paso 1.</small>
                             </div>
 
                             {paperResources.length > 0 ? (
-                              <>
-                                <label>
-                                  Papel
-                                  <select
-                                    value={paperResourceId}
-                                    onChange={(event) => setPaperResourceId(event.target.value)}
-                                  >
-                                    {paperResources.map((resource) => (
-                                      <option key={resource.id} value={resource.id}>
-                                        {resource.name}{resource.detail ? ` · ${resource.detail}` : ''}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </label>
-                                <label>
-                                  Hojas por unidad
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    step="0.01"
-                                    value={sheetsPerUnit}
-                                    onChange={(event) => setSheetsPerUnit(event.target.value)}
-                                  />
-                                </label>
-                              </>
+                              <label>
+                                Papel
+                                <select
+                                  value={paperResourceId}
+                                  onChange={(event) => setPaperResourceId(event.target.value)}
+                                >
+                                  {paperResources.map((resource) => (
+                                    <option key={resource.id} value={resource.id}>
+                                      {resource.name}{resource.detail ? ` · ${resource.detail}` : ''}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
                             ) : (
-                              <button className="admin-secondary" type="button" onClick={goToCostData}>
-                                Cargar un papel
+                              <button
+                                className="admin-secondary"
+                                type="button"
+                                onClick={() =>
+                                  goToCostData('Cargá al menos un papel para presupuestar impresiones.')
+                                }
+                              >
+                                Cargar papel
                               </button>
                             )}
                           </div>
 
-                          <div className="admin-quote-plus" aria-hidden="true">+</div>
-
-                          <div className="admin-quote-resource-card">
-                            <span className="admin-quote-resource-number">2</span>
+                          <div className="admin-budget-cost-card">
+                            <span className="admin-budget-card-number">2</span>
                             <div>
                               <strong>Tinta</strong>
-                              <small>Cada impresión consume el rendimiento de la tinta elegida.</small>
+                              <small>
+                                La cantidad de tinta se calcula sola a partir de las hojas y las caras.
+                              </small>
                             </div>
 
                             {inkResources.length > 0 ? (
@@ -967,21 +921,37 @@ export default function AdminCostCalculator() {
                                     ))}
                                   </select>
                                 </label>
+
                                 <label>
-                                  Impresiones por unidad
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    step={1}
-                                    value={printsPerUnit}
-                                    onChange={(event) => setPrintsPerUnit(event.target.value)}
-                                  />
-                                  <small>Frente = 1 · doble faz = 2.</small>
+                                  Tipo de impresión
+                                  <select
+                                    value={printSides}
+                                    onChange={(event) =>
+                                      setPrintSides(event.target.value as PrintSides)
+                                    }
+                                  >
+                                    <option value="single">Simple faz · 1 impresión por hoja</option>
+                                    <option value="double">Doble faz · 2 impresiones por hoja</option>
+                                  </select>
                                 </label>
+
+                                <div className="admin-budget-auto">
+                                  <span>Impresiones calculadas</span>
+                                  <strong>
+                                    {Math.max(1, Math.floor(number(quantity) || 1)) *
+                                      (printSides === 'double' ? 2 : 1)}
+                                  </strong>
+                                </div>
                               </>
                             ) : (
-                              <button className="admin-secondary" type="button" onClick={goToCostData}>
-                                Cargar una tinta
+                              <button
+                                className="admin-secondary"
+                                type="button"
+                                onClick={() =>
+                                  goToCostData('Cargá al menos una tinta con su rendimiento por impresión.')
+                                }
+                              >
+                                Cargar tinta
                               </button>
                             )}
                           </div>
@@ -989,16 +959,16 @@ export default function AdminCostCalculator() {
                       )}
 
                       {jobType === '3d-print' && (
-                        <div className="admin-quote-stack">
-                          <div className="admin-quote-resource-card admin-quote-resource-card-wide">
-                            <span className="admin-quote-resource-number">1</span>
+                        <div className="admin-budget-stack">
+                          <div className="admin-budget-cost-card admin-budget-wide">
+                            <span className="admin-budget-card-number">1</span>
                             <div>
                               <strong>Filamento</strong>
-                              <small>Usá los gramos estimados que te informa el laminador.</small>
+                              <small>Ingresá los gramos aproximados que usa cada pieza.</small>
                             </div>
 
                             {filamentResources.length > 0 ? (
-                              <div className="admin-quote-fields-2">
+                              <div className="admin-budget-fields-2">
                                 <label>
                                   Filamento
                                   <select
@@ -1012,42 +982,49 @@ export default function AdminCostCalculator() {
                                     ))}
                                   </select>
                                 </label>
+
                                 <label>
                                   Gramos por pieza
                                   <input
                                     type="number"
                                     min={0}
                                     step="0.1"
-                                    value={gramsPerUnit}
-                                    onChange={(event) => setGramsPerUnit(event.target.value)}
+                                    value={gramsPerPiece}
+                                    onChange={(event) => setGramsPerPiece(event.target.value)}
                                   />
                                 </label>
                               </div>
                             ) : (
-                              <button className="admin-secondary" type="button" onClick={goToCostData}>
+                              <button
+                                className="admin-secondary"
+                                type="button"
+                                onClick={() =>
+                                  goToCostData('Cargá al menos un filamento para presupuestar 3D.')
+                                }
+                              >
                                 Cargar filamento
                               </button>
                             )}
                           </div>
 
-                          <div className="admin-quote-optional-card">
-                            <label className="admin-quote-check">
+                          <div className="admin-budget-optional">
+                            <label className="admin-budget-check">
                               <input
                                 type="checkbox"
                                 checked={paintEnabled}
                                 onChange={(event) => setPaintEnabled(event.target.checked)}
                               />
                               <span>
-                                <strong>¿La pieza lleva acrílico / pintura?</strong>
-                                <small>Activá esto solo si realmente la vas a pintar.</small>
+                                <strong>¿La pieza lleva acrílico o pintura?</strong>
+                                <small>Activá esto solamente si realmente la pintás.</small>
                               </span>
                             </label>
 
                             {paintEnabled && (
                               paintResources.length > 0 ? (
-                                <div className="admin-quote-fields-2">
+                                <div className="admin-budget-fields-2">
                                   <label>
-                                    Pintura
+                                    Pintura / acrílico
                                     <select
                                       value={paintResourceId}
                                       onChange={(event) => setPaintResourceId(event.target.value)}
@@ -1065,14 +1042,20 @@ export default function AdminCostCalculator() {
                                       type="number"
                                       min={0}
                                       step="0.1"
-                                      value={paintMlPerUnit}
-                                      onChange={(event) => setPaintMlPerUnit(event.target.value)}
+                                      value={paintMlPerPiece}
+                                      onChange={(event) => setPaintMlPerPiece(event.target.value)}
                                     />
                                   </label>
                                 </div>
                               ) : (
-                                <button className="admin-secondary" type="button" onClick={goToCostData}>
-                                  Cargar pintura / acrílico
+                                <button
+                                  className="admin-secondary"
+                                  type="button"
+                                  onClick={() =>
+                                    goToCostData('Cargá una pintura o acrílico para incluirlo.')
+                                  }
+                                >
+                                  Cargar pintura
                                 </button>
                               )
                             )}
@@ -1081,16 +1064,16 @@ export default function AdminCostCalculator() {
                       )}
 
                       {jobType === 'manual' && (
-                        <div className="admin-quote-stack">
-                          <div className="admin-quote-resource-card admin-quote-resource-card-wide">
-                            <span className="admin-quote-resource-number">1</span>
+                        <div className="admin-budget-stack">
+                          <div className="admin-budget-cost-card admin-budget-wide">
+                            <span className="admin-budget-card-number">1</span>
                             <div>
                               <strong>Material principal</strong>
-                              <small>Elegí el material que más pesa en este trabajo.</small>
+                              <small>Se multiplica por la cantidad final del proyecto.</small>
                             </div>
 
                             {manualMaterialResources.length > 0 ? (
-                              <div className="admin-quote-fields-2">
+                              <div className="admin-budget-fields-2">
                                 <label>
                                   Material
                                   <select
@@ -1104,6 +1087,7 @@ export default function AdminCostCalculator() {
                                     ))}
                                   </select>
                                 </label>
+
                                 <label>
                                   Uso por unidad
                                   <input
@@ -1116,19 +1100,25 @@ export default function AdminCostCalculator() {
                                   <small>
                                     {selectedManualResource
                                       ? `En ${unitLabels[selectedManualResource.unit]}.`
-                                      : 'Según la unidad de tu dato.'}
+                                      : 'Elegí el material.'}
                                   </small>
                                 </label>
                               </div>
                             ) : (
-                              <button className="admin-secondary" type="button" onClick={goToCostData}>
-                                Cargar un material
+                              <button
+                                className="admin-secondary"
+                                type="button"
+                                onClick={() =>
+                                  goToCostData('Cargá un material para presupuestar manualidades.')
+                                }
+                              >
+                                Cargar material
                               </button>
                             )}
                           </div>
 
-                          <div className="admin-quote-optional-card">
-                            <label className="admin-quote-check">
+                          <div className="admin-budget-optional">
+                            <label className="admin-budget-check">
                               <input
                                 type="checkbox"
                                 checked={manualExtraEnabled}
@@ -1136,12 +1126,12 @@ export default function AdminCostCalculator() {
                               />
                               <span>
                                 <strong>¿Usa un segundo material?</strong>
-                                <small>Por ejemplo cinta, acrílico, papel adicional o pegamento.</small>
+                                <small>Por ejemplo cinta, acrílico, papel extra o pegamento.</small>
                               </span>
                             </label>
 
                             {manualExtraEnabled && (
-                              <div className="admin-quote-fields-2">
+                              <div className="admin-budget-fields-2">
                                 <label>
                                   Material extra
                                   <select
@@ -1156,6 +1146,7 @@ export default function AdminCostCalculator() {
                                     ))}
                                   </select>
                                 </label>
+
                                 <label>
                                   Uso por unidad
                                   <input
@@ -1177,171 +1168,137 @@ export default function AdminCostCalculator() {
                         </div>
                       )}
 
-                      <div className="admin-quote-optional-section">
-                        <div className="admin-quote-section-title">
-                          <strong>Tiempo, máquina y energía</strong>
-                          <small>Opcional. Completá solo lo que quieras cobrar o medir.</small>
+                      <div className="admin-budget-worker">
+                        <div className="admin-budget-worker-copy">
+                          <span className="admin-budget-card-number">3</span>
+                          <div>
+                            <strong>Trabajo de una persona</strong>
+                            <small>
+                              Elegís una sola persona y las horas son del proyecto completo.
+                              No se multiplican por hoja ni por pieza.
+                            </small>
+                          </div>
                         </div>
 
-                        <div className="admin-quote-fields-3">
-                          <label>
-                            Costo de máquina
-                            <select
-                              value={machineResourceId}
-                              onChange={(event) => setMachineResourceId(event.target.value)}
-                            >
-                              <option value="">No incluir</option>
-                              {machineResources.map((resource) => (
-                                <option key={resource.id} value={resource.id}>
-                                  {resource.name}{resource.detail ? ` · ${resource.detail}` : ''}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                        {workerResources.length > 0 ? (
+                          <div className="admin-budget-fields-2">
+                            <label>
+                              Persona
+                              <select
+                                value={workerResourceId}
+                                onChange={(event) => setWorkerResourceId(event.target.value)}
+                              >
+                                {workerResources.map((resource) => (
+                                  <option key={resource.id} value={resource.id}>
+                                    {resource.name}
+                                    {resource.detail ? ` · ${resource.detail}` : ''}
+                                    {' · '}
+                                    {money(number(resource.effective_unit_cost))}/hora
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
 
-                          <label>
-                            {jobType === '3d-print' ? 'Horas de máquina por pieza' : 'Minutos de máquina por unidad'}
-                            <input
-                              type="number"
-                              min={0}
-                              step={jobType === '3d-print' ? '0.1' : '1'}
-                              value={machineTimePerUnit}
-                              onChange={(event) => setMachineTimePerUnit(event.target.value)}
-                              disabled={!machineResourceId}
-                              placeholder={jobType === '3d-print' ? 'Ej. 3.5' : 'Ej. 2'}
-                            />
-                          </label>
+                            <label>
+                              Horas totales del proyecto
+                              <input
+                                type="number"
+                                min={0}
+                                step="0.25"
+                                value={projectHours}
+                                onChange={(event) => setProjectHours(event.target.value)}
+                                placeholder="Ej. 2"
+                              />
+                              <small>Ej. 1,5 = una hora y media.</small>
+                            </label>
+                          </div>
+                        ) : (
+                          <button
+                            className="admin-secondary"
+                            type="button"
+                            onClick={() =>
+                              goToCostData(
+                                'Cargá al menos una persona en Mano de obra. Ejemplo: Samuel = valor por hora.',
+                              )
+                            }
+                          >
+                            Cargar persona / hora
+                          </button>
+                        )}
+                      </div>
 
-                          <label>
-                            Tarifa eléctrica
-                            <select
-                              value={energyResourceId}
-                              onChange={(event) => setEnergyResourceId(event.target.value)}
-                            >
-                              <option value="">No incluir</option>
-                              {energyResources.map((resource) => (
-                                <option key={resource.id} value={resource.id}>
-                                  {resource.name}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-
-                          <label>
-                            Consumo eléctrico kWh/h
-                            <input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              value={energyKwhPerHour}
-                              onChange={(event) => setEnergyKwhPerHour(event.target.value)}
-                              disabled={!energyResourceId || !machineResourceId}
-                              placeholder="Ej. 0.12"
-                            />
-                            <small>Potencia promedio de la máquina.</small>
-                          </label>
-
-                          <label>
-                            Valor de tu tiempo
-                            <select
-                              value={laborResourceId}
-                              onChange={(event) => setLaborResourceId(event.target.value)}
-                            >
-                              <option value="">No incluir</option>
-                              {laborResources.map((resource) => (
-                                <option key={resource.id} value={resource.id}>
-                                  {resource.name}{resource.detail ? ` · ${resource.detail}` : ''}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-
-                          <label>
-                            Minutos de trabajo
-                            <input
-                              type="number"
-                              min={0}
-                              step={1}
-                              value={laborMinutes}
-                              onChange={(event) => setLaborMinutes(event.target.value)}
-                              disabled={!laborResourceId}
-                              placeholder="Ej. 30"
-                            />
-                          </label>
-
-                          <label>
-                            Ese tiempo es
-                            <select
-                              value={laborScope}
-                              onChange={(event) =>
-                                setLaborScope(event.target.value as 'unit' | 'job')
-                              }
-                              disabled={!laborResourceId}
-                            >
-                              <option value="job">Una vez por todo el trabajo</option>
-                              <option value="unit">Por cada unidad</option>
-                            </select>
-                          </label>
+                      <div className="admin-budget-percent-rule">
+                        <div>
+                          <span>Luz</span>
+                          <strong>+{LIGHT_PERCENT}%</strong>
                         </div>
+                        <div>
+                          <span>Desgaste</span>
+                          <strong>+{WEAR_PERCENT}%</strong>
+                        </div>
+                        <p>
+                          No necesitás watts, kWh ni horas de máquina. Estos porcentajes se agregan
+                          automáticamente sobre el costo directo.
+                        </p>
                       </div>
                     </div>
                   )}
 
                   {wizardStep === 3 && (
-                    <div className="admin-quote-step admin-quote-result-step">
-                      <div className="admin-quote-step-copy">
+                    <div className="admin-budget-step">
+                      <div className="admin-budget-copy">
                         <span className="admin-cost-eyebrow">Paso 3</span>
-                        <h4>Este es el costo real del trabajo</h4>
-                        <p>
-                          Podés volver atrás para cambiar materiales. Abajo ajustás indirectos,
-                          recargo y redondeo del precio final.
-                        </p>
+                        <h4>Resultado del proyecto</h4>
+                        <p>Acá podés ver claramente de dónde sale cada peso del presupuesto.</p>
                       </div>
 
-                      <div className="admin-quote-result-layout">
-                        <div className="admin-quote-breakdown">
-                          <div className="admin-quote-section-title">
-                            <strong>¿En qué se va la plata?</strong>
-                            <small>Desglose calculado automáticamente.</small>
-                          </div>
-
-                          {guidedCalculation.costs.length === 0 ? (
-                            <div className="admin-cost-empty admin-cost-empty-small">
-                              Todavía no hay costos medibles. Volvé al paso 2 y completá al menos un material.
-                            </div>
-                          ) : (
-                            guidedCalculation.costs.map((cost) => (
-                              <div className="admin-quote-cost-row" key={cost.key}>
-                                <div>
-                                  <strong>{cost.label}</strong>
-                                  <small>{cost.detail}</small>
-                                </div>
-                                <span>{money(cost.total)}</span>
+                      <div className="admin-budget-result-layout">
+                        <div className="admin-budget-breakdown">
+                          {guidedCalculation.costs.map((cost) => (
+                            <div className="admin-budget-cost-row" key={cost.key}>
+                              <div>
+                                <strong>{cost.label}</strong>
+                                <small>{cost.detail}</small>
                               </div>
-                            ))
-                          )}
+                              <span>{money(cost.total)}</span>
+                            </div>
+                          ))}
 
-                          <div className="admin-quote-cost-row admin-quote-cost-row-subtotal">
+                          <div className="admin-budget-cost-row admin-budget-subtotal">
                             <div>
-                              <strong>Costos directos</strong>
-                              <small>Materiales, máquina, energía y tiempo.</small>
+                              <strong>Costo directo</strong>
+                              <small>Materiales + trabajo.</small>
                             </div>
                             <span>{money(guidedCalculation.directCost)}</span>
                           </div>
+
+                          <div className="admin-budget-cost-row">
+                            <div>
+                              <strong>Luz · {LIGHT_PERCENT}%</strong>
+                              <small>Regla fija de Alimar.</small>
+                            </div>
+                            <span>{money(guidedCalculation.lightCost)}</span>
+                          </div>
+
+                          <div className="admin-budget-cost-row">
+                            <div>
+                              <strong>Desgaste · {WEAR_PERCENT}%</strong>
+                              <small>Herramientas, impresoras y uso general.</small>
+                            </div>
+                            <span>{money(guidedCalculation.wearCost)}</span>
+                          </div>
+
+                          <div className="admin-budget-cost-row admin-budget-real-cost">
+                            <div>
+                              <strong>Costo real del proyecto</strong>
+                              <small>Antes de ganancia.</small>
+                            </div>
+                            <span>{money(guidedCalculation.realCost)}</span>
+                          </div>
                         </div>
 
-                        <aside className="admin-quote-price-panel">
-                          <div className="admin-quote-selling-controls">
-                            <label>
-                              Costos indirectos %
-                              <input
-                                type="number"
-                                min={0}
-                                step="0.1"
-                                value={overheadPercent}
-                                onChange={(event) => setOverheadPercent(event.target.value)}
-                              />
-                            </label>
+                        <aside className="admin-budget-price-panel">
+                          <div className="admin-budget-price-controls">
                             <label>
                               Recargo / ganancia %
                               <input
@@ -1352,6 +1309,7 @@ export default function AdminCostCalculator() {
                                 onChange={(event) => setProfitPercent(event.target.value)}
                               />
                             </label>
+
                             <label>
                               Redondear a
                               <select
@@ -1368,17 +1326,18 @@ export default function AdminCostCalculator() {
                             </label>
                           </div>
 
-                          <div className="admin-quote-price-metric">
-                            <span>Costo total</span>
-                            <strong>{money(guidedCalculation.productionCost)}</strong>
+                          <div className="admin-budget-price-metric">
+                            <span>Costo real</span>
+                            <strong>{money(guidedCalculation.realCost)}</strong>
                             <small>{money(guidedCalculation.costPerUnit)} por unidad</small>
                           </div>
 
-                          <div className="admin-quote-price-final">
+                          <div className="admin-budget-price-final">
                             <span>Precio sugerido</span>
                             <strong>{money(guidedCalculation.suggestedTotal)}</strong>
                             <small>
-                              {money(guidedCalculation.suggestedPerUnit)} × {guidedCalculation.quantity} unidad(es)
+                              {money(guidedCalculation.suggestedPerUnit)} ×{' '}
+                              {guidedCalculation.quantity}
                             </small>
                           </div>
                         </aside>
@@ -1387,7 +1346,7 @@ export default function AdminCostCalculator() {
                   )}
                 </div>
 
-                <footer className="admin-quote-footer">
+                <footer className="admin-budget-footer">
                   <div>
                     {wizardStep > 1 && (
                       <button
@@ -1400,11 +1359,9 @@ export default function AdminCostCalculator() {
                     )}
                   </div>
 
-                  <div className="admin-quote-footer-main">
+                  <div className="admin-budget-footer-main">
                     {wizardStep === 2 && !stepTwoReady && (
-                      <span className="admin-quote-footer-hint">
-                        Completá los materiales obligatorios.
-                      </span>
+                      <span>Completá materiales, persona y horas del proyecto.</span>
                     )}
 
                     <button className="admin-secondary" type="button" onClick={closeQuote}>
@@ -1415,11 +1372,7 @@ export default function AdminCostCalculator() {
                       <button
                         className="admin-primary"
                         type="button"
-                        disabled={
-                          wizardStep === 1
-                            ? number(productionQuantity) < 1
-                            : !stepTwoReady
-                        }
+                        disabled={wizardStep === 1 ? number(quantity) < 1 : !stepTwoReady}
                         onClick={() => setWizardStep((wizardStep + 1) as WizardStep)}
                       >
                         Continuar →
@@ -1447,18 +1400,17 @@ export default function AdminCostCalculator() {
             <div className="admin-cost-data-title">
               <strong>{editingId ? 'Editar dato de costo' : 'Nuevo dato de costo'}</strong>
               <span>
-                Tu base de costos alimenta automáticamente la calculadora. Podés cargar desde
-                una hoja de papel hasta una hora de diseño o de impresora 3D.
+                Guardá materiales y personas con su valor/hora. Estos datos alimentan el presupuesto rápido.
               </span>
             </div>
 
             <label>
-              Nombre
+              {draft.category === 'labor' ? 'Persona / trabajo' : 'Nombre'}
               <input
                 value={draft.name}
                 onChange={(event) => updateDraft('name', event.target.value)}
                 maxLength={120}
-                placeholder="Ej. Papel holográfico"
+                placeholder={draft.category === 'labor' ? 'Ej. Samuel' : 'Ej. Papel holográfico'}
                 required
               />
             </label>
@@ -1473,16 +1425,14 @@ export default function AdminCostCalculator() {
                   setDraft((current) => ({
                     ...current,
                     category: nextCategory,
-                    unit:
-                      nextCategory === 'ink'
-                        ? 'print'
-                        : current.unit === 'print'
-                          ? defaultUnitForCategory(nextCategory)
-                          : current.unit,
+                    unit: defaultUnitForCategory(nextCategory),
                     packageQuantity:
-                      nextCategory === 'ink' && current.category !== 'ink'
-                        ? ''
-                        : current.packageQuantity,
+                      nextCategory === 'labor'
+                        ? '1'
+                        : nextCategory === 'ink' && current.category !== 'ink'
+                          ? ''
+                          : current.packageQuantity,
+                    wastePercent: nextCategory === 'labor' ? '0' : current.wastePercent,
                   }))
                 }}
               >
@@ -1500,7 +1450,11 @@ export default function AdminCostCalculator() {
                 value={draft.detail}
                 onChange={(event) => updateDraft('detail', event.target.value)}
                 maxLength={160}
-                placeholder="Ej. A4 · 180 g · doble faz"
+                placeholder={
+                  draft.category === 'labor'
+                    ? 'Ej. Diseño, corte, armado'
+                    : 'Ej. A4 · 180 g · doble faz'
+                }
               />
             </label>
 
@@ -1509,6 +1463,12 @@ export default function AdminCostCalculator() {
                 Unidad base
                 <input value="impresión" readOnly aria-readonly="true" />
                 <small>Para tinta usamos rendimiento por impresión.</small>
+              </label>
+            ) : draft.category === 'labor' ? (
+              <label>
+                Unidad base
+                <input value="hora" readOnly aria-readonly="true" />
+                <small>La persona se cobra por hora del proyecto completo.</small>
               </label>
             ) : (
               <label>
@@ -1529,57 +1489,70 @@ export default function AdminCostCalculator() {
             )}
 
             <label>
-              Precio pagado
+              {draft.category === 'labor' ? 'Valor por hora' : 'Precio pagado'}
               <input
                 value={draft.purchasePrice}
                 onChange={(event) => updateDraft('purchasePrice', event.target.value)}
                 inputMode="decimal"
-                placeholder="Ej. 15000"
+                placeholder={draft.category === 'labor' ? 'Ej. 5000' : 'Ej. 15000'}
                 required
               />
             </label>
 
-            <label>
-              {draft.category === 'ink' ? '¿Cuántas impresiones rinde?' : 'Ese precio contiene'}
-              <input
-                value={draft.packageQuantity}
-                onChange={(event) => updateDraft('packageQuantity', event.target.value)}
-                inputMode="decimal"
-                placeholder={
-                  draft.category === 'ink'
-                    ? 'Ej. 50'
-                    : 'Ej. 100 hojas / 1000 g / 1 hora'
-                }
-                required
-              />
-              <small>
-                {draft.category === 'ink'
-                  ? 'Ejemplo: si pagaste $10.000 y rinde 50 impresiones, la tinta cuesta $200 por impresión.'
-                  : 'La calculadora obtiene automáticamente el costo por unidad base.'}
-              </small>
-            </label>
+            {draft.category !== 'labor' && (
+              <label>
+                {draft.category === 'ink' ? '¿Cuántas impresiones rinde?' : 'Ese precio contiene'}
+                <input
+                  value={draft.packageQuantity}
+                  onChange={(event) => updateDraft('packageQuantity', event.target.value)}
+                  inputMode="decimal"
+                  placeholder={
+                    draft.category === 'ink'
+                      ? 'Ej. 50'
+                      : 'Ej. 100 hojas / 1000 g / 1 hora'
+                  }
+                  required
+                />
+                <small>
+                  {draft.category === 'ink'
+                    ? 'Ejemplo: $10.000 / 50 impresiones = $200 por impresión.'
+                    : 'La calculadora obtiene automáticamente el costo por unidad base.'}
+                </small>
+              </label>
+            )}
+
+            {draft.category === 'labor' && (
+              <div className="admin-budget-labor-note admin-cost-span-2">
+                <strong>Una persona por proyecto</strong>
+                <span>
+                  Ejemplo: Samuel vale $5.000/h. En el presupuesto elegís Samuel y ponés 2 horas;
+                  el costo de trabajo será $10.000, sin multiplicarse por hojas o piezas.
+                </span>
+              </div>
+            )}
 
             {draft.category === 'ink' && (
               <div className="admin-cost-ink-note admin-cost-span-2">
                 <strong>Tinta por impresión</strong>
                 <span>
-                  La tinta se calcula por impresión y es independiente del papel elegido.
-                  En la calculadora, 1 impresión por unidad usa exactamente este costo.
+                  Simple faz usa 1 impresión por hoja. Doble faz usa la misma hoja pero 2 impresiones.
                 </span>
               </div>
             )}
 
-            <label>
-              Desperdicio %
-              <input
-                value={draft.wastePercent}
-                onChange={(event) => updateDraft('wastePercent', event.target.value)}
-                inputMode="decimal"
-                placeholder="0"
-                required
-              />
-              <small>Ej. 5% por pruebas, recortes o material que se pierde.</small>
-            </label>
+            {draft.category !== 'labor' && (
+              <label>
+                Desperdicio %
+                <input
+                  value={draft.wastePercent}
+                  onChange={(event) => updateDraft('wastePercent', event.target.value)}
+                  inputMode="decimal"
+                  placeholder="0"
+                  required
+                />
+                <small>Ej. 5% por pruebas, recortes o material que se pierde.</small>
+              </label>
+            )}
 
             <label className="admin-cost-span-2">
               Notas
@@ -1588,7 +1561,7 @@ export default function AdminCostCalculator() {
                 onChange={(event) => updateDraft('notes', event.target.value)}
                 maxLength={280}
                 rows={2}
-                placeholder="Marca, proveedor, observaciones, etc."
+                placeholder="Proveedor, tarea, observaciones, etc."
               />
             </label>
 
@@ -1607,6 +1580,7 @@ export default function AdminCostCalculator() {
                   Cancelar edición
                 </button>
               )}
+
               <button className="admin-primary" type="submit" disabled={saving}>
                 {saving ? 'Guardando…' : editingId ? 'Actualizar dato' : 'Guardar dato'}
               </button>
@@ -1621,7 +1595,7 @@ export default function AdminCostCalculator() {
                   type="search"
                   value={resourceSearch}
                   onChange={(event) => setResourceSearch(event.target.value)}
-                  placeholder="Papel, tinta, PLA..."
+                  placeholder="Papel, tinta, Samuel, PLA..."
                 />
               </label>
 
@@ -1666,15 +1640,24 @@ export default function AdminCostCalculator() {
                   </div>
 
                   <div className="admin-cost-resource-price">
-                    <small>
-                      Compra: {money(number(resource.purchase_price))} /{' '}
-                      {resource.package_quantity} {unitLabels[resource.unit]}
-                    </small>
-                    <strong>
-                      {money(number(resource.effective_unit_cost))} / {unitLabels[resource.unit]}
-                    </strong>
-                    {number(resource.waste_percent) > 0 && (
-                      <small>Incluye {resource.waste_percent}% de desperdicio</small>
+                    {resource.category === 'labor' ? (
+                      <>
+                        <small>Valor de trabajo</small>
+                        <strong>{money(number(resource.effective_unit_cost))} / hora</strong>
+                      </>
+                    ) : (
+                      <>
+                        <small>
+                          Compra: {money(number(resource.purchase_price))} /{' '}
+                          {resource.package_quantity} {unitLabels[resource.unit]}
+                        </small>
+                        <strong>
+                          {money(number(resource.effective_unit_cost))} / {unitLabels[resource.unit]}
+                        </strong>
+                        {number(resource.waste_percent) > 0 && (
+                          <small>Incluye {resource.waste_percent}% de desperdicio</small>
+                        )}
+                      </>
                     )}
                   </div>
 
