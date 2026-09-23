@@ -4174,3 +4174,509 @@
     margin-left: auto;
   }
 }
+
+
+/* ALIMAR SAVED QUOTES + PRINT 1A.27 */
+.admin-saved-quotes {
+  display: grid;
+  gap: 16px;
+  padding: 24px 28px 30px;
+}
+
+.admin-saved-quotes-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-saved-quotes-heading > div {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-saved-quotes-heading h3 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.5rem;
+  letter-spacing: -0.035em;
+}
+
+.admin-saved-quotes-heading p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.admin-saved-quotes-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(150px, .35fr) auto;
+  align-items: end;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(12, 16, 20, 0.075);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.admin-saved-quotes-toolbar label,
+.admin-quote-save-body label,
+.admin-quote-detail-modal footer label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--admin-ink);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.admin-saved-quotes-toolbar input,
+.admin-saved-quotes-toolbar select,
+.admin-quote-save-body input,
+.admin-quote-save-body select,
+.admin-quote-save-body textarea,
+.admin-quote-detail-modal footer select {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid rgba(12, 16, 20, 0.11);
+  border-radius: 9px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.admin-quote-save-body textarea {
+  min-height: 82px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.admin-saved-quotes-toolbar > span {
+  padding-bottom: 12px;
+  color: var(--admin-muted);
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.admin-saved-quote-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-saved-quote-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(150px, .45fr) minmax(135px, .35fr) auto;
+  align-items: center;
+  gap: 13px;
+  padding: 13px;
+  border: 1px solid rgba(12, 16, 20, 0.085);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.admin-saved-quote-main {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.admin-saved-quote-code {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-saved-quote-code > span {
+  flex: 0 0 auto;
+  color: var(--admin-blue-dark);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.admin-saved-quote-code > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.77rem;
+}
+
+.admin-saved-quote-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+}
+
+.admin-saved-quote-meta span {
+  color: var(--admin-muted);
+  font-size: 0.59rem;
+}
+
+.admin-saved-quote-total {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  text-align: right;
+}
+
+.admin-saved-quote-total span,
+.admin-saved-quote-total small {
+  color: var(--admin-muted);
+  font-size: 0.59rem;
+}
+
+.admin-saved-quote-total strong {
+  color: var(--admin-blue-dark);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1rem;
+}
+
+.admin-saved-quote-status select {
+  min-height: 38px;
+}
+
+.admin-saved-quote-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.admin-saved-quote-actions button {
+  min-height: 38px;
+  padding: 0 10px;
+  font-size: 0.64rem;
+}
+
+.admin-quote-save-overlay {
+  position: fixed;
+  z-index: 180;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(12, 16, 20, 0.62);
+  backdrop-filter: blur(6px);
+}
+
+.admin-quote-save-modal,
+.admin-quote-detail-modal {
+  width: min(720px, 100%);
+  max-height: min(90vh, 820px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 20px;
+  background: #fff9eb;
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.3);
+}
+
+.admin-quote-detail-modal {
+  width: min(880px, 100%);
+}
+
+.admin-quote-save-modal > header,
+.admin-quote-detail-modal > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(12, 16, 20, 0.075);
+}
+
+.admin-quote-save-modal > header > div,
+.admin-quote-detail-modal > header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-quote-save-modal > header span,
+.admin-quote-detail-modal > header span {
+  color: var(--admin-blue-dark);
+  font-size: 0.61rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-quote-save-modal > header h3,
+.admin-quote-detail-modal > header h3 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.28rem;
+  letter-spacing: -0.03em;
+}
+
+.admin-quote-save-body,
+.admin-quote-detail-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 20px;
+}
+
+.admin-quote-save-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-quote-save-span-2 {
+  grid-column: 1 / -1;
+}
+
+.admin-quote-save-price {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid rgba(63, 120, 138, 0.2);
+  border-radius: 10px;
+  background: rgba(100, 175, 198, 0.08);
+}
+
+.admin-quote-save-price span,
+.admin-quote-save-price small {
+  color: var(--admin-muted);
+  font-size: 0.59rem;
+}
+
+.admin-quote-save-price strong {
+  color: var(--admin-blue-dark);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.1rem;
+}
+
+.admin-quote-save-modal > footer,
+.admin-quote-detail-modal > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(12, 16, 20, 0.075);
+  background: rgba(255, 253, 248, 0.92);
+}
+
+.admin-quote-save-modal > footer > div {
+  display: flex;
+  gap: 7px;
+}
+
+.admin-quote-detail-body {
+  display: grid;
+  gap: 13px;
+}
+
+.admin-quote-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-quote-detail-meta > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid rgba(12, 16, 20, 0.075);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.admin-quote-detail-meta span,
+.admin-quote-detail-meta small {
+  color: var(--admin-muted);
+  font-size: 0.58rem;
+}
+
+.admin-quote-detail-meta strong {
+  font-size: 0.69rem;
+}
+
+.admin-quote-detail-costs {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-quote-detail-costs > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 1px solid rgba(12, 16, 20, 0.07);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.admin-quote-detail-costs > div > span {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-quote-detail-costs strong {
+  font-size: 0.66rem;
+}
+
+.admin-quote-detail-costs small {
+  color: var(--admin-muted);
+  font-size: 0.58rem;
+}
+
+.admin-quote-detail-costs b {
+  color: var(--admin-blue-dark);
+  font-size: 0.7rem;
+}
+
+.admin-quote-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.admin-quote-detail-summary > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid rgba(12, 16, 20, 0.075);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.admin-quote-detail-summary span {
+  color: var(--admin-muted);
+  font-size: 0.58rem;
+}
+
+.admin-quote-detail-summary strong {
+  font-size: 0.78rem;
+}
+
+.admin-quote-detail-summary .is-final {
+  grid-column: 1 / -1;
+  color: #f7edd7;
+  background: var(--admin-ink);
+}
+
+.admin-quote-detail-summary .is-final span {
+  color: rgba(247, 237, 215, 0.72);
+}
+
+.admin-quote-detail-summary .is-final strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.25rem;
+}
+
+.admin-quote-detail-notes {
+  display: grid;
+  gap: 4px;
+  padding: 10px 11px;
+  border: 1px solid rgba(12, 16, 20, 0.075);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.admin-quote-detail-notes strong {
+  font-size: 0.66rem;
+}
+
+.admin-quote-detail-notes p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.62rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.admin-quote-detail-modal > footer label {
+  grid-template-columns: auto minmax(130px, 1fr);
+  align-items: center;
+}
+
+.admin-quote-detail-modal > footer select {
+  min-height: 38px;
+}
+
+@media (max-width: 900px) {
+  .admin-saved-quote-card {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, .4fr);
+  }
+
+  .admin-saved-quote-status,
+  .admin-saved-quote-actions {
+    grid-column: auto;
+  }
+
+  .admin-quote-detail-meta,
+  .admin-quote-detail-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-saved-quotes {
+    padding: 18px;
+  }
+
+  .admin-saved-quotes-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-saved-quotes-toolbar,
+  .admin-saved-quote-card,
+  .admin-quote-save-body,
+  .admin-quote-detail-meta,
+  .admin-quote-detail-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-saved-quote-total {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .admin-saved-quote-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-quote-save-overlay {
+    padding: 8px;
+  }
+
+  .admin-quote-save-modal,
+  .admin-quote-detail-modal {
+    max-height: 95vh;
+    border-radius: 16px;
+  }
+
+  .admin-quote-save-modal > footer,
+  .admin-quote-detail-modal > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-quote-save-modal > footer > div {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-quote-save-modal > footer button,
+  .admin-quote-detail-modal > footer button {
+    width: 100%;
+  }
+
+  .admin-quote-detail-summary .is-final {
+    grid-column: auto;
+  }
+
+  .admin-quote-detail-modal > footer label {
+    grid-template-columns: 1fr;
+  }
+}

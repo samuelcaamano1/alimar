@@ -1,4 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import {
+  openQuotePrintView,
+  type AdminQuote,
+  type QuoteSnapshot,
+  type QuoteStatus,
+} from './adminQuotePrint'
 
 type CostCategory =
   | 'paper'
@@ -62,6 +68,16 @@ type GuidedCost = {
 
 const LIGHT_PERCENT = 10
 const WEAR_PERCENT = 20
+
+const quoteStatusLabels: Record<QuoteStatus, string> = {
+  draft: 'Borrador',
+  sent: 'Enviado',
+  accepted: 'Aceptado',
+  rejected: 'Rechazado',
+  expired: 'Vencido',
+}
+
+const quoteStatusOptions = Object.entries(quoteStatusLabels) as Array<[QuoteStatus, string]>
 
 const categoryLabels: Record<CostCategory, string> = {
   paper: 'Papel',
@@ -129,6 +145,30 @@ function money(value: number) {
     currency: 'ARS',
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+function dateLabel(value: string | null) {
+  if (!value) return 'Sin vencimiento'
+
+  const date = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
+}
+
+function dateTimeLabel(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
 }
 
 function number(value: string) {
@@ -220,7 +260,7 @@ function payloadFromDraft(draft: Draft) {
 }
 
 export default function AdminCostCalculator() {
-  const [view, setView] = useState<'calculator' | 'data'>('calculator')
+  const [view, setView] = useState<'calculator' | 'quotes' | 'data'>('calculator')
   const [resources, setResources] = useState<CostResource[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [message, setMessage] = useState('')
@@ -229,6 +269,19 @@ export default function AdminCostCalculator() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [resourceSearch, setResourceSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<'all' | CostCategory>('all')
+
+  const [quotes, setQuotes] = useState<AdminQuote[]>([])
+  const [quoteState, setQuoteState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [quoteSearch, setQuoteSearch] = useState('')
+  const [quoteStatusFilter, setQuoteStatusFilter] = useState<'all' | QuoteStatus>('all')
+  const [selectedQuote, setSelectedQuote] = useState<AdminQuote | null>(null)
+  const [saveQuoteOpen, setSaveQuoteOpen] = useState(false)
+  const [quoteSaving, setQuoteSaving] = useState(false)
+  const [quoteTitle, setQuoteTitle] = useState('')
+  const [quoteCustomer, setQuoteCustomer] = useState('')
+  const [quotePhone, setQuotePhone] = useState('')
+  const [quoteValidityDays, setQuoteValidityDays] = useState('7')
+  const [quoteNotes, setQuoteNotes] = useState('')
 
   const [quoteOpen, setQuoteOpen] = useState(false)
   const [wizardStep, setWizardStep] = useState<WizardStep>(1)
@@ -277,9 +330,36 @@ export default function AdminCostCalculator() {
     }
   }, [])
 
+  const loadQuotes = useCallback(async () => {
+    setQuoteState('loading')
+
+    try {
+      const response = await fetch('/api/admin/catalog?action=quotes', {
+        cache: 'no-store',
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      const data = (await response.json()) as { quotes: AdminQuote[] }
+      setQuotes(data.quotes)
+      setQuoteState('ready')
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : 'No se pudieron cargar los presupuestos.',
+      )
+      setQuoteState('error')
+    }
+  }, [])
+
   useEffect(() => {
     void loadResources()
   }, [loadResources])
+
+  useEffect(() => {
+    if (view === 'quotes' && quoteState === 'idle') {
+      void loadQuotes()
+    }
+  }, [loadQuotes, quoteState, view])
 
   useEffect(() => {
     if (!quoteOpen) return
@@ -317,6 +397,27 @@ export default function AdminCostCalculator() {
         .includes(query)
     })
   }, [categoryFilter, resourceSearch, resources])
+
+
+  const filteredQuotes = useMemo(() => {
+    const query = quoteSearch.trim().toLocaleLowerCase('es-AR')
+
+    return quotes.filter((quote) => {
+      if (quoteStatusFilter !== 'all' && quote.status !== quoteStatusFilter) return false
+      if (!query) return true
+
+      return [
+        quote.public_code,
+        quote.title,
+        quote.customer_name ?? '',
+        quote.customer_phone ?? '',
+        quote.snapshot.jobLabel,
+      ]
+        .join(' ')
+        .toLocaleLowerCase('es-AR')
+        .includes(query)
+    })
+  }, [quoteSearch, quoteStatusFilter, quotes])
 
   const paperResources = resources.filter((resource) => resource.category === 'paper')
   const inkResources = resources.filter((resource) => resource.category === 'ink')
@@ -633,6 +734,170 @@ export default function AdminCostCalculator() {
     setMessage(messageText)
   }
 
+  const jobTitle =
+    jobType === 'paper-print'
+      ? 'Impresión en papel'
+      : jobType === '3d-print'
+        ? 'Impresión 3D'
+        : 'Manualidad / armado'
+
+  const quantityTitle =
+    jobType === 'paper-print'
+      ? '¿Cuántas hojas vas a imprimir?'
+      : jobType === '3d-print'
+        ? '¿Cuántas piezas vas a hacer?'
+        : '¿Cuántas unidades vas a hacer?'
+
+  const quantityLabel =
+    jobType === 'paper-print'
+      ? 'Cantidad de hojas'
+      : jobType === '3d-print'
+        ? 'Cantidad de piezas'
+        : 'Cantidad de unidades'
+
+  function buildQuoteSnapshot(): QuoteSnapshot {
+    const worker = workerResources.find((resource) => resource.id === workerResourceId)
+
+    return {
+      version: 1,
+      jobType,
+      jobLabel: jobTitle,
+      quantity: guidedCalculation.quantity,
+      quantityLabel,
+      workerName: worker?.name ?? '',
+      projectHours: Math.max(0, number(projectHours)),
+      printSides: jobType === 'paper-print' ? printSides : null,
+      lightPercent: LIGHT_PERCENT,
+      wearPercent: WEAR_PERCENT,
+      costs: guidedCalculation.costs.map((cost) => ({ ...cost })),
+      directCost: guidedCalculation.directCost,
+      lightCost: guidedCalculation.lightCost,
+      wearCost: guidedCalculation.wearCost,
+      realCost: guidedCalculation.realCost,
+      profitPercent: guidedCalculation.profit,
+      roundingStep: Math.max(1, number(roundingStep) || 1),
+      costPerUnit: guidedCalculation.costPerUnit,
+      suggestedUnitPrice: guidedCalculation.suggestedPerUnit,
+      totalPrice: guidedCalculation.suggestedTotal,
+    }
+  }
+
+  function openSaveQuote() {
+    setQuoteTitle(jobTitle)
+    setQuoteCustomer('')
+    setQuotePhone('')
+    setQuoteValidityDays('7')
+    setQuoteNotes('')
+    setSaveQuoteOpen(true)
+  }
+
+  function quoteValidUntil() {
+    const days = Math.max(1, Math.floor(number(quoteValidityDays) || 7))
+    const date = new Date()
+    date.setHours(12, 0, 0, 0)
+    date.setDate(date.getDate() + days)
+    return date.toISOString().slice(0, 10)
+  }
+
+  async function saveCurrentQuote(printAfter = false) {
+    const title = quoteTitle.trim()
+
+    if (title.length < 2) {
+      setMessage('Ingresá un título para guardar el presupuesto.')
+      return
+    }
+
+    const previewWindow = printAfter
+      ? window.open('', '_blank', 'width=980,height=1200')
+      : null
+
+    setQuoteSaving(true)
+    setMessage('')
+
+    try {
+      const snapshot = buildQuoteSnapshot()
+
+      const response = await fetch('/api/admin/catalog?action=quotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          customerName: quoteCustomer.trim(),
+          customerPhone: quotePhone.trim(),
+          jobType,
+          quantity: guidedCalculation.quantity,
+          validUntil: quoteValidUntil(),
+          notes: quoteNotes.trim(),
+          snapshot,
+          directCost: guidedCalculation.directCost,
+          lightCost: guidedCalculation.lightCost,
+          wearCost: guidedCalculation.wearCost,
+          realCost: guidedCalculation.realCost,
+          profitPercent: guidedCalculation.profit,
+          suggestedUnitPrice: guidedCalculation.suggestedPerUnit,
+          totalPrice: guidedCalculation.suggestedTotal,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      const data = (await response.json()) as { quote: AdminQuote }
+      const saved = data.quote
+
+      setQuotes((current) => [saved, ...current.filter((quote) => quote.id !== saved.id)])
+      setQuoteState('ready')
+      setSaveQuoteOpen(false)
+      setQuoteOpen(false)
+      setView('quotes')
+      setSelectedQuote(saved)
+      setMessage(`${saved.public_code} guardado correctamente.`)
+
+      if (printAfter && !openQuotePrintView(saved, previewWindow)) {
+        setMessage(`${saved.public_code} guardado. El navegador bloqueó la vista de impresión.`)
+      }
+    } catch (error) {
+      if (previewWindow && !previewWindow.closed) previewWindow.close()
+      setMessage(error instanceof Error ? error.message : 'No se pudo guardar el presupuesto.')
+    } finally {
+      setQuoteSaving(false)
+    }
+  }
+
+  async function updateQuoteStatus(quote: AdminQuote, status: QuoteStatus) {
+    if (status === quote.status) return
+
+    setMessage('')
+
+    try {
+      const response = await fetch(
+        `/api/admin/catalog?action=quotes&id=${encodeURIComponent(quote.id)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        },
+      )
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      const data = (await response.json()) as { quote: AdminQuote }
+
+      setQuotes((current) =>
+        current.map((item) => (item.id === data.quote.id ? data.quote : item)),
+      )
+
+      if (selectedQuote?.id === data.quote.id) {
+        setSelectedQuote(data.quote)
+      }
+
+      setMessage(`${data.quote.public_code} actualizado a ${quoteStatusLabels[status]}.`)
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : 'No se pudo actualizar el presupuesto.',
+      )
+    }
+  }
+
   const stepTwoReady =
     jobType === 'paper-print'
       ? Boolean(
@@ -658,26 +923,6 @@ export default function AdminCostCalculator() {
               (manualExtraResourceId && number(manualExtraUsagePerUnit) > 0)),
           )
 
-  const jobTitle =
-    jobType === 'paper-print'
-      ? 'Impresión en papel'
-      : jobType === '3d-print'
-        ? 'Impresión 3D'
-        : 'Manualidad / armado'
-
-  const quantityTitle =
-    jobType === 'paper-print'
-      ? '¿Cuántas hojas vas a imprimir?'
-      : jobType === '3d-print'
-        ? '¿Cuántas piezas vas a hacer?'
-        : '¿Cuántas unidades vas a hacer?'
-
-  const quantityLabel =
-    jobType === 'paper-print'
-      ? 'Cantidad de hojas'
-      : jobType === '3d-print'
-        ? 'Cantidad de piezas'
-        : 'Cantidad de unidades'
 
   return (
     <section className="admin-panel admin-cost-calculator">
@@ -707,6 +952,13 @@ export default function AdminCostCalculator() {
           </button>
           <button
             type="button"
+            className={view === 'quotes' ? 'is-active' : ''}
+            onClick={() => setView('quotes')}
+          >
+            Presupuestos
+          </button>
+          <button
+            type="button"
             className={view === 'data' ? 'is-active' : ''}
             onClick={() => setView('data')}
           >
@@ -717,7 +969,7 @@ export default function AdminCostCalculator() {
 
       {message && <div className="admin-toast admin-cost-message">{message}</div>}
 
-      {view === 'calculator' ? (
+      {view === 'calculator' && (
         <div className="admin-budget-home">
           {resources.length === 0 ? (
             <div className="admin-cost-empty admin-cost-empty-hero">
@@ -1380,13 +1632,22 @@ export default function AdminCostCalculator() {
                     )}
 
                     {wizardStep === 3 && (
-                      <button
-                        className="admin-primary"
-                        type="button"
-                        onClick={() => openQuote(jobType)}
-                      >
-                        Nuevo cálculo
-                      </button>
+                      <>
+                        <button
+                          className="admin-secondary"
+                          type="button"
+                          onClick={openSaveQuote}
+                        >
+                          Guardar presupuesto
+                        </button>
+                        <button
+                          className="admin-primary"
+                          type="button"
+                          onClick={() => openQuote(jobType)}
+                        >
+                          Nuevo cálculo
+                        </button>
+                      </>
                     )}
                   </div>
                 </footer>
@@ -1394,7 +1655,136 @@ export default function AdminCostCalculator() {
             </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {view === 'quotes' && (
+        <div className="admin-saved-quotes">
+          <div className="admin-saved-quotes-heading">
+            <div>
+              <span className="admin-cost-eyebrow">Historial</span>
+              <h3>Presupuestos guardados</h3>
+              <p>
+                Cada presupuesto conserva una foto exacta de los costos y del precio del día en que lo guardaste.
+              </p>
+            </div>
+
+            <button className="admin-primary" type="button" onClick={() => setView('calculator')}>
+              + Nuevo presupuesto
+            </button>
+          </div>
+
+          <div className="admin-saved-quotes-toolbar">
+            <label>
+              Buscar
+              <input
+                type="search"
+                value={quoteSearch}
+                onChange={(event) => setQuoteSearch(event.target.value)}
+                placeholder="Código, cliente o título"
+              />
+            </label>
+
+            <label>
+              Estado
+              <select
+                value={quoteStatusFilter}
+                onChange={(event) =>
+                  setQuoteStatusFilter(event.target.value as 'all' | QuoteStatus)
+                }
+              >
+                <option value="all">Todos</option>
+                {quoteStatusOptions.map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </label>
+
+            <span>{filteredQuotes.length} visibles</span>
+          </div>
+
+          {quoteState === 'loading' && quotes.length === 0 && (
+            <div className="admin-cost-empty">Cargando presupuestos…</div>
+          )}
+
+          {quoteState === 'error' && quotes.length === 0 && (
+            <div className="admin-cost-empty">
+              No se pudieron cargar los presupuestos.
+              <button className="admin-secondary" type="button" onClick={() => void loadQuotes()}>
+                Reintentar
+              </button>
+            </div>
+          )}
+
+          {quoteState === 'ready' && filteredQuotes.length === 0 && (
+            <div className="admin-cost-empty">
+              Todavía no hay presupuestos para este filtro.
+            </div>
+          )}
+
+          <div className="admin-saved-quote-list">
+            {filteredQuotes.map((quote) => (
+              <article className="admin-saved-quote-card" key={quote.id}>
+                <div className="admin-saved-quote-main">
+                  <div className="admin-saved-quote-code">
+                    <span>{quote.public_code}</span>
+                    <strong>{quote.title}</strong>
+                  </div>
+
+                  <div className="admin-saved-quote-meta">
+                    <span>{quote.customer_name || 'Sin cliente'}</span>
+                    <span>{quote.snapshot.jobLabel}</span>
+                    <span>{quote.quantity} unidad(es)</span>
+                    <span>{dateTimeLabel(quote.created_at)}</span>
+                  </div>
+                </div>
+
+                <div className="admin-saved-quote-total">
+                  <span>Presupuestado</span>
+                  <strong>{money(Number(quote.total_price))}</strong>
+                  <small>Válido hasta {dateLabel(quote.valid_until)}</small>
+                </div>
+
+                <label className="admin-saved-quote-status">
+                  Estado
+                  <select
+                    value={quote.status}
+                    onChange={(event) =>
+                      void updateQuoteStatus(quote, event.target.value as QuoteStatus)
+                    }
+                  >
+                    {quoteStatusOptions.map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="admin-saved-quote-actions">
+                  <button
+                    className="admin-secondary"
+                    type="button"
+                    onClick={() => setSelectedQuote(quote)}
+                  >
+                    Ver
+                  </button>
+                  <button
+                    className="admin-primary"
+                    type="button"
+                    onClick={() => {
+                      if (!openQuotePrintView(quote)) {
+                        setMessage('El navegador bloqueó la vista de impresión.')
+                      }
+                    }}
+                  >
+                    Imprimir / PDF
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {view === 'data' && (
         <div className="admin-cost-data">
           <form className="admin-cost-data-form" onSubmit={submitResource}>
             <div className="admin-cost-data-title">
@@ -1687,6 +2077,239 @@ export default function AdminCostCalculator() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {saveQuoteOpen && (
+        <div className="admin-quote-save-overlay" role="presentation">
+          <section
+            className="admin-quote-save-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-save-quote-title"
+          >
+            <header>
+              <div>
+                <span>Guardar presupuesto</span>
+                <h3 id="admin-save-quote-title">Datos para identificarlo</h3>
+              </div>
+              <button
+                type="button"
+                className="admin-budget-close"
+                onClick={() => setSaveQuoteOpen(false)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </header>
+
+            <div className="admin-quote-save-body">
+              <label className="admin-quote-save-span-2">
+                Título
+                <input
+                  value={quoteTitle}
+                  onChange={(event) => setQuoteTitle(event.target.value)}
+                  maxLength={160}
+                  placeholder="Ej. Invitaciones cumpleaños Sofía"
+                  autoFocus
+                />
+              </label>
+
+              <label>
+                Cliente
+                <input
+                  value={quoteCustomer}
+                  onChange={(event) => setQuoteCustomer(event.target.value)}
+                  maxLength={120}
+                  placeholder="Opcional"
+                />
+              </label>
+
+              <label>
+                WhatsApp
+                <input
+                  value={quotePhone}
+                  onChange={(event) => setQuotePhone(event.target.value)}
+                  maxLength={40}
+                  placeholder="Opcional"
+                />
+              </label>
+
+              <label>
+                Vigencia
+                <select
+                  value={quoteValidityDays}
+                  onChange={(event) => setQuoteValidityDays(event.target.value)}
+                >
+                  <option value="3">3 días</option>
+                  <option value="7">7 días</option>
+                  <option value="15">15 días</option>
+                  <option value="30">30 días</option>
+                </select>
+              </label>
+
+              <div className="admin-quote-save-price">
+                <span>Total</span>
+                <strong>{money(guidedCalculation.suggestedTotal)}</strong>
+                <small>
+                  El cálculo queda congelado aunque después cambien los costos base.
+                </small>
+              </div>
+
+              <label className="admin-quote-save-span-2">
+                Notas
+                <textarea
+                  value={quoteNotes}
+                  onChange={(event) => setQuoteNotes(event.target.value)}
+                  rows={3}
+                  maxLength={3000}
+                  placeholder="Detalles internos, condiciones, entrega, etc."
+                />
+              </label>
+            </div>
+
+            <footer>
+              <button
+                className="admin-secondary"
+                type="button"
+                onClick={() => setSaveQuoteOpen(false)}
+                disabled={quoteSaving}
+              >
+                Cancelar
+              </button>
+
+              <div>
+                <button
+                  className="admin-secondary"
+                  type="button"
+                  onClick={() => void saveCurrentQuote(false)}
+                  disabled={quoteSaving}
+                >
+                  {quoteSaving ? 'Guardando…' : 'Guardar'}
+                </button>
+                <button
+                  className="admin-primary"
+                  type="button"
+                  onClick={() => void saveCurrentQuote(true)}
+                  disabled={quoteSaving}
+                >
+                  Guardar e imprimir PDF
+                </button>
+              </div>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {selectedQuote && (
+        <div className="admin-quote-save-overlay" role="presentation">
+          <section
+            className="admin-quote-detail-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-quote-detail-title"
+          >
+            <header>
+              <div>
+                <span>{selectedQuote.public_code}</span>
+                <h3 id="admin-quote-detail-title">{selectedQuote.title}</h3>
+              </div>
+              <button
+                type="button"
+                className="admin-budget-close"
+                onClick={() => setSelectedQuote(null)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </header>
+
+            <div className="admin-quote-detail-body">
+              <div className="admin-quote-detail-meta">
+                <div>
+                  <span>Cliente</span>
+                  <strong>{selectedQuote.customer_name || 'Sin cliente'}</strong>
+                  <small>{selectedQuote.customer_phone || 'Sin teléfono'}</small>
+                </div>
+                <div>
+                  <span>Trabajo</span>
+                  <strong>{selectedQuote.snapshot.jobLabel}</strong>
+                  <small>{selectedQuote.quantity} unidad(es)</small>
+                </div>
+                <div>
+                  <span>Responsable</span>
+                  <strong>{selectedQuote.snapshot.workerName || 'Sin asignar'}</strong>
+                  <small>{selectedQuote.snapshot.projectHours} hora(s)</small>
+                </div>
+                <div>
+                  <span>Vigencia</span>
+                  <strong>{dateLabel(selectedQuote.valid_until)}</strong>
+                  <small>{quoteStatusLabels[selectedQuote.status]}</small>
+                </div>
+              </div>
+
+              <div className="admin-quote-detail-costs">
+                {selectedQuote.snapshot.costs.map((cost) => (
+                  <div key={cost.key}>
+                    <span>
+                      <strong>{cost.label}</strong>
+                      <small>{cost.detail}</small>
+                    </span>
+                    <b>{money(cost.total)}</b>
+                  </div>
+                ))}
+              </div>
+
+              <div className="admin-quote-detail-summary">
+                <div><span>Costo directo</span><strong>{money(Number(selectedQuote.direct_cost))}</strong></div>
+                <div><span>Luz</span><strong>{money(Number(selectedQuote.light_cost))}</strong></div>
+                <div><span>Desgaste</span><strong>{money(Number(selectedQuote.wear_cost))}</strong></div>
+                <div><span>Costo real</span><strong>{money(Number(selectedQuote.real_cost))}</strong></div>
+                <div className="is-final">
+                  <span>Precio presupuestado</span>
+                  <strong>{money(Number(selectedQuote.total_price))}</strong>
+                </div>
+              </div>
+
+              {selectedQuote.notes && (
+                <div className="admin-quote-detail-notes">
+                  <strong>Notas</strong>
+                  <p>{selectedQuote.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <footer>
+              <label>
+                Estado
+                <select
+                  value={selectedQuote.status}
+                  onChange={(event) =>
+                    void updateQuoteStatus(
+                      selectedQuote,
+                      event.target.value as QuoteStatus,
+                    )
+                  }
+                >
+                  {quoteStatusOptions.map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                className="admin-primary"
+                type="button"
+                onClick={() => {
+                  if (!openQuotePrintView(selectedQuote)) {
+                    setMessage('El navegador bloqueó la vista de impresión.')
+                  }
+                }}
+              >
+                Imprimir / Guardar PDF
+              </button>
+            </footer>
+          </section>
         </div>
       )}
     </section>

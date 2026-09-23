@@ -1,6 +1,11 @@
 import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 import {
+  createAdminQuote,
+  listAdminQuotes,
+  updateAdminQuote,
+} from '../_lib/admin-quotes.js'
+import {
   createCostResource,
   deleteCostResource,
   listCostResources,
@@ -40,9 +45,14 @@ export async function GET(request: Request) {
   }
 
   const requestUrl = new URL(request.url)
+  const action = requestUrl.searchParams.get('action')
 
-  if (requestUrl.searchParams.get('action') === 'cost-resources') {
+  if (action === 'cost-resources') {
     return listCostResources(databaseUrl)
+  }
+
+  if (action === 'quotes') {
+    return listAdminQuotes(databaseUrl)
   }
 
   try {
@@ -98,8 +108,7 @@ export async function GET(request: Request) {
   }
 }
 
-
-async function costMutationContext(request: Request) {
+async function adminMutationContext(request: Request) {
   const originError = requireSameOrigin(request)
   if (originError) return { error: originError }
 
@@ -117,7 +126,9 @@ async function costMutationContext(request: Request) {
   }
 
   const requestUrl = new URL(request.url)
-  if (requestUrl.searchParams.get('action') !== 'cost-resources') {
+  const action = requestUrl.searchParams.get('action')
+
+  if (action !== 'cost-resources' && action !== 'quotes') {
     return {
       error: Response.json(
         { error: 'Invalid action' },
@@ -126,11 +137,11 @@ async function costMutationContext(request: Request) {
     }
   }
 
-  return { databaseUrl, requestUrl }
+  return { databaseUrl, requestUrl, action }
 }
 
 export async function POST(request: Request) {
-  const context = await costMutationContext(request)
+  const context = await adminMutationContext(request)
   if ('error' in context) return context.error
 
   let body: Record<string, unknown>
@@ -141,11 +152,15 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
   }
 
+  if (context.action === 'quotes') {
+    return createAdminQuote(context.databaseUrl, body)
+  }
+
   return createCostResource(context.databaseUrl, body)
 }
 
 export async function PATCH(request: Request) {
-  const context = await costMutationContext(request)
+  const context = await adminMutationContext(request)
   if ('error' in context) return context.error
 
   let body: Record<string, unknown>
@@ -154,6 +169,14 @@ export async function PATCH(request: Request) {
     body = (await request.json()) as Record<string, unknown>
   } catch {
     return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  }
+
+  if (context.action === 'quotes') {
+    return updateAdminQuote(
+      context.databaseUrl,
+      context.requestUrl.searchParams.get('id') ?? '',
+      body,
+    )
   }
 
   return updateCostResource(
@@ -164,8 +187,15 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const context = await costMutationContext(request)
+  const context = await adminMutationContext(request)
   if ('error' in context) return context.error
+
+  if (context.action !== 'cost-resources') {
+    return Response.json(
+      { error: 'Invalid action' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
 
   return deleteCostResource(
     context.databaseUrl,
