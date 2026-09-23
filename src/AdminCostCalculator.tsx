@@ -71,6 +71,7 @@ type QuoteCommercialMetrics = {
   accepted_count: number
   rejected_count: number
   converted_count: number
+  converted_actual_cost_count: number
   quoted_value: string
   accepted_value: string
   accepted_real_cost: string
@@ -466,6 +467,20 @@ export default function AdminCostCalculator({
   useEffect(() => {
     if (view === 'quotes') {
       void loadQuotes()
+    }
+  }, [loadQuotes, view])
+
+  useEffect(() => {
+    function onQuoteMetricsChanged() {
+      if (view === 'quotes') {
+        void loadQuotes()
+      }
+    }
+
+    window.addEventListener('alimar:quote-metrics-changed', onQuoteMetricsChanged)
+
+    return () => {
+      window.removeEventListener('alimar:quote-metrics-changed', onQuoteMetricsChanged)
     }
   }, [loadQuotes, view])
 
@@ -2124,7 +2139,8 @@ export default function AdminCostCalculator({
                       <strong>Precio final menos costo real congelado</strong>
                     </div>
                     <small>
-                      Es una estimación basada en el costo guardado dentro de cada PRE.
+                      Aceptados usa el costo del PRE. PED usa costo real cargado y,
+                      si falta, conserva la estimación del PRE.
                     </small>
                   </div>
 
@@ -2168,7 +2184,7 @@ export default function AdminCostCalculator({
                             ? money(Number(activeQuoteMetrics.converted_profit))
                             : '—'}
                         </strong>
-                        <small>ganancia estimada</small>
+                        <small>ganancia según costo disponible</small>
                       </div>
 
                       <dl>
@@ -2191,6 +2207,19 @@ export default function AdminCostCalculator({
                       </dl>
                     </article>
                   </div>
+
+                  {activeQuoteMetrics.converted_count > 0 && (
+                    <div className="admin-quote-actual-cost-coverage">
+                      <span>Costo real cargado</span>
+                      <strong>
+                        {activeQuoteMetrics.converted_actual_cost_count}/
+                        {activeQuoteMetrics.converted_count} pedidos
+                      </strong>
+                      <small>
+                        En los PED sin costo real todavía se usa la estimación congelada del PRE.
+                      </small>
+                    </div>
+                  )}
                 </div>
 
                 {activeQuoteMetrics.rejected_count > 0 && (

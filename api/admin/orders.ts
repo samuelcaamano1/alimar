@@ -43,6 +43,11 @@ type OrderRow = {
   customer_notes: string | null
   known_total: string
   has_quote: boolean
+  quote_code: string | null
+  estimated_cost: string | null
+  actual_cost: string | null
+  actual_cost_note: string | null
+  actual_cost_updated_at: string | null
   created_at: string
   item_id: string | null
   product_name: string | null
@@ -102,6 +107,38 @@ function text(value: unknown, max: number) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
 }
 
+function nonNegativeMoney(value: unknown) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && value >= 0 && value <= 1_000_000_000_000
+      ? value
+      : undefined
+  }
+
+  if (typeof value !== 'string') return undefined
+
+  const raw = value.trim().replace(/\s+/g, '')
+  if (!raw) return undefined
+
+  let normalized = raw
+
+  if (raw.includes(',') && raw.includes('.')) {
+    normalized =
+      raw.lastIndexOf(',') > raw.lastIndexOf('.')
+        ? raw.replace(/\./g, '').replace(',', '.')
+        : raw.replace(/,/g, '')
+  } else if (raw.includes(',')) {
+    normalized = raw.replace(',', '.')
+  } else if (/^\d{1,3}(?:\.\d{3})+$/.test(raw)) {
+    normalized = raw.replace(/\./g, '')
+  }
+
+  const parsed = Number(normalized)
+
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1_000_000_000_000
+    ? parsed
+    : undefined
+}
+
 export async function GET(request: Request) {
   const authError = requireAdmin(request)
   if (authError) return authError
@@ -150,6 +187,14 @@ export async function GET(request: Request) {
         o.customer_notes,
         o.known_total::text,
         o.has_quote,
+        CASE
+          WHEN linked_quote.quote_number IS NULL THEN NULL
+          ELSE 'PRE-' || LPAD(linked_quote.quote_number::text, 6, '0')
+        END AS quote_code,
+        linked_quote.real_cost::text AS estimated_cost,
+        o.actual_cost::text,
+        o.actual_cost_note,
+        o.actual_cost_updated_at::text,
         o.created_at::text,
         i.id::text AS item_id,
         i.product_name,
@@ -162,6 +207,7 @@ export async function GET(request: Request) {
         i.customization_note,
         i.customization_values
       FROM recent_orders o
+      LEFT JOIN quotes linked_quote ON linked_quote.id = o.quote_id
       LEFT JOIN order_items i ON i.order_id = o.id
       ORDER BY o.created_at DESC, i.created_at ASC
     `) as OrderRow[]
@@ -197,6 +243,11 @@ export async function GET(request: Request) {
         customer_notes: string | null
         known_total: string
         has_quote: boolean
+        quote_code: string | null
+        estimated_cost: string | null
+        actual_cost: string | null
+        actual_cost_note: string | null
+        actual_cost_updated_at: string | null
         created_at: string
         items: Array<{
           id: string
@@ -226,6 +277,11 @@ export async function GET(request: Request) {
           customer_notes: row.customer_notes,
           known_total: row.known_total,
           has_quote: row.has_quote,
+          quote_code: row.quote_code,
+          estimated_cost: row.estimated_cost,
+          actual_cost: row.actual_cost,
+          actual_cost_note: row.actual_cost_note,
+          actual_cost_updated_at: row.actual_cost_updated_at,
           created_at: row.created_at,
           items: [],
           events: [],
@@ -291,6 +347,92 @@ export async function PATCH(request: Request) {
 
   if (requestUrl.searchParams.get('action') === 'custom-requests') {
     return updateAdminCustomRequest(databaseUrl, body)
+  }
+
+  if (requestUrl.searchParams.get('action') === 'actual-cost') {
+    const id = text(body.id, 40)
+    const actualCost = nonNegativeMoney(body.actualCost)
+    const costNote = text(body.note, 500)
+
+    if (!UUID_RE.test(id)) {
+      return Response.json({ error: 'Pedido inválido.' }, { status: 400 })
+    }
+
+    if (actualCost === undefined) {
+      return Response.json(
+        { error: 'Ingresá un costo real válido.' },
+        { status: 400 },
+      )
+    }
+
+    try {
+      const sql = neon(databaseUrl)
+
+      const currentRows = await sql`
+        SELECT status, quote_id
+        FROM orders
+        WHERE id = ${id}::uuid
+        LIMIT 1
+      `
+
+      if (currentRows.length === 0) {
+        return Response.json({ error: 'Pedido no encontrado.' }, { status: 404 })
+      }
+
+      if (!currentRows[0].quote_id) {
+        return Response.json(
+          { error: 'Este pedido no está vinculado a un presupuesto.' },
+          { status: 409 },
+        )
+      }
+
+      const currentStatus = String(currentRows[0].status) as OrderStatus
+      const eventNote = [
+        `Costo real final: ${actualCost.toLocaleString('es-AR')}`,
+        costNote,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+        .slice(0, 300)
+
+      await sql.transaction([
+        sql`
+          UPDATE orders
+          SET
+            actual_cost = ${actualCost},
+            actual_cost_note = ${costNote || null},
+            actual_cost_updated_at = now(),
+            updated_at = now()
+          WHERE id = ${id}::uuid
+        `,
+        sql`
+          INSERT INTO order_events (
+            order_id,
+            event_type,
+            from_status,
+            to_status,
+            note
+          )
+          VALUES (
+            ${id}::uuid,
+            'actual_cost_updated',
+            ${currentStatus},
+            ${currentStatus},
+            ${eventNote}
+          )
+        `,
+      ])
+
+      return Response.json(
+        { ok: true, actualCost },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
+    } catch {
+      return Response.json(
+        { error: 'No se pudo guardar el costo real del pedido.' },
+        { status: 500, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
   }
 
   const id = text(body.id, 40)

@@ -48,6 +48,11 @@ type AdminOrder = {
   customer_notes: string | null
   known_total: string
   has_quote: boolean
+  quote_code: string | null
+  estimated_cost: string | null
+  actual_cost: string | null
+  actual_cost_note: string | null
+  actual_cost_updated_at: string | null
   created_at: string
   items: AdminOrderItem[]
   events: AdminOrderEvent[]
@@ -79,6 +84,12 @@ function money(value: string | null) {
     currency: 'ARS',
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+function numericAmount(value: string | null) {
+  if (value === null) return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function dateTime(value: string) {
@@ -166,6 +177,9 @@ export default function AdminOrdersPanel() {
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null)
   const [draftStatus, setDraftStatus] = useState<Record<string, OrderStatus>>({})
   const [draftNote, setDraftNote] = useState<Record<string, string>>({})
+  const [draftActualCost, setDraftActualCost] = useState<Record<string, string>>({})
+  const [draftActualCostNote, setDraftActualCostNote] = useState<Record<string, string>>({})
+  const [savingActualCostId, setSavingActualCostId] = useState<string | null>(null)
 
   const applyOrders = useCallback((nextOrders: AdminOrder[]) => {
     setOrders(nextOrders)
@@ -174,6 +188,16 @@ export default function AdminOrdersPanel() {
         string,
         OrderStatus
       >,
+    )
+    setDraftActualCost(
+      Object.fromEntries(
+        nextOrders.map((order) => [order.id, order.actual_cost ?? '']),
+      ) as Record<string, string>,
+    )
+    setDraftActualCostNote(
+      Object.fromEntries(
+        nextOrders.map((order) => [order.id, order.actual_cost_note ?? '']),
+      ) as Record<string, string>,
     )
     setState('ready')
   }, [])
@@ -330,6 +354,47 @@ export default function AdminOrdersPanel() {
     }
   }
 
+  async function saveActualCost(order: AdminOrder) {
+    const rawCost = (draftActualCost[order.id] ?? '').trim()
+    const normalized = rawCost.replace(',', '.')
+    const actualCost = Number(normalized)
+    const note = (draftActualCostNote[order.id] ?? '').trim()
+
+    if (!rawCost || !Number.isFinite(actualCost) || actualCost < 0) {
+      setMessage('Ingresá un costo real válido para el pedido.')
+      return
+    }
+
+    setSavingActualCostId(order.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=actual-cost', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: order.id,
+          actualCost,
+          note,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      await loadOrders()
+      window.dispatchEvent(new Event('alimar:quote-metrics-changed'))
+      setMessage(`Costo real de ${order.public_code} guardado.`)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el costo real del pedido.',
+      )
+    } finally {
+      setSavingActualCostId(null)
+    }
+  }
+
   return (
     <section className="admin-panel admin-orders-panel">
       <div className="admin-panel-heading admin-orders-heading">
@@ -445,6 +510,26 @@ export default function AdminOrdersPanel() {
             const selectedStatus = draftStatus[order.id] ?? order.status
             const note = draftNote[order.id] ?? ''
             const saving = savingOrderId === order.id
+            const savingActualCost = savingActualCostId === order.id
+            const estimatedCost = numericAmount(order.estimated_cost)
+            const actualCost = numericAmount(order.actual_cost)
+            const revenue = numericAmount(order.known_total)
+            const estimatedProfit =
+              revenue !== null && estimatedCost !== null
+                ? revenue - estimatedCost
+                : null
+            const actualProfit =
+              revenue !== null && actualCost !== null
+                ? revenue - actualCost
+                : null
+            const actualMargin =
+              revenue !== null && revenue > 0 && actualProfit !== null
+                ? (actualProfit / revenue) * 100
+                : null
+            const costDifference =
+              actualCost !== null && estimatedCost !== null
+                ? actualCost - estimatedCost
+                : null
 
             return (
               <article className="admin-order-card" key={order.id}>
@@ -534,6 +619,114 @@ export default function AdminOrdersPanel() {
                   <span>Subtotal conocido</span>
                   <strong>{money(order.known_total)}</strong>
                 </div>
+
+                {order.quote_code && order.estimated_cost && (
+                  <section className="admin-order-actual-cost">
+                    <div className="admin-order-actual-cost-heading">
+                      <div>
+                        <span>Control de rentabilidad</span>
+                        <strong>{order.quote_code}</strong>
+                      </div>
+
+                      {order.actual_cost_updated_at && (
+                        <small>
+                          Actualizado {dateTime(order.actual_cost_updated_at)}
+                        </small>
+                      )}
+                    </div>
+
+                    <div className="admin-order-cost-summary">
+                      <div>
+                        <span>Costo estimado PRE</span>
+                        <strong>{money(order.estimated_cost)}</strong>
+                        {estimatedProfit !== null && (
+                          <small>
+                            Ganancia estimada {money(String(estimatedProfit))}
+                          </small>
+                        )}
+                      </div>
+
+                      <div>
+                        <span>Costo real final</span>
+                        <strong>
+                          {order.actual_cost ? money(order.actual_cost) : 'Pendiente'}
+                        </strong>
+                        {actualProfit !== null && (
+                          <small>
+                            Ganancia final {money(String(actualProfit))}
+                            {actualMargin !== null
+                              ? ` · margen ${Math.round(actualMargin)}%`
+                              : ''}
+                          </small>
+                        )}
+                      </div>
+                    </div>
+
+                    {costDifference !== null && (
+                      <p className="admin-order-cost-difference">
+                        {costDifference === 0
+                          ? 'El costo real coincidió con la estimación.'
+                          : costDifference > 0
+                            ? `El costo real quedó ${money(String(costDifference))} por encima de lo estimado.`
+                            : `El costo real quedó ${money(String(Math.abs(costDifference)))} por debajo de lo estimado.`}
+                      </p>
+                    )}
+
+                    <div className="admin-order-actual-cost-form">
+                      <label>
+                        Costo real final del pedido
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          value={draftActualCost[order.id] ?? ''}
+                          placeholder="Ej. 45500"
+                          onChange={(event) =>
+                            setDraftActualCost((current) => ({
+                              ...current,
+                              [order.id]: event.target.value,
+                            }))
+                          }
+                          disabled={savingActualCost}
+                        />
+                        <small>
+                          Total del proyecto, no por unidad. Incluí materiales, trabajo,
+                          luz y desgaste reales.
+                        </small>
+                      </label>
+
+                      <label>
+                        Nota del costo
+                        <input
+                          type="text"
+                          maxLength={500}
+                          value={draftActualCostNote[order.id] ?? ''}
+                          placeholder="Opcional: desperdicio extra, reimpresión, etc."
+                          onChange={(event) =>
+                            setDraftActualCostNote((current) => ({
+                              ...current,
+                              [order.id]: event.target.value,
+                            }))
+                          }
+                          disabled={savingActualCost}
+                        />
+                      </label>
+
+                      <button
+                        className="admin-primary"
+                        type="button"
+                        onClick={() => void saveActualCost(order)}
+                        disabled={
+                          savingActualCost ||
+                          !(draftActualCost[order.id] ?? '').trim()
+                        }
+                      >
+                        {savingActualCost ? 'Guardando…' : 'Guardar costo real'}
+                      </button>
+                    </div>
+                  </section>
+                )}
 
                 {order.has_quote && (
                   <p className="admin-order-quote">Incluye ítems que requieren cotización.</p>

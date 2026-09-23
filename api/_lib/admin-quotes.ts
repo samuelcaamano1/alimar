@@ -88,6 +88,7 @@ function formatCommercialMetrics(row: Record<string, unknown>) {
     accepted_count: Number(row.accepted_count ?? 0),
     rejected_count: Number(row.rejected_count ?? 0),
     converted_count: Number(row.converted_count ?? 0),
+    converted_actual_cost_count: Number(row.converted_actual_cost_count ?? 0),
     quoted_value: String(row.quoted_value ?? '0'),
     accepted_value: String(row.accepted_value ?? '0'),
     accepted_real_cost: String(row.accepted_real_cost ?? '0'),
@@ -117,6 +118,10 @@ async function commercialMetrics(
           COUNT(*) FILTER (WHERE quote.status = 'accepted')::int AS accepted_count,
           COUNT(*) FILTER (WHERE quote.status = 'rejected')::int AS rejected_count,
           COUNT(linked_order.id)::int AS converted_count,
+          COUNT(*) FILTER (
+            WHERE linked_order.id IS NOT NULL
+              AND linked_order.actual_cost IS NOT NULL
+          )::int AS converted_actual_cost_count,
           COALESCE(SUM(quote.total_price), 0)::text AS quoted_value,
           COALESCE(
             SUM(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
@@ -136,11 +141,15 @@ async function commercialMetrics(
             0
           )::text AS converted_value,
           COALESCE(
-            SUM(quote.real_cost) FILTER (WHERE linked_order.id IS NOT NULL),
+            SUM(COALESCE(linked_order.actual_cost, quote.real_cost))
+              FILTER (WHERE linked_order.id IS NOT NULL),
             0
           )::text AS converted_real_cost,
           COALESCE(
-            SUM(quote.total_price - quote.real_cost)
+            SUM(
+              quote.total_price -
+              COALESCE(linked_order.actual_cost, quote.real_cost)
+            )
               FILTER (WHERE linked_order.id IS NOT NULL),
             0
           )::text AS converted_profit,
@@ -175,6 +184,10 @@ async function commercialMetrics(
           COUNT(*) FILTER (WHERE quote.status = 'accepted')::int AS accepted_count,
           COUNT(*) FILTER (WHERE quote.status = 'rejected')::int AS rejected_count,
           COUNT(linked_order.id)::int AS converted_count,
+          COUNT(*) FILTER (
+            WHERE linked_order.id IS NOT NULL
+              AND linked_order.actual_cost IS NOT NULL
+          )::int AS converted_actual_cost_count,
           COALESCE(SUM(quote.total_price), 0)::text AS quoted_value,
           COALESCE(
             SUM(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
@@ -194,11 +207,15 @@ async function commercialMetrics(
             0
           )::text AS converted_value,
           COALESCE(
-            SUM(quote.real_cost) FILTER (WHERE linked_order.id IS NOT NULL),
+            SUM(COALESCE(linked_order.actual_cost, quote.real_cost))
+              FILTER (WHERE linked_order.id IS NOT NULL),
             0
           )::text AS converted_real_cost,
           COALESCE(
-            SUM(quote.total_price - quote.real_cost)
+            SUM(
+              quote.total_price -
+              COALESCE(linked_order.actual_cost, quote.real_cost)
+            )
               FILTER (WHERE linked_order.id IS NOT NULL),
             0
           )::text AS converted_profit,
