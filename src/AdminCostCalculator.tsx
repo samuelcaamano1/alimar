@@ -73,6 +73,11 @@ type QuoteCommercialMetrics = {
   converted_count: number
   quoted_value: string
   accepted_value: string
+  accepted_real_cost: string
+  accepted_profit: string
+  converted_value: string
+  converted_real_cost: string
+  converted_profit: string
   average_accepted_ticket: string
   reject_price_count: number
   reject_timing_count: number
@@ -199,6 +204,17 @@ function quoteResponseReasonLabel(value: string | null) {
     default:
       return 'Sin motivo'
   }
+}
+
+function grossMargin(revenueValue: string, costValue: string) {
+  const revenue = Number(revenueValue)
+  const cost = Number(costValue)
+
+  if (!Number.isFinite(revenue) || revenue <= 0 || !Number.isFinite(cost)) {
+    return null
+  }
+
+  return ((revenue - cost) / revenue) * 100
 }
 
 function acceptanceRate(metrics: QuoteCommercialMetrics) {
@@ -509,6 +525,18 @@ export default function AdminCostCalculator({
   const activeQuoteMetrics = quoteMetrics?.[quoteMetricPeriod] ?? null
   const activeAcceptanceRate = activeQuoteMetrics
     ? acceptanceRate(activeQuoteMetrics)
+    : null
+  const acceptedMargin = activeQuoteMetrics
+    ? grossMargin(
+        activeQuoteMetrics.accepted_value,
+        activeQuoteMetrics.accepted_real_cost,
+      )
+    : null
+  const convertedMargin = activeQuoteMetrics
+    ? grossMargin(
+        activeQuoteMetrics.converted_value,
+        activeQuoteMetrics.converted_real_cost,
+      )
     : null
 
   const quoteFollowUpCounts = useMemo(() => {
@@ -2086,6 +2114,82 @@ export default function AdminCostCalculator({
                         : '—'}
                     </strong>
                     <small>promedio de presupuestos aceptados</small>
+                  </div>
+                </div>
+
+                <div className="admin-quote-profitability">
+                  <div className="admin-quote-profitability-heading">
+                    <div>
+                      <span>Rentabilidad estimada</span>
+                      <strong>Precio final menos costo real congelado</strong>
+                    </div>
+                    <small>
+                      Es una estimación basada en el costo guardado dentro de cada PRE.
+                    </small>
+                  </div>
+
+                  <div className="admin-quote-profitability-grid">
+                    <article>
+                      <div>
+                        <span>Aceptados</span>
+                        <strong>
+                          {activeQuoteMetrics.accepted_count > 0
+                            ? money(Number(activeQuoteMetrics.accepted_profit))
+                            : '—'}
+                        </strong>
+                        <small>ganancia estimada</small>
+                      </div>
+
+                      <dl>
+                        <div>
+                          <dt>Ingreso</dt>
+                          <dd>{money(Number(activeQuoteMetrics.accepted_value))}</dd>
+                        </div>
+                        <div>
+                          <dt>Costo real</dt>
+                          <dd>{money(Number(activeQuoteMetrics.accepted_real_cost))}</dd>
+                        </div>
+                        <div>
+                          <dt>Margen</dt>
+                          <dd>
+                            {acceptedMargin === null
+                              ? '—'
+                              : String(Math.round(acceptedMargin)) + '%'}
+                          </dd>
+                        </div>
+                      </dl>
+                    </article>
+
+                    <article>
+                      <div>
+                        <span>Convertidos a pedido</span>
+                        <strong>
+                          {activeQuoteMetrics.converted_count > 0
+                            ? money(Number(activeQuoteMetrics.converted_profit))
+                            : '—'}
+                        </strong>
+                        <small>ganancia estimada</small>
+                      </div>
+
+                      <dl>
+                        <div>
+                          <dt>Ingreso</dt>
+                          <dd>{money(Number(activeQuoteMetrics.converted_value))}</dd>
+                        </div>
+                        <div>
+                          <dt>Costo real</dt>
+                          <dd>{money(Number(activeQuoteMetrics.converted_real_cost))}</dd>
+                        </div>
+                        <div>
+                          <dt>Margen</dt>
+                          <dd>
+                            {convertedMargin === null
+                              ? '—'
+                              : String(Math.round(convertedMargin)) + '%'}
+                          </dd>
+                        </div>
+                      </dl>
+                    </article>
                   </div>
                 </div>
 

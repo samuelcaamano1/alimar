@@ -90,6 +90,11 @@ function formatCommercialMetrics(row: Record<string, unknown>) {
     converted_count: Number(row.converted_count ?? 0),
     quoted_value: String(row.quoted_value ?? '0'),
     accepted_value: String(row.accepted_value ?? '0'),
+    accepted_real_cost: String(row.accepted_real_cost ?? '0'),
+    accepted_profit: String(row.accepted_profit ?? '0'),
+    converted_value: String(row.converted_value ?? '0'),
+    converted_real_cost: String(row.converted_real_cost ?? '0'),
+    converted_profit: String(row.converted_profit ?? '0'),
     average_accepted_ticket: String(row.average_accepted_ticket ?? '0'),
     reject_price_count: Number(row.reject_price_count ?? 0),
     reject_timing_count: Number(row.reject_timing_count ?? 0),
@@ -117,6 +122,28 @@ async function commercialMetrics(
             SUM(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
             0
           )::text AS accepted_value,
+          COALESCE(
+            SUM(quote.real_cost) FILTER (WHERE quote.status = 'accepted'),
+            0
+          )::text AS accepted_real_cost,
+          COALESCE(
+            SUM(quote.total_price - quote.real_cost)
+              FILTER (WHERE quote.status = 'accepted'),
+            0
+          )::text AS accepted_profit,
+          COALESCE(
+            SUM(quote.total_price) FILTER (WHERE linked_order.id IS NOT NULL),
+            0
+          )::text AS converted_value,
+          COALESCE(
+            SUM(quote.real_cost) FILTER (WHERE linked_order.id IS NOT NULL),
+            0
+          )::text AS converted_real_cost,
+          COALESCE(
+            SUM(quote.total_price - quote.real_cost)
+              FILTER (WHERE linked_order.id IS NOT NULL),
+            0
+          )::text AS converted_profit,
           COALESCE(
             AVG(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
             0
@@ -153,6 +180,28 @@ async function commercialMetrics(
             SUM(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
             0
           )::text AS accepted_value,
+          COALESCE(
+            SUM(quote.real_cost) FILTER (WHERE quote.status = 'accepted'),
+            0
+          )::text AS accepted_real_cost,
+          COALESCE(
+            SUM(quote.total_price - quote.real_cost)
+              FILTER (WHERE quote.status = 'accepted'),
+            0
+          )::text AS accepted_profit,
+          COALESCE(
+            SUM(quote.total_price) FILTER (WHERE linked_order.id IS NOT NULL),
+            0
+          )::text AS converted_value,
+          COALESCE(
+            SUM(quote.real_cost) FILTER (WHERE linked_order.id IS NOT NULL),
+            0
+          )::text AS converted_real_cost,
+          COALESCE(
+            SUM(quote.total_price - quote.real_cost)
+              FILTER (WHERE linked_order.id IS NOT NULL),
+            0
+          )::text AS converted_profit,
           COALESCE(
             AVG(quote.total_price) FILTER (WHERE quote.status = 'accepted'),
             0

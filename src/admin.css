@@ -5258,3 +5258,131 @@
     justify-content: flex-start;
   }
 }
+
+
+/* ALIMAR QUOTE PROFITABILITY 1A.35 */
+.admin-quote-profitability {
+  display: grid;
+  gap: 9px;
+  padding-top: 2px;
+}
+
+.admin-quote-profitability-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-quote-profitability-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-quote-profitability-heading span {
+  color: var(--admin-blue-dark);
+  font-size: .59rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.admin-quote-profitability-heading strong {
+  font-size: .68rem;
+}
+
+.admin-quote-profitability-heading > small {
+  max-width: 360px;
+  color: var(--admin-muted);
+  font-size: .55rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.admin-quote-profitability-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 8px;
+}
+
+.admin-quote-profitability-grid article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(120px,.45fr) minmax(0,1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 11px;
+  border: 1px solid rgba(63,120,138,.16);
+  border-radius: 11px;
+  background: rgba(100,175,198,.055);
+}
+
+.admin-quote-profitability-grid article > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-quote-profitability-grid article > div > span,
+.admin-quote-profitability-grid article > div > small {
+  color: var(--admin-muted);
+  font-size: .54rem;
+}
+
+.admin-quote-profitability-grid article > div > strong {
+  overflow: hidden;
+  color: var(--admin-blue-dark);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+}
+
+.admin-quote-profitability-grid dl {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 5px;
+  margin: 0;
+}
+
+.admin-quote-profitability-grid dl > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.5);
+}
+
+.admin-quote-profitability-grid dt {
+  color: var(--admin-muted);
+  font-size: .51rem;
+}
+
+.admin-quote-profitability-grid dd {
+  overflow: hidden;
+  margin: 0;
+  color: var(--admin-ink);
+  font-size: .59rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .admin-quote-profitability-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-quote-profitability-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .admin-quote-profitability-heading > small {
+    text-align: left;
+  }
+
+  .admin-quote-profitability-grid article {
+    grid-template-columns: 1fr;
+  }
+}
