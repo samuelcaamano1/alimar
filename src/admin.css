@@ -4962,3 +4962,54 @@
     justify-content: flex-start;
   }
 }
+
+
+/* ALIMAR QUOTE COMMERCIAL FLOW 1A.30 */
+.admin-saved-quote-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-quote-order-link {
+  min-height: 38px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 10px;
+  border: 1px solid rgba(63, 120, 138, 0.22);
+  border-radius: 9px;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, 0.1);
+  font-size: 0.61rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.admin-quote-commercial-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.admin-quote-commercial-actions button {
+  min-height: 38px;
+}
+
+.admin-quote-commercial-actions button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+@media (max-width: 650px) {
+  .admin-quote-commercial-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .admin-quote-commercial-actions button,
+  .admin-quote-commercial-actions .admin-quote-order-link {
+    width: 100%;
+  }
+}

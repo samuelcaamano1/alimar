@@ -54,6 +54,7 @@ export type AdminQuote = {
   profit_percent: string
   suggested_unit_price: string
   total_price: string
+  order_code: string | null
   created_at: string
   updated_at: string
 }
@@ -107,6 +108,52 @@ function dateTimeLabel(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+export function quoteCustomerWhatsappMessage(quote: AdminQuote) {
+  const customer = quote.customer_name?.trim() || 'Hola'
+  const validity = quote.valid_until ? dateLabel(quote.valid_until) : 'sin vencimiento'
+
+  return [
+    `Hola ${customer}, te envío el presupuesto ${quote.public_code} de Alimar.`,
+    '',
+    `Trabajo: ${quote.title}`,
+    `Cantidad: ${quote.quantity}`,
+    `Total: ${money(Number(quote.total_price))}`,
+    `Válido hasta: ${validity}`,
+    '',
+    'Si estás de acuerdo, respondeme por acá con “Acepto” y lo convertimos en pedido.',
+  ].join('\n')
+}
+
+function customerWhatsappDigits(phone: string) {
+  let digits = phone.replace(/\D/g, '')
+
+  if (digits.startsWith('00')) digits = digits.slice(2)
+  if (digits.startsWith('549')) return digits
+
+  if (digits.startsWith('54')) {
+    const local = digits.slice(2).replace(/^0/, '')
+    return `549${local}`
+  }
+
+  if (digits.length === 10) {
+    return `549${digits}`
+  }
+
+  return digits
+}
+
+export function quoteCustomerWhatsappUrl(quote: AdminQuote) {
+  const phone = quote.customer_phone?.trim()
+  if (!phone) return null
+
+  const digits = customerWhatsappDigits(phone)
+  if (digits.length < 8) return null
+
+  return `https://wa.me/${digits}?text=${encodeURIComponent(
+    quoteCustomerWhatsappMessage(quote),
+  )}`
 }
 
 function rowsHtml(quote: AdminQuote) {

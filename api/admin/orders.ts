@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
+import { createOrderFromQuote } from '../_lib/quote-orders.js'
 import {
   listAdminCustomRequests,
   updateAdminCustomRequest,
@@ -369,4 +370,41 @@ export async function PATCH(request: Request) {
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }
+}
+
+
+export async function POST(request: Request) {
+  const originError = requireSameOrigin(request)
+  if (originError) return originError
+
+  const authError = requireAdmin(request)
+  if (authError) return authError
+
+  const databaseUrl = process.env.DATABASE_URL
+  if (!databaseUrl) {
+    return Response.json(
+      { error: 'Database not configured' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const requestUrl = new URL(request.url)
+
+  if (requestUrl.searchParams.get('action') !== 'from-quote') {
+    return Response.json(
+      { error: 'Invalid action' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  let body: Record<string, unknown>
+
+  try {
+    body = (await request.json()) as Record<string, unknown>
+  } catch {
+    return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  }
+
+  const quoteId = typeof body.quoteId === 'string' ? body.quoteId.trim() : ''
+  return createOrderFromQuote(databaseUrl, quoteId)
 }

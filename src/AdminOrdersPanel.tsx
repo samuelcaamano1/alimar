@@ -217,6 +217,18 @@ export default function AdminOrdersPanel() {
     return () => controller.abort()
   }, [applyOrders])
 
+  useEffect(() => {
+    function onOrdersChanged() {
+      void loadOrders()
+    }
+
+    window.addEventListener('alimar:orders-changed', onOrdersChanged)
+
+    return () => {
+      window.removeEventListener('alimar:orders-changed', onOrdersChanged)
+    }
+  }, [loadOrders])
+
   const orderCounts = useMemo(
     () => ({
       all: orders.length,

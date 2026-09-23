@@ -66,6 +66,7 @@ function formatRow(row: Record<string, unknown>) {
     profit_percent: String(row.profit_percent ?? '0'),
     suggested_unit_price: String(row.suggested_unit_price ?? '0'),
     total_price: String(row.total_price ?? '0'),
+    order_code: row.order_code ? String(row.order_code) : null,
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
   }
@@ -77,28 +78,30 @@ export async function listAdminQuotes(databaseUrl: string) {
 
     const rows = await sql`
       SELECT
-        id::text,
-        quote_number,
-        status,
-        title,
-        customer_name,
-        customer_phone,
-        job_type,
-        quantity,
-        valid_until::text,
-        notes,
-        snapshot,
-        direct_cost::text,
-        light_cost::text,
-        wear_cost::text,
-        real_cost::text,
-        profit_percent::text,
-        suggested_unit_price::text,
-        total_price::text,
-        created_at::text,
-        updated_at::text
-      FROM quotes
-      ORDER BY created_at DESC
+        quote.id::text,
+        quote.quote_number,
+        quote.status,
+        quote.title,
+        quote.customer_name,
+        quote.customer_phone,
+        quote.job_type,
+        quote.quantity,
+        quote.valid_until::text,
+        quote.notes,
+        quote.snapshot,
+        quote.direct_cost::text,
+        quote.light_cost::text,
+        quote.wear_cost::text,
+        quote.real_cost::text,
+        quote.profit_percent::text,
+        quote.suggested_unit_price::text,
+        quote.total_price::text,
+        linked_order.public_code AS order_code,
+        quote.created_at::text,
+        quote.updated_at::text
+      FROM quotes quote
+      LEFT JOIN orders linked_order ON linked_order.quote_id = quote.id
+      ORDER BY quote.created_at DESC
       LIMIT 100
     `
 

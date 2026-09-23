@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import type { CustomRequest } from './AdminCustomRequests'
 import {
   openQuotePrintView,
+  quoteCustomerWhatsappUrl,
   type AdminQuote,
   type QuoteSnapshot,
   type QuoteStatus,
@@ -302,6 +303,7 @@ export default function AdminCostCalculator({
   const [selectedQuote, setSelectedQuote] = useState<AdminQuote | null>(null)
   const [saveQuoteOpen, setSaveQuoteOpen] = useState(false)
   const [quoteSaving, setQuoteSaving] = useState(false)
+  const [quoteConvertingId, setQuoteConvertingId] = useState<string | null>(null)
   const [quoteTitle, setQuoteTitle] = useState('')
   const [quoteCustomer, setQuoteCustomer] = useState('')
   const [quotePhone, setQuotePhone] = useState('')
@@ -922,6 +924,77 @@ export default function AdminCostCalculator({
     }
   }
 
+  function openQuoteWhatsapp(quote: AdminQuote) {
+    const url = quoteCustomerWhatsappUrl(quote)
+
+    if (!url) {
+      setMessage('Este presupuesto no tiene un WhatsApp de cliente válido.')
+      return
+    }
+
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  async function convertQuoteToOrder(quote: AdminQuote) {
+    if (quote.order_code) {
+      setMessage(`${quote.public_code} ya está vinculado al pedido ${quote.order_code}.`)
+      return
+    }
+
+    if (quote.status !== 'accepted') {
+      setMessage('Marcá el presupuesto como Aceptado antes de convertirlo en pedido.')
+      return
+    }
+
+    if (!quote.customer_name || !quote.customer_phone) {
+      setMessage('El presupuesto necesita cliente y WhatsApp para crear el pedido.')
+      return
+    }
+
+    setQuoteConvertingId(quote.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=from-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteId: quote.id }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      const data = (await response.json()) as {
+        orderCode: string
+        existing?: boolean
+      }
+
+      const updated = { ...quote, order_code: data.orderCode }
+
+      setQuotes((current) =>
+        current.map((item) => (item.id === quote.id ? updated : item)),
+      )
+
+      if (selectedQuote?.id === quote.id) {
+        setSelectedQuote(updated)
+      }
+
+      window.dispatchEvent(new Event('alimar:orders-changed'))
+      setMessage(
+        data.existing
+          ? `${quote.public_code} ya estaba vinculado a ${data.orderCode}.`
+          : `${quote.public_code} convertido en pedido ${data.orderCode}.`,
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo convertir el presupuesto en pedido.',
+      )
+    } finally {
+      setQuoteConvertingId(null)
+    }
+  }
+
   async function updateQuoteStatus(quote: AdminQuote, status: QuoteStatus) {
     if (status === quote.status) return
 
@@ -940,13 +1013,17 @@ export default function AdminCostCalculator({
       if (!response.ok) throw new Error(await responseMessage(response))
 
       const data = (await response.json()) as { quote: AdminQuote }
+      const updatedQuote = {
+        ...data.quote,
+        order_code: quote.order_code ?? data.quote.order_code,
+      }
 
       setQuotes((current) =>
-        current.map((item) => (item.id === data.quote.id ? data.quote : item)),
+        current.map((item) => (item.id === updatedQuote.id ? updatedQuote : item)),
       )
 
-      if (selectedQuote?.id === data.quote.id) {
-        setSelectedQuote(data.quote)
+      if (selectedQuote?.id === updatedQuote.id) {
+        setSelectedQuote(updatedQuote)
       }
 
       setMessage(`${data.quote.public_code} actualizado a ${quoteStatusLabels[status]}.`)
@@ -1848,8 +1925,19 @@ export default function AdminCostCalculator({
                   >
                     Ver
                   </button>
+
+                  {quote.customer_phone && (
+                    <button
+                      className="admin-secondary"
+                      type="button"
+                      onClick={() => openQuoteWhatsapp(quote)}
+                    >
+                      WhatsApp cliente
+                    </button>
+                  )}
+
                   <button
-                    className="admin-primary"
+                    className="admin-secondary"
                     type="button"
                     onClick={() => {
                       if (!openQuotePrintView(quote)) {
@@ -1857,8 +1945,21 @@ export default function AdminCostCalculator({
                       }
                     }}
                   >
-                    Imprimir / PDF
+                    PDF
                   </button>
+
+                  {quote.order_code ? (
+                    <span className="admin-quote-order-link">{quote.order_code}</span>
+                  ) : quote.status === 'accepted' ? (
+                    <button
+                      className="admin-primary"
+                      type="button"
+                      disabled={quoteConvertingId === quote.id}
+                      onClick={() => void convertQuoteToOrder(quote)}
+                    >
+                      {quoteConvertingId === quote.id ? 'Creando…' : 'Crear pedido'}
+                    </button>
+                  ) : null}
                 </div>
               </article>
             ))}
@@ -2379,17 +2480,54 @@ export default function AdminCostCalculator({
                 </select>
               </label>
 
-              <button
-                className="admin-primary"
-                type="button"
-                onClick={() => {
-                  if (!openQuotePrintView(selectedQuote)) {
-                    setMessage('El navegador bloqueó la vista de impresión.')
-                  }
-                }}
-              >
-                Imprimir / Guardar PDF
-              </button>
+              <div className="admin-quote-commercial-actions">
+                {selectedQuote.customer_phone && (
+                  <button
+                    className="admin-secondary"
+                    type="button"
+                    onClick={() => openQuoteWhatsapp(selectedQuote)}
+                  >
+                    Enviar por WhatsApp
+                  </button>
+                )}
+
+                <button
+                  className="admin-secondary"
+                  type="button"
+                  onClick={() => {
+                    if (!openQuotePrintView(selectedQuote)) {
+                      setMessage('El navegador bloqueó la vista de impresión.')
+                    }
+                  }}
+                >
+                  Imprimir / Guardar PDF
+                </button>
+
+                {selectedQuote.order_code ? (
+                  <span className="admin-quote-order-link">
+                    Pedido {selectedQuote.order_code}
+                  </span>
+                ) : (
+                  <button
+                    className="admin-primary"
+                    type="button"
+                    disabled={
+                      selectedQuote.status !== 'accepted' ||
+                      quoteConvertingId === selectedQuote.id
+                    }
+                    title={
+                      selectedQuote.status === 'accepted'
+                        ? 'Crear pedido confirmado'
+                        : 'Primero marcá el presupuesto como Aceptado'
+                    }
+                    onClick={() => void convertQuoteToOrder(selectedQuote)}
+                  >
+                    {quoteConvertingId === selectedQuote.id
+                      ? 'Creando pedido…'
+                      : 'Convertir en pedido'}
+                  </button>
+                )}
+              </div>
             </footer>
           </section>
         </div>
