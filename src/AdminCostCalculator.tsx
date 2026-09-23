@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import type { CustomRequest } from './AdminCustomRequests'
 import {
   openQuotePrintView,
   type AdminQuote,
@@ -209,6 +210,22 @@ function convertUsage(amount: number, from: CostUnit, to: CostUnit) {
   return amount
 }
 
+function customRequestNotes(request: CustomRequest) {
+  const lines = [
+    `Solicitud ${request.public_code}`,
+    `Tipo solicitado: ${request.request_type}`,
+    `Idea: ${request.description}`,
+  ]
+
+  if (request.quantity !== null) lines.push(`Cantidad aproximada: ${request.quantity}`)
+  if (request.needed_date) lines.push(`Fecha solicitada: ${request.needed_date}`)
+  if (request.dimensions) lines.push(`Medidas: ${request.dimensions}`)
+  if (request.theme) lines.push(`Tema / colores: ${request.theme}`)
+  if (request.reference_url) lines.push(`Referencia: ${request.reference_url}`)
+
+  return lines.join('\n')
+}
+
 async function responseMessage(response: Response) {
   try {
     const data = (await response.json()) as { error?: string }
@@ -259,7 +276,15 @@ function payloadFromDraft(draft: Draft) {
   }
 }
 
-export default function AdminCostCalculator() {
+type AdminCostCalculatorProps = {
+  quoteSource?: CustomRequest | null
+  onQuoteSourceConsumed?: () => void
+}
+
+export default function AdminCostCalculator({
+  quoteSource = null,
+  onQuoteSourceConsumed,
+}: AdminCostCalculatorProps) {
   const [view, setView] = useState<'calculator' | 'quotes' | 'data'>('calculator')
   const [resources, setResources] = useState<CostResource[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -360,6 +385,21 @@ export default function AdminCostCalculator() {
       void loadQuotes()
     }
   }, [loadQuotes, quoteState, view])
+
+  useEffect(() => {
+    if (!quoteSource) return
+
+    setView('calculator')
+    setQuoteOpen(false)
+    setSaveQuoteOpen(false)
+    setQuantity(quoteSource.quantity ? String(quoteSource.quantity) : '1')
+    setQuoteTitle(`${quoteSource.public_code} · ${quoteSource.customer_name}`)
+    setQuoteCustomer(quoteSource.customer_name)
+    setQuotePhone(quoteSource.customer_phone)
+    setQuoteValidityDays('7')
+    setQuoteNotes(customRequestNotes(quoteSource))
+    setMessage(`Solicitud ${quoteSource.public_code} lista para presupuestar.`)
+  }, [quoteSource])
 
   useEffect(() => {
     if (!quoteOpen) return
@@ -696,7 +736,7 @@ export default function AdminCostCalculator() {
   function openQuote(type: GuidedJobType) {
     setJobType(type)
     setWizardStep(1)
-    setQuantity('1')
+    setQuantity(quoteSource?.quantity ? String(quoteSource.quantity) : '1')
     setProfitPercent('40')
     setRoundingStep('100')
     setPrintSides('single')
@@ -783,11 +823,22 @@ export default function AdminCostCalculator() {
   }
 
   function openSaveQuote() {
-    setQuoteTitle(jobTitle)
-    setQuoteCustomer('')
-    setQuotePhone('')
-    setQuoteValidityDays('7')
-    setQuoteNotes('')
+    if (quoteSource) {
+      setQuoteTitle((current) =>
+        current.trim() || `${quoteSource.public_code} · ${quoteSource.customer_name}`,
+      )
+      setQuoteCustomer(quoteSource.customer_name)
+      setQuotePhone(quoteSource.customer_phone)
+      setQuoteValidityDays('7')
+      setQuoteNotes((current) => current.trim() || customRequestNotes(quoteSource))
+    } else {
+      setQuoteTitle(jobTitle)
+      setQuoteCustomer('')
+      setQuotePhone('')
+      setQuoteValidityDays('7')
+      setQuoteNotes('')
+    }
+
     setSaveQuoteOpen(true)
   }
 
@@ -822,6 +873,7 @@ export default function AdminCostCalculator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
+          sourceRequestId: quoteSource?.id ?? null,
           customerName: quoteCustomer.trim(),
           customerPhone: quotePhone.trim(),
           jobType,
@@ -850,7 +902,14 @@ export default function AdminCostCalculator() {
       setQuoteOpen(false)
       setView('quotes')
       setSelectedQuote(saved)
-      setMessage(`${saved.public_code} guardado correctamente.`)
+
+      if (quoteSource) {
+        const sourceCode = quoteSource.public_code
+        onQuoteSourceConsumed?.()
+        setMessage(`${saved.public_code} guardado y vinculado a ${sourceCode}.`)
+      } else {
+        setMessage(`${saved.public_code} guardado correctamente.`)
+      }
 
       if (printAfter && !openQuotePrintView(saved, previewWindow)) {
         setMessage(`${saved.public_code} guardado. El navegador bloqueó la vista de impresión.`)
@@ -987,6 +1046,29 @@ export default function AdminCostCalculator() {
             </div>
           ) : (
             <>
+              {quoteSource && (
+                <div className="admin-budget-source-request">
+                  <div>
+                    <span>Solicitud de cliente</span>
+                    <strong>{quoteSource.public_code} · {quoteSource.customer_name}</strong>
+                    <p>{quoteSource.description}</p>
+                  </div>
+
+                  <div className="admin-budget-source-meta">
+                    {quoteSource.quantity !== null && (
+                      <span>{quoteSource.quantity} unidades aprox.</span>
+                    )}
+                    {quoteSource.needed_date && <span>Para {quoteSource.needed_date}</span>}
+                    {quoteSource.theme && <span>{quoteSource.theme}</span>}
+                  </div>
+
+                  <small>
+                    Elegí debajo cómo querés calcular este trabajo. Los datos del cliente y la
+                    cantidad ya quedan preparados para guardar el presupuesto.
+                  </small>
+                </div>
+              )}
+
               <div className="admin-budget-intro">
                 <div>
                   <span className="admin-cost-eyebrow">Nuevo presupuesto</span>

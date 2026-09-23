@@ -10,7 +10,7 @@ import { alimarLogoDataUrl } from './brand'
 import { compressAdminImage } from './adminImage'
 import AdminOrdersPanel from './AdminOrdersPanel'
 import AdminCostCalculator from './AdminCostCalculator'
-import AdminCustomRequests from './AdminCustomRequests'
+import AdminCustomRequests, { type CustomRequest } from './AdminCustomRequests'
 import AdminCategoriesPanel from './AdminCategoriesPanel'
 import AdminProductVariants from './AdminProductVariants'
 import AdminProductGallery from './AdminProductGallery'
@@ -88,6 +88,8 @@ function formatBytes(value: number) {
 }
 
 export default function AdminApp() {
+  const [quoteSource, setQuoteSource] = useState<CustomRequest | null>(null)
+  const [customRequestRefreshToken, setCustomRequestRefreshToken] = useState(0)
   const [session, setSession] = useState<SessionResponse | null>(null)
   const [catalog, setCatalog] = useState<AdminCatalog>(emptyCatalog)
   const [password, setPassword] = useState('')
@@ -555,9 +557,26 @@ export default function AdminApp() {
 
         {message && <div className="admin-toast">{message}</div>}
 
-        <AdminCostCalculator />
+        <AdminCostCalculator
+          quoteSource={quoteSource}
+          onQuoteSourceConsumed={() => {
+            setQuoteSource(null)
+            setCustomRequestRefreshToken((current) => current + 1)
+          }}
+        />
 
-        <AdminCustomRequests />
+        <AdminCustomRequests
+          refreshToken={customRequestRefreshToken}
+          onCreateQuote={(request) => {
+            setQuoteSource(request)
+
+            requestAnimationFrame(() => {
+              document
+                .querySelector('.admin-cost-calculator')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            })
+          }}
+        />
 
         <AdminOrdersPanel />
 

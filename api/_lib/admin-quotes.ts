@@ -125,6 +125,7 @@ export async function createAdminQuote(
   const quantity = integer(body.quantity)
   const validUntil = dateOrNull(body.validUntil)
   const notes = optionalText(body.notes, 3000)
+  const sourceRequestId = optionalText(body.sourceRequestId, 40)
 
   const directCost = decimal(body.directCost)
   const lightCost = decimal(body.lightCost)
@@ -142,6 +143,13 @@ export async function createAdminQuote(
   if (title.length < 2) {
     return Response.json(
       { error: 'Ingresá un título para el presupuesto.' },
+      { status: 400 },
+    )
+  }
+
+  if (sourceRequestId && !UUID_RE.test(sourceRequestId)) {
+    return Response.json(
+      { error: 'La solicitud de origen es inválida.' },
       { status: 400 },
     )
   }
@@ -193,66 +201,155 @@ export async function createAdminQuote(
     const sql = neon(databaseUrl)
     const snapshotJson = JSON.stringify(snapshot)
 
-    const [row] = await sql`
-      INSERT INTO quotes (
-        title,
-        customer_name,
-        customer_phone,
-        job_type,
-        quantity,
-        valid_until,
-        notes,
-        snapshot,
-        direct_cost,
-        light_cost,
-        wear_cost,
-        real_cost,
-        profit_percent,
-        suggested_unit_price,
-        total_price
+    const rows = sourceRequestId
+      ? await sql`
+          WITH source AS (
+            SELECT id
+            FROM custom_requests
+            WHERE id = ${sourceRequestId}::uuid
+              AND quote_id IS NULL
+            FOR UPDATE
+          ),
+          inserted AS (
+            INSERT INTO quotes (
+              title,
+              customer_name,
+              customer_phone,
+              job_type,
+              quantity,
+              valid_until,
+              notes,
+              snapshot,
+              direct_cost,
+              light_cost,
+              wear_cost,
+              real_cost,
+              profit_percent,
+              suggested_unit_price,
+              total_price
+            )
+            SELECT
+              ${title},
+              ${customerName},
+              ${customerPhone},
+              ${jobType},
+              ${quantity},
+              ${validUntil},
+              ${notes},
+              ${snapshotJson}::jsonb,
+              ${directCost},
+              ${lightCost},
+              ${wearCost},
+              ${realCost},
+              ${profitPercent},
+              ${suggestedUnitPrice},
+              ${totalPrice}
+            FROM source
+            RETURNING
+              id::text,
+              quote_number,
+              status,
+              title,
+              customer_name,
+              customer_phone,
+              job_type,
+              quantity,
+              valid_until::text,
+              notes,
+              snapshot,
+              direct_cost::text,
+              light_cost::text,
+              wear_cost::text,
+              real_cost::text,
+              profit_percent::text,
+              suggested_unit_price::text,
+              total_price::text,
+              created_at::text,
+              updated_at::text
+          ),
+          linked AS (
+            UPDATE custom_requests request
+            SET
+              quote_id = inserted.id::uuid,
+              status = 'quoted',
+              updated_at = now()
+            FROM inserted
+            WHERE request.id = ${sourceRequestId}::uuid
+            RETURNING request.id
+          )
+          SELECT *
+          FROM inserted
+        `
+      : await sql`
+          INSERT INTO quotes (
+            title,
+            customer_name,
+            customer_phone,
+            job_type,
+            quantity,
+            valid_until,
+            notes,
+            snapshot,
+            direct_cost,
+            light_cost,
+            wear_cost,
+            real_cost,
+            profit_percent,
+            suggested_unit_price,
+            total_price
+          )
+          VALUES (
+            ${title},
+            ${customerName},
+            ${customerPhone},
+            ${jobType},
+            ${quantity},
+            ${validUntil},
+            ${notes},
+            ${snapshotJson}::jsonb,
+            ${directCost},
+            ${lightCost},
+            ${wearCost},
+            ${realCost},
+            ${profitPercent},
+            ${suggestedUnitPrice},
+            ${totalPrice}
+          )
+          RETURNING
+            id::text,
+            quote_number,
+            status,
+            title,
+            customer_name,
+            customer_phone,
+            job_type,
+            quantity,
+            valid_until::text,
+            notes,
+            snapshot,
+            direct_cost::text,
+            light_cost::text,
+            wear_cost::text,
+            real_cost::text,
+            profit_percent::text,
+            suggested_unit_price::text,
+            total_price::text,
+            created_at::text,
+            updated_at::text
+        `
+
+    if (rows.length === 0) {
+      return Response.json(
+        {
+          error:
+            'La solicitud ya tiene un presupuesto vinculado o dejó de estar disponible.',
+        },
+        { status: 409, headers: { 'Cache-Control': 'no-store' } },
       )
-      VALUES (
-        ${title},
-        ${customerName},
-        ${customerPhone},
-        ${jobType},
-        ${quantity},
-        ${validUntil},
-        ${notes},
-        ${snapshotJson}::jsonb,
-        ${directCost},
-        ${lightCost},
-        ${wearCost},
-        ${realCost},
-        ${profitPercent},
-        ${suggestedUnitPrice},
-        ${totalPrice}
-      )
-      RETURNING
-        id::text,
-        quote_number,
-        status,
-        title,
-        customer_name,
-        customer_phone,
-        job_type,
-        quantity,
-        valid_until::text,
-        notes,
-        snapshot,
-        direct_cost::text,
-        light_cost::text,
-        wear_cost::text,
-        real_cost::text,
-        profit_percent::text,
-        suggested_unit_price::text,
-        total_price::text,
-        created_at::text,
-        updated_at::text
-    `
+    }
 
     return Response.json(
-      { quote: formatRow(row as Record<string, unknown>) },
+      { quote: formatRow(rows[0] as Record<string, unknown>) },
       { status: 201, headers: { 'Cache-Control': 'no-store' } },
     )
   } catch {

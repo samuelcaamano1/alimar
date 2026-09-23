@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { site } from './site'
 
-type CustomRequestStatus = 'new' | 'reviewing' | 'quoted' | 'closed'
+export type CustomRequestStatus = 'new' | 'reviewing' | 'quoted' | 'closed'
 
-type CustomRequest = {
+export type CustomRequest = {
   id: string
   public_code: string
   status: CustomRequestStatus
@@ -71,7 +71,15 @@ async function responseMessage(response: Response) {
   }
 }
 
-export default function AdminCustomRequests() {
+type AdminCustomRequestsProps = {
+  onCreateQuote: (request: CustomRequest) => void
+  refreshToken?: number
+}
+
+export default function AdminCustomRequests({
+  onCreateQuote,
+  refreshToken = 0,
+}: AdminCustomRequestsProps) {
   const [requests, setRequests] = useState<CustomRequest[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [message, setMessage] = useState('')
@@ -104,7 +112,7 @@ export default function AdminCustomRequests() {
 
   useEffect(() => {
     void loadRequests()
-  }, [loadRequests])
+  }, [loadRequests, refreshToken])
 
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase('es-AR')
@@ -295,9 +303,13 @@ export default function AdminCustomRequests() {
               {request.quote_id ? (
                 <span className="admin-custom-request-linked">Presupuesto vinculado</span>
               ) : (
-                <span className="admin-custom-request-pending">
-                  Próximo paso: crear presupuesto
-                </span>
+                <button
+                  className="admin-secondary admin-custom-request-quote"
+                  type="button"
+                  onClick={() => onCreateQuote(request)}
+                >
+                  Crear presupuesto
+                </button>
               )}
             </div>
           </article>
