@@ -56,6 +56,8 @@ export type AdminQuote = {
   suggested_unit_price: string
   total_price: string
   order_code: string | null
+  sent_at: string | null
+  last_reminded_at: string | null
   created_at: string
   updated_at: string
 }
@@ -152,6 +154,36 @@ function customerWhatsappDigits(phone: string) {
   }
 
   return digits
+}
+
+export function quoteReminderWhatsappMessage(quote: AdminQuote) {
+  const customer = quote.customer_name?.trim() || 'Hola'
+  const validity = quote.valid_until ? dateLabel(quote.valid_until) : 'sin vencimiento'
+  const publicUrl = quotePublicUrl(quote)
+
+  return [
+    `Hola ${customer}, te recuerdo que el presupuesto ${quote.public_code} de Alimar sigue disponible.`,
+    '',
+    `Trabajo: ${quote.title}`,
+    `Total: ${money(Number(quote.total_price))}`,
+    `Válido hasta: ${validity}`,
+    '',
+    `Podés revisarlo y aceptarlo acá: ${publicUrl}`,
+    '',
+    'Si querés cambiar algo, respondeme por este WhatsApp.',
+  ].join('\n')
+}
+
+export function quoteReminderWhatsappUrl(quote: AdminQuote) {
+  const phone = quote.customer_phone?.trim()
+  if (!phone) return null
+
+  const digits = customerWhatsappDigits(phone)
+  if (digits.length < 8) return null
+
+  return `https://wa.me/${digits}?text=${encodeURIComponent(
+    quoteReminderWhatsappMessage(quote),
+  )}`
 }
 
 export function quoteCustomerWhatsappUrl(quote: AdminQuote) {

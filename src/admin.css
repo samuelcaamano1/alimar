@@ -5013,3 +5013,91 @@
     width: 100%;
   }
 }
+
+
+/* ALIMAR QUOTE FOLLOW-UP 1A.32 */
+.admin-quote-follow-up {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(63, 120, 138, 0.18);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(100, 175, 198, 0.085), rgba(243, 232, 207, 0.28));
+}
+
+.admin-quote-follow-up-title {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-quote-follow-up-title strong {
+  color: var(--admin-blue-dark);
+  font-size: .67rem;
+}
+
+.admin-quote-follow-up-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.admin-quote-follow-up-grid button {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(12,16,20,.075);
+  border-radius: 10px;
+  color: var(--admin-ink);
+  background: rgba(255,255,255,.48);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.admin-quote-follow-up-grid button:hover,
+.admin-quote-follow-up-grid button:focus-visible,
+.admin-quote-follow-up-grid button.is-active {
+  border-color: rgba(63,120,138,.34);
+  background: rgba(100,175,198,.11);
+  outline: none;
+}
+
+.admin-quote-follow-up-grid span {
+  overflow: hidden;
+  color: var(--admin-muted);
+  font-size: .57rem;
+  line-height: 1.25;
+}
+
+.admin-quote-follow-up-grid strong {
+  color: var(--admin-blue-dark);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.05rem;
+}
+
+.admin-quote-reminder {
+  border-color: rgba(63,120,138,.22);
+  color: var(--admin-blue-dark);
+  background: rgba(100,175,198,.08);
+}
+
+@media (max-width: 900px) {
+  .admin-quote-follow-up-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-quote-follow-up-title {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .admin-quote-follow-up-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

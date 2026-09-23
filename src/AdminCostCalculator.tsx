@@ -4,6 +4,7 @@ import {
   openQuotePrintView,
   quoteCustomerWhatsappUrl,
   quotePublicUrl,
+  quoteReminderWhatsappUrl,
   type AdminQuote,
   type QuoteSnapshot,
   type QuoteStatus,
@@ -61,6 +62,7 @@ type Draft = {
 type GuidedJobType = 'paper-print' | '3d-print' | 'manual'
 type WizardStep = 1 | 2 | 3
 type PrintSides = 'single' | 'double'
+type QuoteFocusFilter = 'all' | 'waiting' | 'expiring' | 'accepted' | 'expired'
 
 type GuidedCost = {
   key: string
@@ -161,6 +163,18 @@ function dateLabel(value: string | null) {
     month: '2-digit',
     year: 'numeric',
   }).format(date)
+}
+
+function daysUntil(value: string | null) {
+  if (!value) return null
+
+  const target = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(target.getTime())) return null
+
+  const today = new Date()
+  today.setHours(12, 0, 0, 0)
+
+  return Math.ceil((target.getTime() - today.getTime()) / 86_400_000)
 }
 
 function dateTimeLabel(value: string) {
@@ -301,6 +315,7 @@ export default function AdminCostCalculator({
   const [quoteState, setQuoteState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [quoteSearch, setQuoteSearch] = useState('')
   const [quoteStatusFilter, setQuoteStatusFilter] = useState<'all' | QuoteStatus>('all')
+  const [quoteFocusFilter, setQuoteFocusFilter] = useState<QuoteFocusFilter>('all')
   const [selectedQuote, setSelectedQuote] = useState<AdminQuote | null>(null)
   const [saveQuoteOpen, setSaveQuoteOpen] = useState(false)
   const [quoteSaving, setQuoteSaving] = useState(false)
@@ -442,11 +457,60 @@ export default function AdminCostCalculator({
   }, [categoryFilter, resourceSearch, resources])
 
 
+  const quoteFollowUpCounts = useMemo(() => {
+    const waiting = quotes.filter((quote) => quote.status === 'sent').length
+    const expiring = quotes.filter((quote) => {
+      const days = daysUntil(quote.valid_until)
+      return (
+        (quote.status === 'draft' || quote.status === 'sent') &&
+        days !== null &&
+        days >= 0 &&
+        days <= 3
+      )
+    }).length
+    const accepted = quotes.filter(
+      (quote) => quote.status === 'accepted' && !quote.order_code,
+    ).length
+    const expired = quotes.filter((quote) => quote.status === 'expired').length
+
+    return {
+      all: quotes.length,
+      waiting,
+      expiring,
+      accepted,
+      expired,
+      attention: expiring + accepted,
+    }
+  }, [quotes])
+
   const filteredQuotes = useMemo(() => {
     const query = quoteSearch.trim().toLocaleLowerCase('es-AR')
 
     return quotes.filter((quote) => {
       if (quoteStatusFilter !== 'all' && quote.status !== quoteStatusFilter) return false
+
+      if (quoteFocusFilter === 'waiting' && quote.status !== 'sent') return false
+
+      if (quoteFocusFilter === 'accepted') {
+        if (quote.status !== 'accepted' || quote.order_code) return false
+      }
+
+      if (quoteFocusFilter === 'expired' && quote.status !== 'expired') return false
+
+      if (quoteFocusFilter === 'expiring') {
+        const days = daysUntil(quote.valid_until)
+        if (
+          !(
+            (quote.status === 'draft' || quote.status === 'sent') &&
+            days !== null &&
+            days >= 0 &&
+            days <= 3
+          )
+        ) {
+          return false
+        }
+      }
+
       if (!query) return true
 
       return [
@@ -460,7 +524,7 @@ export default function AdminCostCalculator({
         .toLocaleLowerCase('es-AR')
         .includes(query)
     })
-  }, [quoteSearch, quoteStatusFilter, quotes])
+  }, [quoteFocusFilter, quoteSearch, quoteStatusFilter, quotes])
 
   const paperResources = resources.filter((resource) => resource.category === 'paper')
   const inkResources = resources.filter((resource) => resource.category === 'ink')
@@ -948,6 +1012,52 @@ export default function AdminCostCalculator({
 
     if (quote.status === 'draft') {
       void updateQuoteStatus(quote, 'sent')
+    }
+  }
+
+  async function sendQuoteReminder(quote: AdminQuote) {
+    const url = quoteReminderWhatsappUrl(quote)
+
+    if (!url) {
+      setMessage('Este presupuesto no tiene un WhatsApp de cliente válido.')
+      return
+    }
+
+    window.open(url, '_blank', 'noopener,noreferrer')
+
+    try {
+      const response = await fetch(
+        `/api/admin/catalog?action=quotes&id=${encodeURIComponent(quote.id)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'sent', reminder: true }),
+        },
+      )
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      const data = (await response.json()) as { quote: AdminQuote }
+      const updated = {
+        ...data.quote,
+        order_code: quote.order_code ?? data.quote.order_code,
+      }
+
+      setQuotes((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      )
+
+      if (selectedQuote?.id === updated.id) {
+        setSelectedQuote(updated)
+      }
+
+      setMessage(`Recordatorio de ${quote.public_code} preparado en WhatsApp.`)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'WhatsApp se abrió, pero no pudimos registrar el recordatorio.',
+      )
     }
   }
 
@@ -1848,6 +1958,79 @@ export default function AdminCostCalculator({
             </button>
           </div>
 
+          <div className="admin-quote-follow-up">
+            <div className="admin-quote-follow-up-title">
+              <span className="admin-cost-eyebrow">Seguimiento comercial</span>
+              <strong>
+                {quoteFollowUpCounts.attention > 0
+                  ? `${quoteFollowUpCounts.attention} requieren atención`
+                  : 'Todo al día'}
+              </strong>
+            </div>
+
+            <div className="admin-quote-follow-up-grid">
+              <button
+                type="button"
+                className={quoteFocusFilter === 'all' ? 'is-active' : ''}
+                onClick={() => {
+                  setQuoteFocusFilter('all')
+                  setQuoteStatusFilter('all')
+                }}
+              >
+                <span>Todos</span>
+                <strong>{quoteFollowUpCounts.all}</strong>
+              </button>
+
+              <button
+                type="button"
+                className={quoteFocusFilter === 'waiting' ? 'is-active' : ''}
+                onClick={() => {
+                  setQuoteFocusFilter('waiting')
+                  setQuoteStatusFilter('all')
+                }}
+              >
+                <span>Esperando cliente</span>
+                <strong>{quoteFollowUpCounts.waiting}</strong>
+              </button>
+
+              <button
+                type="button"
+                className={quoteFocusFilter === 'expiring' ? 'is-active' : ''}
+                onClick={() => {
+                  setQuoteFocusFilter('expiring')
+                  setQuoteStatusFilter('all')
+                }}
+              >
+                <span>Vencen en 3 días</span>
+                <strong>{quoteFollowUpCounts.expiring}</strong>
+              </button>
+
+              <button
+                type="button"
+                className={quoteFocusFilter === 'accepted' ? 'is-active' : ''}
+                onClick={() => {
+                  setQuoteFocusFilter('accepted')
+                  setQuoteStatusFilter('all')
+                }}
+              >
+                <span>Aceptados sin pedido</span>
+                <strong>{quoteFollowUpCounts.accepted}</strong>
+              </button>
+
+              <button
+                type="button"
+                className={quoteFocusFilter === 'expired' ? 'is-active' : ''}
+                onClick={() => {
+                  setQuoteFocusFilter('expired')
+                  setQuoteStatusFilter('all')
+                }}
+              >
+                <span>Vencidos</span>
+                <strong>{quoteFollowUpCounts.expired}</strong>
+              </button>
+            </div>
+          </div>
+
           <div className="admin-saved-quotes-toolbar">
             <label>
               Buscar
@@ -1863,9 +2046,10 @@ export default function AdminCostCalculator({
               Estado
               <select
                 value={quoteStatusFilter}
-                onChange={(event) =>
+                onChange={(event) => {
+                  setQuoteFocusFilter('all')
                   setQuoteStatusFilter(event.target.value as 'all' | QuoteStatus)
-                }
+                }}
               >
                 <option value="all">Todos</option>
                 {quoteStatusOptions.map(([value, label]) => (
@@ -1910,6 +2094,12 @@ export default function AdminCostCalculator({
                     <span>{quote.snapshot.jobLabel}</span>
                     <span>{quote.quantity} unidad(es)</span>
                     <span>{dateTimeLabel(quote.created_at)}</span>
+                    {quote.sent_at && (
+                      <span>Enviado {dateTimeLabel(quote.sent_at)}</span>
+                    )}
+                    {quote.last_reminded_at && (
+                      <span>Último recordatorio {dateTimeLabel(quote.last_reminded_at)}</span>
+                    )}
                   </div>
                 </div>
 
@@ -1942,7 +2132,17 @@ export default function AdminCostCalculator({
                     Ver
                   </button>
 
-                  {quote.customer_phone && (
+                  {quote.customer_phone && quote.status === 'sent' && (
+                    <button
+                      className="admin-secondary admin-quote-reminder"
+                      type="button"
+                      onClick={() => void sendQuoteReminder(quote)}
+                    >
+                      Recordar cliente
+                    </button>
+                  )}
+
+                  {quote.customer_phone && quote.status !== 'sent' && (
                     <button
                       className="admin-secondary"
                       type="button"
@@ -2505,7 +2705,17 @@ export default function AdminCostCalculator({
               </label>
 
               <div className="admin-quote-commercial-actions">
-                {selectedQuote.customer_phone && (
+                {selectedQuote.customer_phone && selectedQuote.status === 'sent' && (
+                  <button
+                    className="admin-secondary admin-quote-reminder"
+                    type="button"
+                    onClick={() => void sendQuoteReminder(selectedQuote)}
+                  >
+                    Enviar recordatorio
+                  </button>
+                )}
+
+                {selectedQuote.customer_phone && selectedQuote.status !== 'sent' && (
                   <button
                     className="admin-secondary"
                     type="button"

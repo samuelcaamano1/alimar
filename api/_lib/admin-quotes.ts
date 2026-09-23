@@ -68,6 +68,8 @@ function formatRow(row: Record<string, unknown>) {
     suggested_unit_price: String(row.suggested_unit_price ?? '0'),
     total_price: String(row.total_price ?? '0'),
     order_code: row.order_code ? String(row.order_code) : null,
+    sent_at: row.sent_at ? String(row.sent_at) : null,
+    last_reminded_at: row.last_reminded_at ? String(row.last_reminded_at) : null,
     created_at: String(row.created_at ?? ''),
     updated_at: String(row.updated_at ?? ''),
   }
@@ -82,7 +84,13 @@ export async function listAdminQuotes(databaseUrl: string) {
         quote.id::text,
         quote.quote_number,
         quote.public_token,
-        quote.status,
+        CASE
+          WHEN quote.status IN ('draft', 'sent')
+            AND quote.valid_until IS NOT NULL
+            AND quote.valid_until < CURRENT_DATE
+            THEN 'expired'
+          ELSE quote.status
+        END AS effective_status,
         quote.title,
         quote.customer_name,
         quote.customer_phone,
@@ -99,6 +107,8 @@ export async function listAdminQuotes(databaseUrl: string) {
         quote.suggested_unit_price::text,
         quote.total_price::text,
         linked_order.public_code AS order_code,
+        quote.sent_at::text,
+        quote.last_reminded_at::text,
         quote.created_at::text,
         quote.updated_at::text
       FROM quotes quote
@@ -108,7 +118,14 @@ export async function listAdminQuotes(databaseUrl: string) {
     `
 
     return Response.json(
-      { quotes: rows.map((row) => formatRow(row as Record<string, unknown>)) },
+      {
+        quotes: rows.map((row) =>
+          formatRow({
+            ...(row as Record<string, unknown>),
+            status: (row as Record<string, unknown>).effective_status,
+          }),
+        ),
+      },
       { headers: { 'Cache-Control': 'no-store' } },
     )
   } catch {
@@ -376,6 +393,7 @@ export async function updateAdminQuote(
   }
 
   const status = text(body.status, 20)
+  const reminder = body.reminder === true
 
   if (!STATUSES.has(status)) {
     return Response.json({ error: 'Estado inválido.' }, { status: 400 })
@@ -386,13 +404,37 @@ export async function updateAdminQuote(
 
     const rows = await sql`
       UPDATE quotes
-      SET status = ${status}, updated_at = now()
+      SET
+        status = CASE
+          WHEN ${reminder}::boolean THEN status
+          ELSE ${status}
+        END,
+        sent_at = CASE
+          WHEN ${reminder}::boolean THEN COALESCE(sent_at, now())
+          WHEN ${status} = 'sent' THEN COALESCE(sent_at, now())
+          ELSE sent_at
+        END,
+        last_reminded_at = CASE
+          WHEN ${reminder}::boolean THEN now()
+          ELSE last_reminded_at
+        END,
+        updated_at = now()
       WHERE id = ${id}::uuid
+        AND (
+          ${reminder}::boolean = false
+          OR status = 'sent'
+        )
       RETURNING
         id::text,
         quote_number,
         public_token,
-        status,
+        CASE
+          WHEN status IN ('draft', 'sent')
+            AND valid_until IS NOT NULL
+            AND valid_until < CURRENT_DATE
+            THEN 'expired'
+          ELSE status
+        END AS status,
         title,
         customer_name,
         customer_phone,
@@ -408,6 +450,8 @@ export async function updateAdminQuote(
         profit_percent::text,
         suggested_unit_price::text,
         total_price::text,
+        sent_at::text,
+        last_reminded_at::text,
         created_at::text,
         updated_at::text
     `
