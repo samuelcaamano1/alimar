@@ -12,6 +12,7 @@ import AdminOrdersPanel from './AdminOrdersPanel'
 import AdminCostCalculator from './AdminCostCalculator'
 import AdminCustomRequests, { type CustomRequest } from './AdminCustomRequests'
 import AdminBusinessDashboard from './AdminBusinessDashboard'
+import AdminCustomersPanel from './AdminCustomersPanel'
 import AdminCategoriesPanel from './AdminCategoriesPanel'
 import AdminProductVariants from './AdminProductVariants'
 import AdminProductGallery from './AdminProductGallery'
@@ -559,6 +560,8 @@ export default function AdminApp() {
         {message && <div className="admin-toast">{message}</div>}
 
         <AdminBusinessDashboard />
+
+        <AdminCustomersPanel />
 
         <AdminCostCalculator
           quoteSource={quoteSource}

@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 import { getAdminBusinessDashboard } from '../_lib/admin-dashboard.js'
+import { getAdminCustomers } from '../_lib/admin-customers.js'
 import {
   createAdminQuote,
   listAdminQuotes,
@@ -58,6 +59,10 @@ export async function GET(request: Request) {
 
   if (action === 'dashboard') {
     return getAdminBusinessDashboard(databaseUrl)
+  }
+
+  if (action === 'customers') {
+    return getAdminCustomers(databaseUrl, requestUrl)
   }
 
   try {
