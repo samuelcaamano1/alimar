@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { neon } from '@neondatabase/serverless'
+import { createPublicCustomRequest } from './_lib/custom-requests.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -133,6 +134,12 @@ function buildWhatsappMessage(args: {
 }
 
 export async function POST(request: Request) {
+  const requestUrl = new URL(request.url)
+
+  if (requestUrl.searchParams.get('action') === 'custom-request') {
+    return createPublicCustomRequest(request)
+  }
+
   if (!sameOrigin(request)) {
     return Response.json(
       { error: 'Origen de solicitud inválido.' },

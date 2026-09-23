@@ -1,5 +1,9 @@
 import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
+import {
+  listAdminCustomRequests,
+  updateAdminCustomRequest,
+} from '../_lib/custom-requests.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const ORDER_STATUSES = new Set([
@@ -107,6 +111,12 @@ export async function GET(request: Request) {
       { error: 'Database not configured' },
       { status: 503, headers: { 'Cache-Control': 'no-store' } },
     )
+  }
+
+  const requestUrl = new URL(request.url)
+
+  if (requestUrl.searchParams.get('action') === 'custom-requests') {
+    return listAdminCustomRequests(databaseUrl)
   }
 
   try {
@@ -268,12 +278,18 @@ export async function PATCH(request: Request) {
     )
   }
 
+  const requestUrl = new URL(request.url)
+
   let body: Record<string, unknown>
 
   try {
     body = (await request.json()) as Record<string, unknown>
   } catch {
     return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  }
+
+  if (requestUrl.searchParams.get('action') === 'custom-requests') {
+    return updateAdminCustomRequest(databaseUrl, body)
   }
 
   const id = text(body.id, 40)

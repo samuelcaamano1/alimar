@@ -4680,3 +4680,207 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ALIMAR ADMIN CUSTOM REQUESTS 1A.28 */
+.admin-custom-requests {
+  display: grid;
+  gap: 15px;
+}
+
+.admin-custom-requests-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-custom-requests-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-custom-requests-heading h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.35rem;
+}
+
+.admin-custom-requests-heading p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: .7rem;
+  line-height: 1.5;
+}
+
+.admin-custom-requests-count {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: var(--admin-blue-dark);
+  background: rgba(100,175,198,.11);
+  font-size: .62rem;
+  font-weight: 900;
+}
+
+.admin-custom-requests-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(150px, .35fr) auto;
+  align-items: end;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid rgba(12,16,20,.075);
+  border-radius: 12px;
+  background: rgba(255,255,255,.3);
+}
+
+.admin-custom-requests-toolbar label,
+.admin-custom-request-side label {
+  display: grid;
+  gap: 5px;
+  color: var(--admin-ink);
+  font-size: .63rem;
+  font-weight: 800;
+}
+
+.admin-custom-requests-toolbar input,
+.admin-custom-requests-toolbar select,
+.admin-custom-request-side select {
+  width: 100%;
+  min-height: 39px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border: 1px solid rgba(12,16,20,.11);
+  border-radius: 9px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.admin-custom-requests-toolbar > span {
+  padding-bottom: 11px;
+  color: var(--admin-muted);
+  font-size: .6rem;
+}
+
+.admin-custom-request-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-custom-request-card {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(165px,.25fr);
+  gap: 14px;
+  padding: 13px;
+  border: 1px solid rgba(12,16,20,.08);
+  border-radius: 13px;
+  background: rgba(255,255,255,.36);
+}
+
+.admin-custom-request-main {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.admin-custom-request-code {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.admin-custom-request-code span {
+  color: var(--admin-blue-dark);
+  font-size: .61rem;
+  font-weight: 900;
+}
+
+.admin-custom-request-code strong {
+  font-size: .77rem;
+}
+
+.admin-custom-request-meta,
+.admin-custom-request-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+}
+
+.admin-custom-request-meta span,
+.admin-custom-request-details span {
+  color: var(--admin-muted);
+  font-size: .59rem;
+}
+
+.admin-custom-request-main p {
+  margin: 0;
+  color: var(--admin-ink);
+  font-size: .68rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.admin-custom-request-main > a {
+  width: fit-content;
+  color: var(--admin-blue-dark);
+  font-size: .62rem;
+  font-weight: 800;
+}
+
+.admin-custom-request-side {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+}
+
+.admin-custom-request-whatsapp {
+  display: grid;
+  place-items: center;
+  min-height: 38px;
+  text-decoration: none;
+}
+
+.admin-custom-request-side > small {
+  color: var(--admin-muted);
+  font-size: .59rem;
+}
+
+.admin-custom-request-linked,
+.admin-custom-request-pending {
+  padding: 7px 8px;
+  border-radius: 8px;
+  font-size: .58rem;
+  line-height: 1.35;
+}
+
+.admin-custom-request-linked {
+  color: var(--admin-blue-dark);
+  background: rgba(100,175,198,.1);
+}
+
+.admin-custom-request-pending {
+  color: var(--admin-muted);
+  background: rgba(12,16,20,.045);
+}
+
+@media (max-width: 700px) {
+  .admin-custom-requests-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-custom-requests-count {
+    width: fit-content;
+  }
+
+  .admin-custom-requests-toolbar,
+  .admin-custom-request-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-custom-requests-toolbar > span {
+    padding-bottom: 0;
+  }
+}

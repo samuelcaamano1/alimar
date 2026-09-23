@@ -2068,3 +2068,221 @@
 .admin-order-customizations small {
   display: block;
 }
+
+
+/* ALIMAR CUSTOM REQUESTS 1A.28 */
+.custom-request-overlay {
+  position: fixed;
+  z-index: 180;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(12, 16, 20, 0.62);
+  backdrop-filter: blur(7px);
+}
+
+.custom-request-modal {
+  width: min(860px, 100%);
+  max-height: min(92vh, 860px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  background: #fff9eb;
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.3);
+}
+
+.custom-request-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px 17px;
+  border-bottom: 1px solid rgba(12, 16, 20, 0.08);
+}
+
+.custom-request-header > div {
+  display: grid;
+  gap: 5px;
+}
+
+.custom-request-header h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  letter-spacing: -0.04em;
+}
+
+.custom-request-header p:not(.eyebrow) {
+  max-width: 650px;
+  margin: 0;
+  color: #6a747a;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.custom-request-close {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(12, 16, 20, 0.1);
+  border-radius: 50%;
+  color: #0c1014;
+  background: rgba(255,255,255,.56);
+  cursor: pointer;
+  font-size: 1.35rem;
+}
+
+.custom-request-form {
+  min-height: 0;
+  overflow: auto;
+  padding: 20px 24px 22px;
+}
+
+.custom-request-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.custom-request-fields label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: #0c1014;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.custom-request-fields input,
+.custom-request-fields select,
+.custom-request-fields textarea {
+  width: 100%;
+  min-height: 45px;
+  box-sizing: border-box;
+  padding: 0 11px;
+  border: 1px solid rgba(12, 16, 20, 0.12);
+  border-radius: 10px;
+  color: #0c1014;
+  background: #fffdf8;
+  font: inherit;
+}
+
+.custom-request-fields textarea {
+  min-height: 105px;
+  padding: 11px;
+  resize: vertical;
+}
+
+.custom-request-fields input:focus,
+.custom-request-fields select:focus,
+.custom-request-fields textarea:focus {
+  outline: none;
+  border-color: #5f9bad;
+  box-shadow: 0 0 0 3px rgba(100, 175, 198, .12);
+}
+
+.custom-request-span-2 {
+  grid-column: 1 / -1;
+}
+
+.custom-request-error {
+  margin-top: 12px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  color: #8a2d24;
+  background: rgba(180, 71, 56, .09);
+  font-size: .72rem;
+}
+
+.custom-request-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 15px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(12, 16, 20, 0.08);
+}
+
+.custom-request-footer > a {
+  color: #5f9bad;
+  font-size: .72rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.custom-request-success {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 9px;
+  min-height: 390px;
+  padding: 30px;
+  text-align: center;
+}
+
+.custom-request-success > span {
+  color: #5f9bad;
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.custom-request-success > strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 2rem;
+}
+
+.custom-request-success > p {
+  max-width: 510px;
+  margin: 0;
+  color: #69747b;
+  line-height: 1.5;
+}
+
+.custom-request-success > div {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.hero-actions button.button {
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 650px) {
+  .custom-request-overlay {
+    padding: 8px;
+  }
+
+  .custom-request-modal {
+    max-height: 96vh;
+    border-radius: 18px;
+  }
+
+  .custom-request-header,
+  .custom-request-form {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .custom-request-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-request-span-2 {
+    grid-column: auto;
+  }
+
+  .custom-request-footer,
+  .custom-request-success > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

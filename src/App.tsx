@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { alimarLogoDataUrl } from './brand'
 import { site } from './site'
 import CheckoutForm from './CheckoutForm'
@@ -72,6 +72,11 @@ type CatalogCategory = {
 
 type CatalogResponse = {
   categories: CatalogCategory[]
+}
+
+type CustomRequestSuccess = {
+  requestCode: string
+  whatsappMessage: string
 }
 
 const CART_STORAGE_KEY = 'alimar-cart-v1'
@@ -277,6 +282,12 @@ function App() {
   const [recoveredOrder, setRecoveredOrder] = useState<RecoveredOrder | null>(() =>
     loadRecoveredOrder(),
   )
+  const [customRequestOpen, setCustomRequestOpen] = useState(false)
+  const [customRequestId, setCustomRequestId] = useState('')
+  const [customRequestBusy, setCustomRequestBusy] = useState(false)
+  const [customRequestMessage, setCustomRequestMessage] = useState('')
+  const [customRequestSuccess, setCustomRequestSuccess] =
+    useState<CustomRequestSuccess | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -468,6 +479,69 @@ function App() {
     setCart((current) => current.filter((item) => cartItemKey(item) !== itemKey))
   }
 
+  function openCustomRequest() {
+    setCustomRequestId(crypto.randomUUID())
+    setCustomRequestMessage('')
+    setCustomRequestSuccess(null)
+    setCustomRequestOpen(true)
+  }
+
+  async function submitCustomRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+
+    setCustomRequestBusy(true)
+    setCustomRequestMessage('')
+
+    try {
+      const response = await fetch('/api/orders?action=custom-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: customRequestId || crypto.randomUUID(),
+          customerName: form.get('customerName'),
+          customerPhone: form.get('customerPhone'),
+          requestType: form.get('requestType'),
+          quantity: form.get('quantity'),
+          neededDate: form.get('neededDate'),
+          dimensions: form.get('dimensions'),
+          theme: form.get('theme'),
+          description: form.get('description'),
+          referenceUrl: form.get('referenceUrl'),
+        }),
+      })
+
+      const data = (await response.json()) as {
+        error?: string
+        requestCode?: string
+        whatsappMessage?: string
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'No pudimos guardar tu solicitud.')
+      }
+
+      if (!data.requestCode || !data.whatsappMessage) {
+        throw new Error('La solicitud se guardó, pero no pudimos recuperar el comprobante.')
+      }
+
+      setCustomRequestSuccess({
+        requestCode: data.requestCode,
+        whatsappMessage: data.whatsappMessage,
+      })
+      setCustomRequestMessage('')
+      formElement.reset()
+    } catch (error) {
+      setCustomRequestMessage(
+        error instanceof Error ? error.message : 'No pudimos guardar tu solicitud.',
+      )
+    } finally {
+      setCustomRequestBusy(false)
+    }
+  }
+
   const featuredProducts = useMemo(() => {
     const source =
       activeCategory === 'all'
@@ -546,15 +620,14 @@ function App() {
                 Ver catálogo
                 <span aria-hidden="true">↓</span>
               </a>
-              <a
+              <button
                 className="button button-secondary"
-                href={site.whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
+                type="button"
+                onClick={openCustomRequest}
               >
-                Consultar por WhatsApp
-                <span aria-hidden="true">↗</span>
-              </a>
+                Quiero algo personalizado
+                <span aria-hidden="true">✦</span>
+              </button>
             </div>
 
             <div className="hero-note">
@@ -756,6 +829,172 @@ function App() {
             </li>
           </ol>
         </section>
+
+        {customRequestOpen && (
+          <div className="custom-request-overlay" role="presentation">
+            <section
+              className="custom-request-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="custom-request-title"
+            >
+              <header className="custom-request-header">
+                <div>
+                  <p className="eyebrow">Proyecto a medida</p>
+                  <h2 id="custom-request-title">Contanos qué imaginaste.</h2>
+                  <p>
+                    No necesitás saber todos los detalles. Con esta información podemos entender
+                    la idea y preparar un presupuesto.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="custom-request-close"
+                  onClick={() => setCustomRequestOpen(false)}
+                  aria-label="Cerrar"
+                >
+                  ×
+                </button>
+              </header>
+
+              {customRequestSuccess ? (
+                <div className="custom-request-success">
+                  <span>Solicitud recibida</span>
+                  <strong>{customRequestSuccess.requestCode}</strong>
+                  <p>
+                    Ya quedó registrada en Alimar. Podés continuar por WhatsApp usando el mismo código.
+                  </p>
+
+                  <div>
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      onClick={() => setCustomRequestOpen(false)}
+                    >
+                      Cerrar
+                    </button>
+                    <a
+                      className="button button-primary"
+                      href={site.whatsappUrlFor(customRequestSuccess.whatsappMessage)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Continuar por WhatsApp ↗
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <form className="custom-request-form" onSubmit={submitCustomRequest}>
+                  <div className="custom-request-fields">
+                    <label>
+                      ¿Qué necesitás?
+                      <select name="requestType" defaultValue="paper" required>
+                        <option value="paper">Papelería / impresión</option>
+                        <option value="3d">Impresión 3D</option>
+                        <option value="event">Evento / cumpleaños</option>
+                        <option value="design">Diseño gráfico</option>
+                        <option value="other">Otro personalizado</option>
+                      </select>
+                    </label>
+
+                    <label>
+                      Cantidad aproximada
+                      <input
+                        name="quantity"
+                        type="number"
+                        min={1}
+                        max={9999}
+                        placeholder="Ej. 30"
+                      />
+                    </label>
+
+                    <label>
+                      ¿Para cuándo lo necesitás?
+                      <input name="neededDate" type="date" />
+                    </label>
+
+                    <label>
+                      Medidas aproximadas
+                      <input name="dimensions" maxLength={120} placeholder="Ej. A5, 10 × 15 cm..." />
+                    </label>
+
+                    <label className="custom-request-span-2">
+                      Tema, colores o estilo
+                      <input
+                        name="theme"
+                        maxLength={240}
+                        placeholder="Ej. dinosaurios, tonos pastel, minimalista..."
+                      />
+                    </label>
+
+                    <label className="custom-request-span-2">
+                      Contanos la idea
+                      <textarea
+                        name="description"
+                        rows={4}
+                        minLength={10}
+                        maxLength={3000}
+                        placeholder="Qué querés hacer, cómo lo imaginás y cualquier detalle importante."
+                        required
+                      />
+                    </label>
+
+                    <label className="custom-request-span-2">
+                      Link de referencia
+                      <input
+                        name="referenceUrl"
+                        type="url"
+                        maxLength={500}
+                        placeholder="https://... (opcional)"
+                      />
+                    </label>
+
+                    <label>
+                      Tu nombre
+                      <input
+                        name="customerName"
+                        autoComplete="name"
+                        maxLength={120}
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      WhatsApp
+                      <input
+                        name="customerPhone"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        maxLength={40}
+                        placeholder="Ej. 11 3568 2635"
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  {customRequestMessage && (
+                    <div className="custom-request-error">{customRequestMessage}</div>
+                  )}
+
+                  <footer className="custom-request-footer">
+                    <a href={site.whatsappUrl} target="_blank" rel="noreferrer">
+                      Prefiero hablar directo por WhatsApp ↗
+                    </a>
+
+                    <button
+                      className="button button-primary"
+                      type="submit"
+                      disabled={customRequestBusy}
+                    >
+                      {customRequestBusy ? 'Enviando…' : 'Enviar solicitud'}
+                    </button>
+                  </footer>
+                </form>
+              )}
+            </section>
+          </div>
+        )}
 
         {selectedProduct && (
           <div
