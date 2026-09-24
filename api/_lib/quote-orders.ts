@@ -62,7 +62,7 @@ export async function createOrderFromQuote(
 
   try {
     const existing = await sql`
-      SELECT public_code
+      SELECT public_code, public_tracking_token::text
       FROM orders
       WHERE quote_id = ${quoteId}::uuid
       LIMIT 1
@@ -72,6 +72,7 @@ export async function createOrderFromQuote(
       return Response.json(
         {
           orderCode: String(existing[0].public_code),
+          trackingToken: String(existing[0].public_tracking_token),
           existing: true,
         },
         { headers: { 'Cache-Control': 'no-store' } },
@@ -142,6 +143,7 @@ export async function createOrderFromQuote(
     }
 
     const orderCode = createPublicCode()
+    const trackingToken = randomUUID()
     const requestId = randomUUID()
     const message = orderWhatsappMessage({
       orderCode,
@@ -160,6 +162,7 @@ export async function createOrderFromQuote(
       sql`
         INSERT INTO orders (
           public_code,
+          public_tracking_token,
           request_id,
           quote_id,
           status,
@@ -174,6 +177,7 @@ export async function createOrderFromQuote(
         )
         VALUES (
           ${orderCode},
+          ${trackingToken}::uuid,
           ${requestId}::uuid,
           ${quoteId}::uuid,
           'confirmed',
@@ -234,14 +238,14 @@ export async function createOrderFromQuote(
     await sql.transaction(queries)
 
     return Response.json(
-      { orderCode, existing: false },
+      { orderCode, trackingToken, existing: false },
       { status: 201, headers: { 'Cache-Control': 'no-store' } },
     )
   } catch {
     try {
       const existing = await sql`
-        SELECT public_code
-        FROM orders
+        SELECT public_code, public_tracking_token::text
+      FROM orders
         WHERE quote_id = ${quoteId}::uuid
         LIMIT 1
       `
@@ -250,7 +254,8 @@ export async function createOrderFromQuote(
         return Response.json(
           {
             orderCode: String(existing[0].public_code),
-            existing: true,
+          trackingToken: String(existing[0].public_tracking_token),
+          existing: true,
           },
           { headers: { 'Cache-Control': 'no-store' } },
         )

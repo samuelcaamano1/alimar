@@ -3,6 +3,10 @@ import { neon } from '@neondatabase/serverless'
 import { createPublicCustomRequest } from './_lib/custom-requests.js'
 import { acceptPublicQuote } from './_lib/public-quotes.js'
 import {
+  getPublicOrderTracking,
+  lookupPublicOrderTracking,
+} from './_lib/public-order-tracking.js'
+import {
   enforceRateLimit,
   requireJsonBodyWithinLimit,
   requireRequestOrigin,
@@ -139,6 +143,39 @@ function buildWhatsappMessage(args: {
   return lines.join('\n')
 }
 
+export async function GET(request: Request) {
+  const requestUrl = new URL(request.url)
+
+  if (requestUrl.searchParams.get('action') !== 'tracking') {
+    return Response.json(
+      { error: 'Acción inválida.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const databaseUrl = process.env.DATABASE_URL
+
+  if (!databaseUrl) {
+    return Response.json(
+      { error: 'Seguimiento no disponible temporalmente.' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const rateLimitError = await enforceRateLimit(request, databaseUrl, {
+    scope: 'public-order-tracking',
+    limit: 60,
+    windowSeconds: 10 * 60,
+  })
+
+  if (rateLimitError) return rateLimitError
+
+  return getPublicOrderTracking(
+    databaseUrl,
+    requestUrl.searchParams.get('token')?.trim() ?? '',
+  )
+}
+
 export async function POST(request: Request) {
   const originError = requireRequestOrigin(request)
   if (originError) return originError
@@ -158,13 +195,19 @@ export async function POST(request: Request) {
   }
 
   const rateLimitOptions =
-    action === 'custom-request'
+    action === 'tracking-lookup'
       ? {
-          scope: 'public-custom-request',
-          limit: 8,
-          windowSeconds: 30 * 60,
+          scope: 'public-order-tracking-lookup',
+          limit: 20,
+          windowSeconds: 10 * 60,
         }
-      : action === 'quote-response'
+      : action === 'custom-request'
+        ? {
+            scope: 'public-custom-request',
+            limit: 8,
+            windowSeconds: 30 * 60,
+          }
+        : action === 'quote-response'
         ? {
             scope: 'public-quote-response',
             limit: 20,
@@ -183,6 +226,21 @@ export async function POST(request: Request) {
   )
 
   if (rateLimitError) return rateLimitError
+
+  if (action === 'tracking-lookup') {
+    let body: Record<string, unknown>
+
+    try {
+      body = (await request.json()) as Record<string, unknown>
+    } catch {
+      return Response.json(
+        { error: 'Solicitud inválida.' },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    return lookupPublicOrderTracking(rateDatabaseUrl, body)
+  }
 
   if (requestUrl.searchParams.get('action') === 'quote-response') {
     return acceptPublicQuote(request)
@@ -334,7 +392,7 @@ export async function POST(request: Request) {
 
   try {
     const existing = await sql`
-      SELECT public_code, whatsapp_message
+      SELECT public_code, whatsapp_message, public_tracking_token::text
       FROM orders
       WHERE request_id = ${requestId}::uuid
       LIMIT 1
@@ -345,6 +403,7 @@ export async function POST(request: Request) {
         {
           orderCode: String(existing[0].public_code),
           whatsappMessage: String(existing[0].whatsapp_message),
+          trackingToken: String(existing[0].public_tracking_token),
           existing: true,
         },
         { headers: { 'Cache-Control': 'no-store' } },
@@ -550,6 +609,7 @@ export async function POST(request: Request) {
     const hasQuote = items.some((item) => item.lineTotal === null)
     const orderId = randomUUID()
     const publicCode = createPublicCode()
+    const trackingToken = randomUUID()
     const whatsappMessage = buildWhatsappMessage({
       code: publicCode,
       customerName,
@@ -564,6 +624,7 @@ export async function POST(request: Request) {
         INSERT INTO orders (
           id,
           public_code,
+          public_tracking_token,
           request_id,
           status,
           customer_name,
@@ -579,6 +640,7 @@ export async function POST(request: Request) {
         VALUES (
           ${orderId}::uuid,
           ${publicCode},
+          ${trackingToken}::uuid,
           ${requestId}::uuid,
           'new',
           ${customerName},
@@ -641,13 +703,13 @@ export async function POST(request: Request) {
     await sql.transaction(queries)
 
     return Response.json(
-      { orderCode: publicCode, whatsappMessage, knownTotal, hasQuote },
+      { orderCode: publicCode, whatsappMessage, trackingToken, knownTotal, hasQuote },
       { status: 201, headers: { 'Cache-Control': 'no-store' } },
     )
   } catch {
     try {
       const existing = await sql`
-        SELECT public_code, whatsapp_message
+        SELECT public_code, whatsapp_message, public_tracking_token::text
         FROM orders
         WHERE request_id = ${requestId}::uuid
         LIMIT 1
@@ -658,7 +720,8 @@ export async function POST(request: Request) {
           {
             orderCode: String(existing[0].public_code),
             whatsappMessage: String(existing[0].whatsapp_message),
-            existing: true,
+          trackingToken: String(existing[0].public_tracking_token),
+          existing: true,
           },
           { headers: { 'Cache-Control': 'no-store' } },
         )

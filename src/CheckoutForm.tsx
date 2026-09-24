@@ -10,7 +10,11 @@ type CheckoutItem = {
   customizations: Array<{ fieldId: string; value: string }>
 }
 
-type CreateOrderResponse = { orderCode: string; whatsappMessage: string }
+type CreateOrderResponse = {
+  orderCode: string
+  whatsappMessage: string
+  trackingToken: string
+}
 type CheckoutFormProps = {
   items: CheckoutItem[]
   onCreated: (order: RecoveredOrder) => void
@@ -66,11 +70,14 @@ export default function CheckoutForm({ items, onCreated }: CheckoutFormProps) {
       if (!response.ok) throw new Error(await errorMessage(response))
 
       const data = (await response.json()) as CreateOrderResponse
-      if (!data.orderCode || !data.whatsappMessage) {
+      if (!data.orderCode || !data.whatsappMessage || !data.trackingToken) {
         throw new Error('El pedido se registró pero la respuesta fue incompleta.')
       }
 
-      const recoveredOrder = saveRecoveredOrder(data.orderCode)
+      const recoveredOrder = saveRecoveredOrder(
+        data.orderCode,
+        data.trackingToken,
+      )
       onCreated(recoveredOrder)
       window.location.assign(site.whatsappUrlFor(data.whatsappMessage))
     } catch (error) {

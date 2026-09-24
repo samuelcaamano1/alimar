@@ -3,6 +3,7 @@ import { alimarLogoDataUrl } from './brand'
 import { site } from './site'
 import CheckoutForm from './CheckoutForm'
 import PublicQuoteView from './PublicQuoteView'
+import PublicOrderTracking from './PublicOrderTracking'
 import {
   clearRecoveredOrder,
   loadRecoveredOrder,
@@ -783,6 +784,7 @@ function StorefrontApp() {
         <nav className="main-nav" aria-label="Navegación principal">
           <a href="#servicios">Qué hacemos</a>
           <a href="#catalogo">Catálogo</a>
+          <a href="/?seguimiento=1">Seguir pedido</a>
           <a href="#como-trabajamos">Cómo trabajamos</a>
         </nav>
 
@@ -1614,6 +1616,14 @@ function StorefrontApp() {
           </div>
 
           <div className="order-recovery-actions">
+            {recoveredOrder.trackingToken && (
+              <a
+                href={`/?pedido=${encodeURIComponent(recoveredOrder.trackingToken)}`}
+              >
+                Ver seguimiento →
+              </a>
+            )}
+
             <a
               href={site.whatsappUrlFor(recoveryWhatsappMessage(recoveredOrder.orderCode))}
               target="_blank"
@@ -1845,7 +1855,13 @@ function StorefrontApp() {
 
 function App() {
   const searchParams = new URLSearchParams(window.location.search)
+  const publicTrackingToken = searchParams.get('pedido')?.trim() ?? ''
+  const trackingLookup = searchParams.get('seguimiento') === '1'
   const publicQuoteToken = searchParams.get('presupuesto')?.trim() ?? ''
+
+  if (publicTrackingToken || trackingLookup) {
+    return <PublicOrderTracking token={publicTrackingToken} />
+  }
 
   return publicQuoteToken
     ? <PublicQuoteView token={publicQuoteToken} />

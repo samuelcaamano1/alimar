@@ -41,6 +41,7 @@ type AdminOrderEvent = {
 type AdminOrder = {
   id: string
   public_code: string
+  tracking_token: string
   status: OrderStatus
   customer_name: string
   customer_phone: string
@@ -258,6 +259,12 @@ function whatsappContactUrl(order: AdminOrder) {
   const phone = order.customer_phone.replace(/\D/g, '')
   const message = `Hola ${order.customer_name}, te escribo de Alimar por tu pedido ${order.public_code}.`
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+}
+
+function trackingUrl(order: AdminOrder) {
+  return `${window.location.origin}/?pedido=${encodeURIComponent(
+    order.tracking_token,
+  )}`
 }
 
 function orderSummary(order: AdminOrder) {
@@ -1138,6 +1145,26 @@ export default function AdminOrdersPanel() {
                   >
                     Copiar código
                   </button>
+                  <button
+                    type="button"
+                    className="admin-secondary"
+                    onClick={() =>
+                      void copyText(
+                        trackingUrl(order),
+                        'Link de seguimiento copiado.',
+                      )
+                    }
+                  >
+                    Copiar seguimiento
+                  </button>
+                  <a
+                    className="admin-secondary admin-order-tracking-link"
+                    href={trackingUrl(order)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Abrir seguimiento ↗
+                  </a>
                   <button
                     type="button"
                     className="admin-secondary"

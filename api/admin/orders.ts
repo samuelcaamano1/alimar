@@ -47,6 +47,7 @@ type OrderCustomizationValue = {
 type OrderRow = {
   id: string
   public_code: string
+  tracking_token: string
   status: OrderStatus
   customer_name: string
   customer_phone: string
@@ -191,6 +192,7 @@ export async function GET(request: Request) {
         SELECT
           id,
           public_code,
+          public_tracking_token,
           status,
           customer_name,
           customer_phone,
@@ -218,6 +220,7 @@ export async function GET(request: Request) {
       SELECT
         o.id::text,
         o.public_code,
+        o.public_tracking_token::text AS tracking_token,
         o.status,
         o.customer_name,
         o.customer_phone,
@@ -284,6 +287,7 @@ export async function GET(request: Request) {
       {
         id: string
         public_code: string
+        tracking_token: string
         status: OrderStatus
         customer_name: string
         customer_phone: string
@@ -337,6 +341,7 @@ export async function GET(request: Request) {
         orders.set(row.id, {
           id: row.id,
           public_code: row.public_code,
+          tracking_token: row.tracking_token,
           status: row.status,
           customer_name: row.customer_name,
           customer_phone: row.customer_phone,

@@ -1,5 +1,6 @@
 export type RecoveredOrder = {
   orderCode: string
+  trackingToken?: string
   createdAt: string
 }
 
@@ -14,6 +15,9 @@ function isRecoveredOrder(value: unknown): value is RecoveredOrder {
   return (
     typeof candidate.orderCode === 'string' &&
     /^PED-\d{4}-[A-Z0-9]{6,12}$/.test(candidate.orderCode) &&
+    (candidate.trackingToken === undefined ||
+      (typeof candidate.trackingToken === 'string' &&
+        /^[0-9a-f-]{36}$/i.test(candidate.trackingToken))) &&
     typeof candidate.createdAt === 'string' &&
     Number.isFinite(Date.parse(candidate.createdAt))
   )
@@ -41,9 +45,13 @@ export function loadRecoveredOrder(): RecoveredOrder | null {
   }
 }
 
-export function saveRecoveredOrder(orderCode: string): RecoveredOrder {
+export function saveRecoveredOrder(
+  orderCode: string,
+  trackingToken?: string,
+): RecoveredOrder {
   const order: RecoveredOrder = {
     orderCode,
+    ...(trackingToken ? { trackingToken } : {}),
     createdAt: new Date().toISOString(),
   }
 

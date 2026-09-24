@@ -8522,3 +8522,18 @@
     justify-content: flex-start;
   }
 }
+
+
+/* ALIMAR ADMIN TRACKING LINK 1.1.1 */
+.admin-order-quick-actions a.admin-secondary {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+.admin-order-tracking-link {
+  color: var(--admin-blue-dark);
+}
