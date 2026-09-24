@@ -2,6 +2,11 @@ import { randomUUID } from 'node:crypto'
 import { neon } from '@neondatabase/serverless'
 import { createPublicCustomRequest } from './_lib/custom-requests.js'
 import { acceptPublicQuote } from './_lib/public-quotes.js'
+import {
+  enforceRateLimit,
+  requireJsonBodyWithinLimit,
+  requireRequestOrigin,
+} from './_lib/request-security.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -135,7 +140,49 @@ function buildWhatsappMessage(args: {
 }
 
 export async function POST(request: Request) {
+  const originError = requireRequestOrigin(request)
+  if (originError) return originError
+
+  const bodyError = await requireJsonBodyWithinLimit(request, 1_300_000)
+  if (bodyError) return bodyError
+
   const requestUrl = new URL(request.url)
+  const action = requestUrl.searchParams.get('action')
+  const rateDatabaseUrl = process.env.DATABASE_URL
+
+  if (!rateDatabaseUrl) {
+    return Response.json(
+      { error: 'Servicio temporalmente no disponible.' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const rateLimitOptions =
+    action === 'custom-request'
+      ? {
+          scope: 'public-custom-request',
+          limit: 8,
+          windowSeconds: 30 * 60,
+        }
+      : action === 'quote-response'
+        ? {
+            scope: 'public-quote-response',
+            limit: 20,
+            windowSeconds: 10 * 60,
+          }
+        : {
+            scope: 'public-order',
+            limit: 12,
+            windowSeconds: 10 * 60,
+          }
+
+  const rateLimitError = await enforceRateLimit(
+    request,
+    rateDatabaseUrl,
+    rateLimitOptions,
+  )
+
+  if (rateLimitError) return rateLimitError
 
   if (requestUrl.searchParams.get('action') === 'quote-response') {
     return acceptPublicQuote(request)

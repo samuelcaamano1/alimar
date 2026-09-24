@@ -4,6 +4,13 @@ import {
   requireSameOrigin,
   verifyAdminPassword,
 } from '../_lib/admin-auth.js'
+import {
+  enforceRateLimit,
+  requireJsonBodyWithinLimit,
+  resetRateLimit,
+} from '../_lib/request-security.js'
+
+const LOGIN_SCOPE = 'admin-login'
 
 export async function POST(request: Request) {
   const originError = requireSameOrigin(request)
@@ -15,6 +22,26 @@ export async function POST(request: Request) {
       { status: 503, headers: { 'Cache-Control': 'no-store' } },
     )
   }
+
+  const bodyError = await requireJsonBodyWithinLimit(request, 16_384)
+  if (bodyError) return bodyError
+
+  const databaseUrl = process.env.DATABASE_URL
+
+  if (!databaseUrl) {
+    return Response.json(
+      { error: 'Database not configured' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const rateLimitError = await enforceRateLimit(request, databaseUrl, {
+    scope: LOGIN_SCOPE,
+    limit: 8,
+    windowSeconds: 15 * 60,
+  })
+
+  if (rateLimitError) return rateLimitError
 
   let password = ''
 
@@ -34,6 +61,8 @@ export async function POST(request: Request) {
       { status: 401, headers: { 'Cache-Control': 'no-store' } },
     )
   }
+
+  await resetRateLimit(request, databaseUrl, LOGIN_SCOPE)
 
   return Response.json(
     { ok: true },

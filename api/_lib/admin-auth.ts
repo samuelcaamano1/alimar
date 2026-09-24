@@ -35,7 +35,10 @@ function parseCookies(request: Request) {
 }
 
 export function isAdminConfigured() {
-  return env('ADMIN_PASSWORD').length >= 8 && env('ADMIN_SESSION_SECRET').length >= 32
+  return (
+    env('ADMIN_PASSWORD').length >= 8 &&
+    env('ADMIN_SESSION_SECRET').length >= 32
+  )
 }
 
 export function verifyAdminPassword(password: string) {
@@ -53,9 +56,13 @@ export function isAdminAuthenticated(request: Request) {
   if (!expiresAt || !signature) return false
 
   const expiresAtNumber = Number(expiresAt)
-  if (!Number.isFinite(expiresAtNumber) || expiresAtNumber <= Date.now()) return false
+
+  if (!Number.isFinite(expiresAtNumber) || expiresAtNumber <= Date.now()) {
+    return false
+  }
 
   const expectedSignature = sign(expiresAt)
+
   return Boolean(expectedSignature) && safeEqual(signature, expectedSignature)
 }
 
@@ -73,10 +80,9 @@ export function requireAdmin(request: Request) {
 
 export function requireSameOrigin(request: Request) {
   const origin = request.headers.get('origin')
-  if (!origin) return null
-
   const requestUrl = new URL(request.url)
-  if (origin === requestUrl.origin) return null
+
+  if (origin && origin === requestUrl.origin) return null
 
   return Response.json(
     { error: 'Invalid origin' },
@@ -92,10 +98,11 @@ export function createAdminSessionCookie(request: Request) {
   const token = `${expiresAt}.${sign(expiresAt)}`
   const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : ''
 
-  return `${COOKIE_NAME}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_SECONDS}${secure}`
+  return `${COOKIE_NAME}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_SECONDS}; Priority=High${secure}`
 }
 
 export function clearAdminSessionCookie(request: Request) {
   const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : ''
-  return `${COOKIE_NAME}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${secure}`
+
+  return `${COOKIE_NAME}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0; Priority=High${secure}`
 }
