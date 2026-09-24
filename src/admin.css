@@ -8537,3 +8537,437 @@
 .admin-order-tracking-link {
   color: var(--admin-blue-dark);
 }
+
+
+/* ALIMAR WHATSAPP OPERATIVO 1.1.2 */
+.admin-whatsapp-action {
+  text-decoration: none;
+}
+
+.admin-order-whatsapp-box {
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(12, 16, 20, .07);
+  border-radius: 11px;
+  background: rgba(100, 175, 198, .065);
+}
+
+.admin-order-whatsapp-box > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-order-whatsapp-box > div:first-child span {
+  color: var(--admin-blue-dark);
+  font-size: .5rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.admin-order-whatsapp-box > div:first-child strong {
+  color: var(--admin-ink);
+  font-size: .58rem;
+}
+
+.admin-order-whatsapp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-order-whatsapp-actions a {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 1px solid rgba(63, 120, 138, .18);
+  border-radius: 9px;
+  color: var(--admin-blue-dark);
+  background: rgba(255, 255, 255, .6);
+  font-size: .5rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.admin-order-whatsapp-actions a:hover {
+  border-color: rgba(63, 120, 138, .35);
+  background: rgba(100, 175, 198, .11);
+}
+
+.admin-order-whatsapp-actions a.is-ready {
+  color: #286b4a;
+  border-color: rgba(40, 107, 74, .2);
+  background: rgba(65, 143, 98, .08);
+}
+
+.admin-order-whatsapp-actions a.is-balance {
+  color: #8a5a2d;
+  border-color: rgba(138, 90, 45, .2);
+  background: rgba(181, 126, 62, .08);
+}
+
+@media (max-width: 650px) {
+  .admin-order-whatsapp-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-order-whatsapp-actions a {
+    text-align: center;
+  }
+}
+
+
+/* ALIMAR CENTRO DE TRABAJO 1.1.3 */
+.admin-work-center {
+  display: grid;
+  gap: 14px;
+  scroll-margin-top: 78px;
+}
+
+.admin-work-center-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-work-center-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-work-center-heading h2 {
+  margin: 0;
+  font-size: clamp(1.55rem, 3vw, 2.15rem);
+}
+
+.admin-work-center-heading p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: .68rem;
+}
+
+.admin-work-center-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.admin-work-center-summary button {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid rgba(12, 16, 20, .07);
+  border-radius: 11px;
+  color: var(--admin-ink);
+  background: rgba(255, 255, 255, .42);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.admin-work-center-summary button:hover {
+  border-color: rgba(63, 120, 138, .28);
+  background: rgba(100, 175, 198, .08);
+}
+
+.admin-work-center-summary button.is-today {
+  background: rgba(100, 175, 198, .11);
+}
+
+.admin-work-center-summary button.is-danger {
+  color: #8e3434;
+  background: rgba(166, 63, 63, .08);
+}
+
+.admin-work-center-summary button.is-money {
+  color: #8a5a2d;
+  background: rgba(181, 126, 62, .08);
+}
+
+.admin-work-center-summary span {
+  overflow: hidden;
+  color: var(--admin-muted);
+  font-size: .49rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-work-center-summary strong {
+  overflow: hidden;
+  color: inherit;
+  font-size: .96rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-work-center-summary small {
+  color: var(--admin-muted);
+  font-size: .46rem;
+}
+
+.admin-work-center-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(250px, .55fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.admin-work-priorities,
+.admin-work-agenda {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(12, 16, 20, .07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .32);
+}
+
+.admin-work-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-work-section-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-work-section-heading span,
+.admin-work-section-heading small {
+  color: var(--admin-muted);
+  font-size: .47rem;
+}
+
+.admin-work-section-heading strong {
+  font-size: .64rem;
+}
+
+.admin-work-task-list {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-work-task {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 30px 44px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid rgba(12, 16, 20, .055);
+  border-radius: 9px;
+  color: inherit;
+  background: rgba(255, 255, 255, .48);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.admin-work-task:hover {
+  border-color: rgba(63, 120, 138, .28);
+  transform: translateY(-1px);
+}
+
+.admin-work-task.is-danger {
+  border-left: 3px solid #a63f3f;
+}
+
+.admin-work-task.is-today {
+  border-left: 3px solid var(--admin-blue);
+}
+
+.admin-work-task.is-money {
+  border-left: 3px solid #b57e3e;
+}
+
+.admin-work-task-number {
+  color: var(--admin-muted);
+  font-size: .48rem;
+  font-weight: 900;
+}
+
+.admin-work-task-kind {
+  width: fit-content;
+  padding: 4px 6px;
+  border-radius: 999px;
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, .1);
+  font-size: .43rem;
+  font-weight: 900;
+}
+
+.admin-work-task-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-work-task-copy strong,
+.admin-work-task-copy span,
+.admin-work-task-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-work-task-copy strong {
+  font-size: .57rem;
+}
+
+.admin-work-task-copy span {
+  color: var(--admin-ink);
+  font-size: .5rem;
+}
+
+.admin-work-task-copy small {
+  color: var(--admin-muted);
+  font-size: .45rem;
+}
+
+.admin-work-task-open {
+  color: var(--admin-blue-dark);
+  font-size: .47rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.admin-work-agenda-list {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-work-agenda-list button {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid rgba(12, 16, 20, .055);
+  border-radius: 9px;
+  color: inherit;
+  background: rgba(255, 255, 255, .48);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.admin-work-agenda-list button:hover {
+  border-color: rgba(63, 120, 138, .25);
+}
+
+.admin-work-agenda-list button > span {
+  color: var(--admin-blue-dark);
+  font-size: .48rem;
+  font-weight: 850;
+}
+
+.admin-work-agenda-list button > div {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.admin-work-agenda-list strong,
+.admin-work-agenda-list small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-work-agenda-list strong {
+  font-size: .54rem;
+}
+
+.admin-work-agenda-list small {
+  color: var(--admin-muted);
+  font-size: .44rem;
+}
+
+.admin-work-agenda-list button > small:last-child {
+  grid-column: 1 / -1;
+  padding-top: 4px;
+  border-top: 1px solid rgba(12, 16, 20, .045);
+}
+
+.admin-work-unscheduled {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  padding: 9px;
+  border-radius: 9px;
+  background: rgba(243, 232, 207, .42);
+}
+
+.admin-work-unscheduled span {
+  color: var(--admin-muted);
+  font-size: .47rem;
+}
+
+.admin-work-unscheduled strong {
+  color: var(--admin-blue-dark);
+  font-size: .72rem;
+}
+
+.admin-work-unscheduled small {
+  grid-column: 1 / -1;
+  color: var(--admin-muted);
+  font-size: .44rem;
+}
+
+.admin-work-empty {
+  display: grid;
+  gap: 3px;
+  padding: 14px;
+  border-radius: 9px;
+  color: var(--admin-muted);
+  background: rgba(255, 255, 255, .35);
+  font-size: .5rem;
+}
+
+.admin-work-empty strong {
+  color: var(--admin-ink);
+}
+
+@media (max-width: 1050px) {
+  .admin-work-center-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 850px) {
+  .admin-work-center-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-work-center-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-work-center-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-work-task {
+    grid-template-columns: 28px 42px minmax(0, 1fr);
+  }
+
+  .admin-work-task-open {
+    grid-column: 3;
+  }
+}

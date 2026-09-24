@@ -127,7 +127,7 @@ export function quoteCustomerWhatsappMessage(quote: AdminQuote) {
   const publicUrl = quotePublicUrl(quote)
 
   return [
-    `Hola ${customer}, te envío el presupuesto ${quote.public_code} de Alimar.`,
+    `Hola ${customer}, tu presupuesto ${quote.public_code} de Alimar ya está listo.`,
     '',
     `Trabajo: ${quote.title}`,
     `Cantidad: ${quote.quantity}`,

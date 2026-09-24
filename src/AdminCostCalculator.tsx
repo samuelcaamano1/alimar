@@ -2650,7 +2650,7 @@ export default function AdminCostCalculator({
                       type="button"
                       onClick={() => void sendQuoteReminder(quote)}
                     >
-                      Recordar cliente
+                      Enviar recordatorio
                     </button>
                   )}
 
@@ -2660,7 +2660,7 @@ export default function AdminCostCalculator({
                       type="button"
                       onClick={() => openQuoteWhatsapp(quote)}
                     >
-                      WhatsApp cliente
+                      Enviar presupuesto
                     </button>
                   )}
 
@@ -3245,7 +3245,7 @@ export default function AdminCostCalculator({
                     type="button"
                     onClick={() => openQuoteWhatsapp(selectedQuote)}
                   >
-                    Enviar por WhatsApp
+                    Enviar presupuesto
                   </button>
                 )}
 

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { site } from './site'
+import {
+  customerWhatsappUrl,
+  requestGeneralWhatsappMessage,
+  requestReceivedWhatsappMessage,
+  requestReviewingWhatsappMessage,
+} from './adminWhatsapp'
 
 export type CustomRequestStatus = 'new' | 'reviewing' | 'quoted' | 'closed'
 
@@ -372,6 +377,7 @@ export default function AdminCustomRequests({
           item.id === data.request.id ? data.request : item,
         ),
       )
+      window.dispatchEvent(new Event('alimar:requests-changed'))
       setMessage(
         `${data.request.public_code} · ${statusLabels[data.request.status]}.`,
       )
@@ -386,9 +392,38 @@ export default function AdminCustomRequests({
     }
   }
 
+  function requestWhatsappContext(request: CustomRequest) {
+    return {
+      customerName: request.customer_name,
+      requestCode: request.public_code,
+      typeLabel: typeLabels[request.request_type],
+    }
+  }
+
   function whatsappUrl(request: CustomRequest) {
-    return site.whatsappUrlFor(
-      `Hola ${request.customer_name}, vimos tu Pedido Personalizado ${request.public_code} de ${typeLabels[request.request_type]}.`,
+    return (
+      customerWhatsappUrl(
+        request.customer_phone,
+        requestGeneralWhatsappMessage(requestWhatsappContext(request)),
+      ) ?? '#'
+    )
+  }
+
+  function receivedWhatsappUrl(request: CustomRequest) {
+    return (
+      customerWhatsappUrl(
+        request.customer_phone,
+        requestReceivedWhatsappMessage(requestWhatsappContext(request)),
+      ) ?? '#'
+    )
+  }
+
+  function reviewingWhatsappUrl(request: CustomRequest) {
+    return (
+      customerWhatsappUrl(
+        request.customer_phone,
+        requestReviewingWhatsappMessage(requestWhatsappContext(request)),
+      ) ?? '#'
     )
   }
 
@@ -703,8 +738,31 @@ export default function AdminCustomRequests({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    WhatsApp
+                    WhatsApp libre
                   </a>
+
+                  {selectedRequest.status === 'new' && (
+                    <a
+                      className="admin-secondary admin-whatsapp-action"
+                      href={receivedWhatsappUrl(selectedRequest)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Avisar recibido
+                    </a>
+                  )}
+
+                  {(selectedRequest.status === 'new' ||
+                    selectedRequest.status === 'reviewing') && (
+                    <a
+                      className="admin-secondary admin-whatsapp-action"
+                      href={reviewingWhatsappUrl(selectedRequest)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Avisar en revisión
+                    </a>
+                  )}
 
                   {!selectedRequest.quote_id && (
                     <button

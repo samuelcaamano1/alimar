@@ -12,6 +12,7 @@ import AdminOrdersPanel from './AdminOrdersPanel'
 import AdminCostCalculator from './AdminCostCalculator'
 import AdminCustomRequests, { type CustomRequest } from './AdminCustomRequests'
 import AdminBusinessDashboard from './AdminBusinessDashboard'
+import AdminWorkCenter from './AdminWorkCenter'
 import AdminCustomersPanel from './AdminCustomersPanel'
 import AdminCustomExamples from './AdminCustomExamples'
 import AdminCategoriesPanel from './AdminCategoriesPanel'
@@ -572,6 +573,12 @@ export default function AdminApp() {
         >
           <button
             type="button"
+            onClick={() => scrollAdminSection('.admin-work-center')}
+          >
+            Hoy
+          </button>
+          <button
+            type="button"
             onClick={() => scrollAdminSection('.admin-business-dashboard')}
           >
             Resumen
@@ -613,6 +620,7 @@ export default function AdminApp() {
             Catálogo
           </button>
         </nav>
+        <AdminWorkCenter />
 
         <AdminBusinessDashboard />
 

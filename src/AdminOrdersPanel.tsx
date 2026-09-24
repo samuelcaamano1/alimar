@@ -1,4 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  customerWhatsappUrl,
+  orderBalanceWhatsappMessage,
+  orderConfirmedWhatsappMessage,
+  orderGeneralWhatsappMessage,
+  orderProductionWhatsappMessage,
+  orderReadyWhatsappMessage,
+} from './adminWhatsapp'
 
 type OrderStatus =
   | 'new'
@@ -255,16 +263,69 @@ function dateFilterStart(filter: DateFilter) {
   return now.getTime() - days * 24 * 60 * 60 * 1000
 }
 
-function whatsappContactUrl(order: AdminOrder) {
-  const phone = order.customer_phone.replace(/\D/g, '')
-  const message = `Hola ${order.customer_name}, te escribo de Alimar por tu pedido ${order.public_code}.`
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-}
-
 function trackingUrl(order: AdminOrder) {
   return `${window.location.origin}/?pedido=${encodeURIComponent(
     order.tracking_token,
   )}`
+}
+
+function orderWhatsappContext(order: AdminOrder) {
+  return {
+    customerName: order.customer_name,
+    orderCode: order.public_code,
+    trackingUrl: trackingUrl(order),
+    productionStageLabel: productionStageLabels[order.production_stage],
+    promisedForLabel: order.promised_for
+      ? promisedTimingLabel(order.promised_for)
+      : null,
+    balanceLabel:
+      order.balance_due !== null ? money(order.balance_due) : null,
+  }
+}
+
+function whatsappContactUrl(order: AdminOrder) {
+  return (
+    customerWhatsappUrl(
+      order.customer_phone,
+      orderGeneralWhatsappMessage(orderWhatsappContext(order)),
+    ) ?? '#'
+  )
+}
+
+function confirmedWhatsappUrl(order: AdminOrder) {
+  return (
+    customerWhatsappUrl(
+      order.customer_phone,
+      orderConfirmedWhatsappMessage(orderWhatsappContext(order)),
+    ) ?? '#'
+  )
+}
+
+function productionWhatsappUrl(order: AdminOrder) {
+  return (
+    customerWhatsappUrl(
+      order.customer_phone,
+      orderProductionWhatsappMessage(orderWhatsappContext(order)),
+    ) ?? '#'
+  )
+}
+
+function readyWhatsappUrl(order: AdminOrder) {
+  return (
+    customerWhatsappUrl(
+      order.customer_phone,
+      orderReadyWhatsappMessage(orderWhatsappContext(order)),
+    ) ?? '#'
+  )
+}
+
+function balanceWhatsappUrl(order: AdminOrder) {
+  return (
+    customerWhatsappUrl(
+      order.customer_phone,
+      orderBalanceWhatsappMessage(orderWhatsappContext(order)),
+    ) ?? '#'
+  )
 }
 
 function orderSummary(order: AdminOrder) {
@@ -1180,6 +1241,70 @@ export default function AdminOrdersPanel() {
                     Copiar resumen
                   </button>
                 </div>
+
+                <section className="admin-order-whatsapp-box">
+                  <div>
+                    <span>WhatsApp operativo</span>
+                    <strong>Mensajes listos según el momento del pedido</strong>
+                  </div>
+
+                  <div className="admin-order-whatsapp-actions">
+                    <a
+                      href={whatsappContactUrl(order)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Consulta general
+                    </a>
+
+                    {order.status === 'confirmed' && (
+                      <a
+                        href={confirmedWhatsappUrl(order)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Pedido confirmado
+                      </a>
+                    )}
+
+                    {order.status !== 'cancelled' &&
+                      order.status !== 'completed' &&
+                      !['not_started', 'ready_for_delivery'].includes(
+                        order.production_stage,
+                      ) && (
+                        <a
+                          href={productionWhatsappUrl(order)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Actualizar producción
+                        </a>
+                      )}
+
+                    {(order.status === 'ready' ||
+                      order.production_stage === 'ready_for_delivery') && (
+                      <a
+                        className="is-ready"
+                        href={readyWhatsappUrl(order)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Avisar que está listo
+                      </a>
+                    )}
+
+                    {balanceDue !== null && balanceDue > 0 && (
+                      <a
+                        className="is-balance"
+                        href={balanceWhatsappUrl(order)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Recordar saldo · {money(order.balance_due)}
+                      </a>
+                    )}
+                  </div>
+                </section>
 
                 {order.customer_notes && (
                   <p className="admin-order-note">
