@@ -9217,3 +9217,46 @@
 .admin-order-file-actions .admin-order-file-approval-action {
   font-weight: 700;
 }
+
+
+/* ALIMAR APROBACIONES OPERATIVAS 1.1.7 */
+.admin-work-center-summary {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.admin-work-center-summary button.is-approval {
+  color: #684a87;
+  background: rgba(104, 74, 135, .08);
+}
+
+.admin-work-task.is-approval {
+  border-left: 3px solid #76539a;
+}
+
+.admin-order-file-actions a.admin-order-file-whatsapp {
+  font-weight: 850;
+}
+
+.admin-order-file-actions a.admin-order-file-whatsapp.is-approval {
+  color: #684a87;
+  border-color: rgba(104, 74, 135, .24);
+  background: rgba(104, 74, 135, .08);
+}
+
+.admin-order-file-actions a.admin-order-file-whatsapp.is-changes {
+  color: #8a5a2d;
+  border-color: rgba(138, 90, 45, .22);
+  background: rgba(181, 126, 62, .08);
+}
+
+@media (max-width: 1050px) {
+  .admin-work-center-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-work-center-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

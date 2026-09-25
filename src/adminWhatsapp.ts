@@ -136,3 +136,28 @@ export function orderBalanceWhatsappMessage(context: OrderWhatsappContext) {
     `Seguimiento: ${context.trackingUrl}`,
   ].join('\n')
 }
+
+
+export function orderDesignApprovalWhatsappMessage(
+  context: OrderWhatsappContext,
+  designLabel: string,
+) {
+  return [
+    `Hola ${context.customerName}, ya podés revisar el diseño "${designLabel}" de tu pedido ${context.orderCode}.`,
+    '',
+    'Desde el seguimiento podés aprobarlo o pedir cambios.',
+    `Revisar diseño: ${context.trackingUrl}`,
+  ].join('\n')
+}
+
+export function orderDesignChangesReceivedWhatsappMessage(
+  context: OrderWhatsappContext,
+  designLabel: string,
+) {
+  return [
+    `Hola ${context.customerName}, recibimos los cambios que pediste sobre el diseño "${designLabel}" de tu pedido ${context.orderCode}.`,
+    '',
+    'Los vamos a revisar y te avisamos cuando haya una nueva versión para aprobar.',
+    `Seguimiento: ${context.trackingUrl}`,
+  ].join('\n')
+}

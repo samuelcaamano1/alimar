@@ -1,4 +1,9 @@
 import { useState } from 'react'
+import {
+  customerWhatsappUrl,
+  orderDesignApprovalWhatsappMessage,
+  orderDesignChangesReceivedWhatsappMessage,
+} from './adminWhatsapp'
 
 export type AdminOrderFileKind =
   | 'reference'
@@ -74,6 +79,10 @@ async function responseMessage(response: Response) {
 
 type AdminOrderFilesProps = {
   orderId: string
+  orderCode: string
+  trackingToken: string
+  customerName: string
+  customerPhone: string
   files: AdminOrderFile[]
   disabled?: boolean
   onChanged: () => void | Promise<void>
@@ -81,6 +90,10 @@ type AdminOrderFilesProps = {
 
 export default function AdminOrderFiles({
   orderId,
+  orderCode,
+  trackingToken,
+  customerName,
+  customerPhone,
   files,
   disabled = false,
   onChanged,
@@ -91,6 +104,28 @@ export default function AdminOrderFiles({
   const [sharingId, setSharingId] = useState<string | null>(null)
   const [approvalId, setApprovalId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+
+  const customerTrackingUrl = `${window.location.origin}/?pedido=${encodeURIComponent(trackingToken)}`
+
+  function designApprovalWhatsappUrl(file: AdminOrderFile) {
+    return customerWhatsappUrl(
+      customerPhone,
+      orderDesignApprovalWhatsappMessage(
+        { customerName, orderCode, trackingUrl: customerTrackingUrl },
+        file.label,
+      ),
+    )
+  }
+
+  function designChangesWhatsappUrl(file: AdminOrderFile) {
+    return customerWhatsappUrl(
+      customerPhone,
+      orderDesignChangesReceivedWhatsappMessage(
+        { customerName, orderCode, trackingUrl: customerTrackingUrl },
+        file.label,
+      ),
+    )
+  }
 
   async function addFile() {
     if (saving || disabled) return
@@ -319,6 +354,32 @@ export default function AdminOrderFiles({
                           : 'Pedir nueva aprobación'}
                   </button>
                 )}
+                {file.kind === 'design' &&
+                  file.customer_visible &&
+                  file.approval_status === 'pending' &&
+                  designApprovalWhatsappUrl(file) && (
+                    <a
+                      className="admin-order-file-whatsapp is-approval"
+                      href={designApprovalWhatsappUrl(file) ?? undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Enviar aprobación por WhatsApp
+                    </a>
+                  )}
+                {file.kind === 'design' &&
+                  file.customer_visible &&
+                  file.approval_status === 'changes_requested' &&
+                  designChangesWhatsappUrl(file) && (
+                    <a
+                      className="admin-order-file-whatsapp is-changes"
+                      href={designChangesWhatsappUrl(file) ?? undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Confirmar cambios por WhatsApp
+                    </a>
+                  )}
                 <button
                   type="button"
                   onClick={() => void archiveFile(file)}

@@ -29,6 +29,16 @@ type ProductionPriority = 'low' | 'normal' | 'high' | 'urgent'
 
 type PaymentStatus = 'total_pending' | 'unpaid' | 'partial' | 'paid'
 
+type WorkApprovalFile = {
+  id: string
+  kind: 'reference' | 'design' | 'production' | 'print' | '3d' | 'other'
+  label: string
+  customer_visible: boolean
+  approval_status: 'not_required' | 'pending' | 'approved' | 'changes_requested'
+  approval_comment: string | null
+  approval_requested_at: string | null
+}
+
 type WorkOrder = {
   id: string
   public_code: string
@@ -39,6 +49,7 @@ type WorkOrder = {
   production_stage: ProductionStage
   balance_due: string | null
   payment_status: PaymentStatus
+  files: WorkApprovalFile[]
   created_at: string
 }
 
@@ -51,11 +62,11 @@ type WorkCenterResponse = {
 type WorkTask = {
   key: string
   score: number
-  kind: 'SOL' | 'PRE' | 'PED' | 'COBRO'
+  kind: 'SOL' | 'PRE' | 'PED' | 'COBRO' | 'APROB'
   title: string
   detail: string
   meta: string
-  tone: 'danger' | 'today' | 'info' | 'money'
+  tone: 'danger' | 'today' | 'info' | 'money' | 'approval'
   target: '.admin-custom-requests' | '.admin-cost-calculator' | '.admin-orders-panel'
   orderId?: string
 }
@@ -231,6 +242,7 @@ export default function AdminWorkCenter() {
       'alimar:production-stage-changed',
       'alimar:quote-metrics-changed',
       'alimar:requests-changed',
+      'alimar:order-files-changed',
     ]
 
     for (const eventName of events) {
@@ -275,12 +287,28 @@ export default function AdminWorkCenter() {
       return balance !== null && balance > 0 ? total + balance : total
     }, 0)
 
+    const approvalFiles = data.orders.flatMap((order) =>
+      (order.files ?? []).filter(
+        (file) =>
+          order.status !== 'cancelled' &&
+          file.kind === 'design' &&
+          file.customer_visible &&
+          (file.approval_status === 'pending' ||
+            file.approval_status === 'changes_requested'),
+      ),
+    )
+    const approvalChanges = approvalFiles.filter(
+      (file) => file.approval_status === 'changes_requested',
+    ).length
+
     return {
       requestsAttention: requestsAttention.length,
       draftQuotes: draftQuotes.length,
       activeOrders: activeOrders.length,
       todayOrders: todayOrders.length,
       overdueOrders: overdueOrders.length,
+      approvalAttention: approvalFiles.length,
+      approvalChanges,
       pendingBalance,
     }
   }, [data, today])
@@ -317,6 +345,42 @@ export default function AdminWorkCenter() {
           target: '.admin-orders-panel',
           orderId: order.id,
         })
+      }
+    }
+
+    for (const order of data.orders) {
+      if (order.status === 'cancelled') continue
+
+      for (const file of order.files ?? []) {
+        if (file.kind !== 'design' || !file.customer_visible) continue
+
+        if (file.approval_status === 'changes_requested') {
+          next.push({
+            key: `approval-changes-${order.id}-${file.id}`,
+            score: 0.5,
+            kind: 'APROB',
+            title: `${order.public_code}: cliente pidió cambios`,
+            detail: `${order.customer_name} · ${file.label}`,
+            meta: file.approval_comment
+              ? file.approval_comment.slice(0, 90)
+              : 'Abrir el PED y revisar la devolución',
+            tone: 'danger',
+            target: '.admin-orders-panel',
+            orderId: order.id,
+          })
+        } else if (file.approval_status === 'pending') {
+          next.push({
+            key: `approval-pending-${order.id}-${file.id}`,
+            score: 4.5,
+            kind: 'APROB',
+            title: `${order.public_code}: diseño esperando aprobación`,
+            detail: `${order.customer_name} · ${file.label}`,
+            meta: 'Podés enviar o reenviar el link por WhatsApp desde el PED',
+            tone: 'approval',
+            target: '.admin-orders-panel',
+            orderId: order.id,
+          })
+        }
       }
     }
 
@@ -515,6 +579,24 @@ export default function AdminWorkCenter() {
           <span>Producción</span>
           <strong>{summary.activeOrders}</strong>
           <small>PED activos</small>
+        </button>
+
+        <button
+          type="button"
+          className={summary.approvalAttention > 0 ? 'is-approval' : ''}
+          onClick={() =>
+            document
+              .querySelector('.admin-orders-panel')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        >
+          <span>Aprobaciones</span>
+          <strong>{summary.approvalAttention}</strong>
+          <small>
+            {summary.approvalChanges > 0
+              ? `${summary.approvalChanges} con cambios`
+              : 'diseños por revisar'}
+          </small>
         </button>
 
         <button

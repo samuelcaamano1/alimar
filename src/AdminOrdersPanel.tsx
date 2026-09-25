@@ -1310,6 +1310,10 @@ export default function AdminOrdersPanel() {
 
                 <AdminOrderFiles
                   orderId={order.id}
+                  orderCode={order.public_code}
+                  trackingToken={order.tracking_token}
+                  customerName={order.customer_name}
+                  customerPhone={order.customer_phone}
                   files={order.files}
                   disabled={order.status === 'cancelled'}
                   onChanged={() => loadOrders()}
