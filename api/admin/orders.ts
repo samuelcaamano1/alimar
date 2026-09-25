@@ -16,6 +16,7 @@ import {
   archiveOrderFile,
   createOrderFile,
   listRecentOrderFiles,
+  setOrderFileVisibility,
   type AdminOrderFile,
 } from '../_lib/order-files.js'
 import {
@@ -491,6 +492,10 @@ export async function PATCH(request: Request) {
 
   if (requestUrl.searchParams.get('action') === 'payment-void') {
     return voidOrderPayment(databaseUrl, body)
+  }
+
+  if (requestUrl.searchParams.get('action') === 'file-visibility') {
+    return setOrderFileVisibility(databaseUrl, body)
   }
 
   if (requestUrl.searchParams.get('action') === 'file-archive') {

@@ -27,6 +27,20 @@ type TrackingItem = {
   quantity: number
 }
 
+type TrackingFileKind =
+  | 'reference'
+  | 'design'
+  | 'production'
+  | 'print'
+  | '3d'
+  | 'other'
+
+type TrackingFile = {
+  kind: TrackingFileKind
+  label: string
+  url: string
+}
+
 type PublicTrackingOrder = {
   orderCode: string
   status: TrackingStatus
@@ -37,6 +51,7 @@ type PublicTrackingOrder = {
   paymentStatus: PaymentStatus
   updatedAt: string
   items: TrackingItem[]
+  files: TrackingFile[]
 }
 
 const steps = [
@@ -82,6 +97,15 @@ const paymentLabels: Record<PaymentStatus, string> = {
   unpaid: 'Pendiente de pago',
   partial: 'Pago parcial',
   paid: 'Pagado',
+}
+
+const fileKindLabels: Record<TrackingFileKind, string> = {
+  reference: 'Referencia',
+  design: 'Diseño',
+  production: 'Producción',
+  print: 'Archivo para imprimir',
+  '3d': 'Archivo 3D',
+  other: 'Archivo',
 }
 
 function currentStep(order: PublicTrackingOrder) {
@@ -447,6 +471,36 @@ export default function PublicOrderTracking({ token }: { token: string }) {
                 )}
               </div>
             </section>
+
+            {order.files.length > 0 && (
+              <section className="tracking-files">
+                <div className="tracking-files-heading">
+                  <div>
+                    <span>Archivos compartidos</span>
+                    <strong>Material disponible para tu pedido</strong>
+                  </div>
+                  <small>Alimar comparte acá sólo los archivos habilitados para vos.</small>
+                </div>
+
+                <div className="tracking-files-list">
+                  {order.files.map((file) => (
+                    <article key={file.url}>
+                      <div>
+                        <span>{fileKindLabels[file.kind]}</span>
+                        <strong>{file.label}</strong>
+                      </div>
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        Abrir archivo ↗
+                      </a>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section className="tracking-help">
               <div>

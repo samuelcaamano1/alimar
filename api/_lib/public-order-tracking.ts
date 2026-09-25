@@ -10,6 +10,21 @@ type TrackingItem = {
   quantity: number
 }
 
+type TrackingFile = {
+  kind: 'reference' | 'design' | 'production' | 'print' | '3d' | 'other'
+  label: string
+  url: string
+}
+
+const TRACKING_FILE_KINDS = new Set([
+  'reference',
+  'design',
+  'production',
+  'print',
+  '3d',
+  'other',
+])
+
 function phoneDigits(value: unknown) {
   return typeof value === 'string' ? value.replace(/\D/g, '') : ''
 }
@@ -39,6 +54,34 @@ function formatTrackingRow(row: Record<string, unknown>) {
       })
     : []
 
+  const files = Array.isArray(row.files)
+    ? row.files.flatMap((entry): TrackingFile[] => {
+        if (!entry || typeof entry !== 'object') return []
+
+        const file = entry as Record<string, unknown>
+        const kind = typeof file.kind === 'string' ? file.kind : ''
+        const label = typeof file.label === 'string' ? file.label.trim() : ''
+        const rawUrl = typeof file.url === 'string' ? file.url : ''
+
+        if (!TRACKING_FILE_KINDS.has(kind) || !label || !rawUrl) return []
+
+        try {
+          const url = new URL(rawUrl)
+          if (url.protocol !== 'https:') return []
+
+          return [
+            {
+              kind: kind as TrackingFile['kind'],
+              label,
+              url: url.toString(),
+            },
+          ]
+        } catch {
+          return []
+        }
+      })
+    : []
+
   return {
     orderCode: String(row.public_code ?? ''),
     status: String(row.status ?? 'new'),
@@ -55,6 +98,7 @@ function formatTrackingRow(row: Record<string, unknown>) {
     paymentStatus: String(row.payment_status ?? 'total_pending'),
     updatedAt: String(row.updated_at ?? ''),
     items,
+    files,
   }
 }
 
@@ -123,7 +167,21 @@ async function selectPublicOrderTracking(
         )
         FROM order_items i
         WHERE i.order_id = o.id
-      ), '[]'::jsonb) AS items
+      ), '[]'::jsonb) AS items,
+      COALESCE((
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'kind', f.kind,
+            'label', f.label,
+            'url', f.url
+          )
+          ORDER BY f.created_at DESC
+        )
+        FROM order_files f
+        WHERE f.order_id = o.id
+          AND f.archived_at IS NULL
+          AND f.customer_visible IS TRUE
+      ), '[]'::jsonb) AS files
     FROM orders o
     WHERE o.public_tracking_token = ${token}::uuid
     LIMIT 1

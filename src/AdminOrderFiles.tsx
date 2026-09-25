@@ -15,6 +15,7 @@ export type AdminOrderFile = {
   label: string
   url: string
   note: string | null
+  customer_visible: boolean
   created_at: string
 }
 
@@ -76,6 +77,7 @@ export default function AdminOrderFiles({
   const [draft, setDraft] = useState<FileDraft>(emptyDraft)
   const [saving, setSaving] = useState(false)
   const [archivingId, setArchivingId] = useState<string | null>(null)
+  const [sharingId, setSharingId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
   async function addFile() {
@@ -122,6 +124,39 @@ export default function AdminOrderFiles({
       )
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function setVisibility(file: AdminOrderFile, visible: boolean) {
+    if (sharingId || disabled) return
+
+    setSharingId(file.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=file-visibility', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          fileId: file.id,
+          visible,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      setMessage(visible ? 'Archivo visible para el cliente.' : 'Archivo oculto para el cliente.')
+      await onChanged()
+      window.dispatchEvent(new Event('alimar:order-files-changed'))
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cambiar la visibilidad del archivo.',
+      )
+    } finally {
+      setSharingId(null)
     }
   }
 
@@ -177,6 +212,13 @@ export default function AdminOrderFiles({
                 <span>{kindLabels[file.kind]}</span>
                 <strong>{file.label}</strong>
                 {file.note && <p>{file.note}</p>}
+                <small
+                  className={`admin-order-file-visibility ${
+                    file.customer_visible ? 'is-shared' : 'is-private'
+                  }`}
+                >
+                  {file.customer_visible ? 'Visible para cliente' : 'Sólo interno'}
+                </small>
                 <small>Agregado {dateTime(file.created_at)}</small>
               </div>
 
@@ -188,6 +230,18 @@ export default function AdminOrderFiles({
                 >
                   Abrir ↗
                 </a>
+                <button
+                  type="button"
+                  className={file.customer_visible ? 'is-shared' : ''}
+                  onClick={() => void setVisibility(file, !file.customer_visible)}
+                  disabled={disabled || sharingId === file.id}
+                >
+                  {sharingId === file.id
+                    ? 'Guardando…'
+                    : file.customer_visible
+                      ? 'Ocultar del cliente'
+                      : 'Compartir con cliente'}
+                </button>
                 <button
                   type="button"
                   onClick={() => void archiveFile(file)}

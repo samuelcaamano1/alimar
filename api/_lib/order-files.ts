@@ -19,6 +19,7 @@ export type AdminOrderFile = {
   label: string
   url: string
   note: string | null
+  customer_visible: boolean
   created_at: string
 }
 
@@ -50,6 +51,7 @@ export async function listRecentOrderFiles(databaseUrl: string) {
       f.label,
       f.url,
       f.note,
+      f.customer_visible,
       f.created_at::text
     FROM order_files f
     WHERE f.archived_at IS NULL
@@ -142,6 +144,7 @@ export async function createOrderFile(
           label,
           url,
           note,
+          customer_visible,
           created_at::text
       `,
       sql`
@@ -244,6 +247,100 @@ export async function archiveOrderFile(
   } catch {
     return Response.json(
       { error: 'No se pudo archivar el archivo.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+
+export async function setOrderFileVisibility(
+  databaseUrl: string,
+  body: Record<string, unknown>,
+) {
+  const orderId = text(body.orderId, 40)
+  const fileId = text(body.fileId, 40)
+  const visible = body.visible
+
+  if (!UUID_RE.test(orderId) || !UUID_RE.test(fileId)) {
+    return Response.json({ error: 'Archivo inválido.' }, { status: 400 })
+  }
+
+  if (typeof visible !== 'boolean') {
+    return Response.json(
+      { error: 'Visibilidad inválida.' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+
+    const rows = await sql`
+      SELECT
+        f.label,
+        f.customer_visible,
+        o.status
+      FROM order_files f
+      JOIN orders o ON o.id = f.order_id
+      WHERE f.id = ${fileId}::uuid
+        AND f.order_id = ${orderId}::uuid
+        AND f.archived_at IS NULL
+      LIMIT 1
+    `
+
+    if (rows.length === 0) {
+      return Response.json({ error: 'Archivo no encontrado.' }, { status: 404 })
+    }
+
+    const currentVisible = Boolean(rows[0].customer_visible)
+    if (currentVisible === visible) {
+      return Response.json(
+        { ok: true, unchanged: true, customerVisible: visible },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const status = String(rows[0].status)
+    const label = String(rows[0].label)
+    const eventNote = visible
+      ? `Archivo compartido con cliente: ${label}`
+      : `Archivo ocultado del cliente: ${label}`
+
+    await sql.transaction([
+      sql`
+        UPDATE order_files
+        SET
+          customer_visible = ${visible},
+          updated_at = now()
+        WHERE id = ${fileId}::uuid
+          AND order_id = ${orderId}::uuid
+          AND archived_at IS NULL
+      `,
+      sql`
+        INSERT INTO order_events (
+          order_id,
+          event_type,
+          from_status,
+          to_status,
+          note
+        )
+        VALUES (
+          ${orderId}::uuid,
+          'file_visibility_changed',
+          ${status},
+          ${status},
+          ${eventNote}
+        )
+      `,
+    ])
+
+    return Response.json(
+      { ok: true, customerVisible: visible },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudo cambiar la visibilidad del archivo.' },
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }

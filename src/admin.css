@@ -9165,3 +9165,28 @@
     flex: 1 1 120px;
   }
 }
+
+
+/* ALIMAR VISIBILIDAD ARCHIVOS 1.1.5 */
+.admin-order-file-visibility {
+  width: max-content;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 850;
+}
+
+.admin-order-file-visibility.is-shared {
+  color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, .13);
+}
+
+.admin-order-file-visibility.is-private {
+  color: var(--admin-muted);
+  background: rgba(12, 16, 20, .05);
+}
+
+.admin-order-file-actions button.is-shared {
+  color: var(--admin-blue-dark);
+  border-color: rgba(63, 120, 138, .25);
+  background: rgba(100, 175, 198, .12);
+}
