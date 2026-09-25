@@ -20,6 +20,10 @@ export type AdminOrderFile = {
   url: string
   note: string | null
   customer_visible: boolean
+  approval_status: 'not_required' | 'pending' | 'approved' | 'changes_requested'
+  approval_comment: string | null
+  approval_requested_at: string | null
+  approval_responded_at: string | null
   created_at: string
 }
 
@@ -52,6 +56,10 @@ export async function listRecentOrderFiles(databaseUrl: string) {
       f.url,
       f.note,
       f.customer_visible,
+      f.approval_status,
+      f.approval_comment,
+      f.approval_requested_at::text,
+      f.approval_responded_at::text,
       f.created_at::text
     FROM order_files f
     WHERE f.archived_at IS NULL
@@ -145,6 +153,10 @@ export async function createOrderFile(
           url,
           note,
           customer_visible,
+          approval_status,
+          approval_comment,
+          approval_requested_at::text,
+          approval_responded_at::text,
           created_at::text
       `,
       sql`
@@ -341,6 +353,99 @@ export async function setOrderFileVisibility(
   } catch {
     return Response.json(
       { error: 'No se pudo cambiar la visibilidad del archivo.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+
+export async function requestOrderFileApproval(
+  databaseUrl: string,
+  body: Record<string, unknown>,
+) {
+  const orderId = text(body.orderId, 40)
+  const fileId = text(body.fileId, 40)
+
+  if (!UUID_RE.test(orderId) || !UUID_RE.test(fileId)) {
+    return Response.json({ error: 'Archivo inválido.' }, { status: 400 })
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+
+    const rows = await sql`
+      SELECT
+        f.kind,
+        f.label,
+        f.customer_visible,
+        o.status
+      FROM order_files f
+      JOIN orders o ON o.id = f.order_id
+      WHERE f.id = ${fileId}::uuid
+        AND f.order_id = ${orderId}::uuid
+        AND f.archived_at IS NULL
+      LIMIT 1
+    `
+
+    if (rows.length === 0) {
+      return Response.json({ error: 'Archivo no encontrado.' }, { status: 404 })
+    }
+
+    if (String(rows[0].kind) !== 'design') {
+      return Response.json(
+        { error: 'Sólo los archivos de tipo Diseño pueden pedir aprobación.' },
+        { status: 409 },
+      )
+    }
+
+    if (!Boolean(rows[0].customer_visible)) {
+      return Response.json(
+        { error: 'Compartí el diseño con el cliente antes de pedir aprobación.' },
+        { status: 409 },
+      )
+    }
+
+    const status = String(rows[0].status)
+    const label = String(rows[0].label)
+
+    await sql.transaction([
+      sql`
+        UPDATE order_files
+        SET
+          approval_status = 'pending',
+          approval_comment = NULL,
+          approval_requested_at = now(),
+          approval_responded_at = NULL,
+          updated_at = now()
+        WHERE id = ${fileId}::uuid
+          AND order_id = ${orderId}::uuid
+          AND archived_at IS NULL
+      `,
+      sql`
+        INSERT INTO order_events (
+          order_id,
+          event_type,
+          from_status,
+          to_status,
+          note
+        )
+        VALUES (
+          ${orderId}::uuid,
+          'file_approval_requested',
+          ${status},
+          ${status},
+          ${`Aprobación solicitada al cliente: ${label}`}
+        )
+      `,
+    ])
+
+    return Response.json(
+      { ok: true, approvalStatus: 'pending' },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudo solicitar la aprobación del diseño.' },
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }

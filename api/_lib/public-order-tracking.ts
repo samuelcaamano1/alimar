@@ -10,11 +10,29 @@ type TrackingItem = {
   quantity: number
 }
 
+type TrackingApprovalStatus =
+  | 'not_required'
+  | 'pending'
+  | 'approved'
+  | 'changes_requested'
+
 type TrackingFile = {
+  id: string
   kind: 'reference' | 'design' | 'production' | 'print' | '3d' | 'other'
   label: string
   url: string
+  approvalStatus: TrackingApprovalStatus
+  approvalComment: string | null
+  approvalRequestedAt: string | null
+  approvalRespondedAt: string | null
 }
+
+const TRACKING_APPROVAL_STATUSES = new Set([
+  'not_required',
+  'pending',
+  'approved',
+  'changes_requested',
+])
 
 const TRACKING_FILE_KINDS = new Set([
   'reference',
@@ -59,11 +77,22 @@ function formatTrackingRow(row: Record<string, unknown>) {
         if (!entry || typeof entry !== 'object') return []
 
         const file = entry as Record<string, unknown>
+        const id = typeof file.id === 'string' ? file.id : ''
         const kind = typeof file.kind === 'string' ? file.kind : ''
         const label = typeof file.label === 'string' ? file.label.trim() : ''
         const rawUrl = typeof file.url === 'string' ? file.url : ''
+        const approvalStatusRaw =
+          typeof file.approvalStatus === 'string'
+            ? file.approvalStatus
+            : 'not_required'
 
-        if (!TRACKING_FILE_KINDS.has(kind) || !label || !rawUrl) return []
+        if (
+          !UUID_RE.test(id) ||
+          !TRACKING_FILE_KINDS.has(kind) ||
+          !label ||
+          !rawUrl ||
+          !TRACKING_APPROVAL_STATUSES.has(approvalStatusRaw)
+        ) return []
 
         try {
           const url = new URL(rawUrl)
@@ -71,9 +100,23 @@ function formatTrackingRow(row: Record<string, unknown>) {
 
           return [
             {
+              id,
               kind: kind as TrackingFile['kind'],
               label,
               url: url.toString(),
+              approvalStatus: approvalStatusRaw as TrackingApprovalStatus,
+              approvalComment:
+                typeof file.approvalComment === 'string'
+                  ? file.approvalComment.slice(0, 500)
+                  : null,
+              approvalRequestedAt:
+                typeof file.approvalRequestedAt === 'string'
+                  ? file.approvalRequestedAt
+                  : null,
+              approvalRespondedAt:
+                typeof file.approvalRespondedAt === 'string'
+                  ? file.approvalRespondedAt
+                  : null,
             },
           ]
         } catch {
@@ -171,9 +214,14 @@ async function selectPublicOrderTracking(
       COALESCE((
         SELECT jsonb_agg(
           jsonb_build_object(
+            'id', f.id::text,
             'kind', f.kind,
             'label', f.label,
-            'url', f.url
+            'url', f.url,
+            'approvalStatus', f.approval_status,
+            'approvalComment', f.approval_comment,
+            'approvalRequestedAt', f.approval_requested_at::text,
+            'approvalRespondedAt', f.approval_responded_at::text
           )
           ORDER BY f.created_at DESC
         )
@@ -293,6 +341,132 @@ export async function lookupPublicOrderTracking(
   } catch {
     return Response.json(
       { error: 'No pudimos consultar el seguimiento.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+
+export async function respondPublicOrderFileApproval(
+  databaseUrl: string,
+  body: Record<string, unknown>,
+) {
+  const token = typeof body.token === 'string' ? body.token.trim() : ''
+  const fileId = typeof body.fileId === 'string' ? body.fileId.trim() : ''
+  const decision =
+    body.decision === 'approved' || body.decision === 'changes_requested'
+      ? body.decision
+      : ''
+  const comment =
+    typeof body.comment === 'string' ? body.comment.trim().slice(0, 500) : ''
+
+  if (!UUID_RE.test(token) || !UUID_RE.test(fileId)) {
+    return Response.json(
+      { error: 'La solicitud de aprobación no es válida.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  if (!decision) {
+    return Response.json(
+      { error: 'Elegí aprobar el diseño o pedir cambios.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  if (decision === 'changes_requested' && !comment) {
+    return Response.json(
+      { error: 'Contanos qué cambios necesitás.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+
+    const rows = await sql`
+      SELECT
+        f.order_id::text,
+        f.label,
+        f.approval_status,
+        o.status
+      FROM order_files f
+      JOIN orders o ON o.id = f.order_id
+      WHERE f.id = ${fileId}::uuid
+        AND o.public_tracking_token = ${token}::uuid
+        AND f.kind = 'design'
+        AND f.customer_visible IS TRUE
+        AND f.archived_at IS NULL
+      LIMIT 1
+    `
+
+    if (rows.length === 0) {
+      return Response.json(
+        { error: 'No encontramos este diseño para aprobación.' },
+        { status: 404, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    if (String(rows[0].approval_status) !== 'pending') {
+      return Response.json(
+        { error: 'Esta aprobación ya fue respondida o ya no está pendiente.' },
+        { status: 409, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const orderId = String(rows[0].order_id)
+    const orderStatus = String(rows[0].status)
+    const label = String(rows[0].label)
+    const eventType =
+      decision === 'approved' ? 'file_approved' : 'file_changes_requested'
+    const eventNote = [
+      decision === 'approved'
+        ? `Diseño aprobado por el cliente: ${label}`
+        : `Cambios solicitados por el cliente: ${label}`,
+      comment,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+      .slice(0, 300)
+
+    await sql.transaction([
+      sql`
+        UPDATE order_files
+        SET
+          approval_status = ${decision},
+          approval_comment = ${comment || null},
+          approval_responded_at = now(),
+          updated_at = now()
+        WHERE id = ${fileId}::uuid
+          AND order_id = ${orderId}::uuid
+          AND approval_status = 'pending'
+          AND archived_at IS NULL
+      `,
+      sql`
+        INSERT INTO order_events (
+          order_id,
+          event_type,
+          from_status,
+          to_status,
+          note
+        )
+        VALUES (
+          ${orderId}::uuid,
+          ${eventType},
+          ${orderStatus},
+          ${orderStatus},
+          ${eventNote}
+        )
+      `,
+    ])
+
+    return Response.json(
+      { ok: true, approvalStatus: decision },
+      { headers: { 'Cache-Control': 'private, no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No pudimos guardar tu respuesta de aprobación.' },
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }

@@ -16,6 +16,10 @@ export type AdminOrderFile = {
   url: string
   note: string | null
   customer_visible: boolean
+  approval_status: 'not_required' | 'pending' | 'approved' | 'changes_requested'
+  approval_comment: string | null
+  approval_requested_at: string | null
+  approval_responded_at: string | null
   created_at: string
 }
 
@@ -24,6 +28,13 @@ type FileDraft = {
   label: string
   url: string
   note: string
+}
+
+const approvalLabels: Record<AdminOrderFile['approval_status'], string> = {
+  not_required: 'Sin aprobación solicitada',
+  pending: 'Esperando respuesta del cliente',
+  approved: 'Aprobado por el cliente',
+  changes_requested: 'Cliente pidió cambios',
 }
 
 const kindLabels: Record<AdminOrderFileKind, string> = {
@@ -78,6 +89,7 @@ export default function AdminOrderFiles({
   const [saving, setSaving] = useState(false)
   const [archivingId, setArchivingId] = useState<string | null>(null)
   const [sharingId, setSharingId] = useState<string | null>(null)
+  const [approvalId, setApprovalId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
   async function addFile() {
@@ -160,6 +172,35 @@ export default function AdminOrderFiles({
     }
   }
 
+  async function requestApproval(file: AdminOrderFile) {
+    if (approvalId || disabled) return
+
+    setApprovalId(file.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=file-approval-request', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, fileId: file.id }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      setMessage('Aprobación solicitada al cliente.')
+      await onChanged()
+      window.dispatchEvent(new Event('alimar:order-files-changed'))
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo solicitar la aprobación.',
+      )
+    } finally {
+      setApprovalId(null)
+    }
+  }
+
   async function archiveFile(file: AdminOrderFile) {
     if (archivingId || disabled) return
 
@@ -219,6 +260,22 @@ export default function AdminOrderFiles({
                 >
                   {file.customer_visible ? 'Visible para cliente' : 'Sólo interno'}
                 </small>
+                {file.kind === 'design' && (
+                  <div
+                    className={`admin-order-file-approval is-${file.approval_status}`}
+                  >
+                    <strong>{approvalLabels[file.approval_status]}</strong>
+                    {file.approval_comment && (
+                      <p>Cliente: {file.approval_comment}</p>
+                    )}
+                    {file.approval_requested_at && (
+                      <small>Solicitada {dateTime(file.approval_requested_at)}</small>
+                    )}
+                    {file.approval_responded_at && (
+                      <small>Respondida {dateTime(file.approval_responded_at)}</small>
+                    )}
+                  </div>
+                )}
                 <small>Agregado {dateTime(file.created_at)}</small>
               </div>
 
@@ -242,6 +299,26 @@ export default function AdminOrderFiles({
                       ? 'Ocultar del cliente'
                       : 'Compartir con cliente'}
                 </button>
+                {file.kind === 'design' && file.customer_visible && (
+                  <button
+                    type="button"
+                    className="admin-order-file-approval-action"
+                    onClick={() => void requestApproval(file)}
+                    disabled={
+                      disabled ||
+                      approvalId === file.id ||
+                      file.approval_status === 'pending'
+                    }
+                  >
+                    {approvalId === file.id
+                      ? 'Solicitando…'
+                      : file.approval_status === 'pending'
+                        ? 'Aprobación pendiente'
+                        : file.approval_status === 'not_required'
+                          ? 'Pedir aprobación'
+                          : 'Pedir nueva aprobación'}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => void archiveFile(file)}

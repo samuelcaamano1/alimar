@@ -5,6 +5,7 @@ import { acceptPublicQuote } from './_lib/public-quotes.js'
 import {
   getPublicOrderTracking,
   lookupPublicOrderTracking,
+  respondPublicOrderFileApproval,
 } from './_lib/public-order-tracking.js'
 import {
   enforceRateLimit,
@@ -195,7 +196,13 @@ export async function POST(request: Request) {
   }
 
   const rateLimitOptions =
-    action === 'tracking-lookup'
+    action === 'file-approval'
+      ? {
+          scope: 'public-order-file-approval',
+          limit: 20,
+          windowSeconds: 10 * 60,
+        }
+      : action === 'tracking-lookup'
       ? {
           scope: 'public-order-tracking-lookup',
           limit: 20,
@@ -226,6 +233,21 @@ export async function POST(request: Request) {
   )
 
   if (rateLimitError) return rateLimitError
+
+  if (action === 'file-approval') {
+    let body: Record<string, unknown>
+
+    try {
+      body = (await request.json()) as Record<string, unknown>
+    } catch {
+      return Response.json(
+        { error: 'Solicitud inválida.' },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    return respondPublicOrderFileApproval(rateDatabaseUrl, body)
+  }
 
   if (action === 'tracking-lookup') {
     let body: Record<string, unknown>

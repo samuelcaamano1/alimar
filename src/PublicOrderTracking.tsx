@@ -27,6 +27,12 @@ type TrackingItem = {
   quantity: number
 }
 
+type TrackingApprovalStatus =
+  | 'not_required'
+  | 'pending'
+  | 'approved'
+  | 'changes_requested'
+
 type TrackingFileKind =
   | 'reference'
   | 'design'
@@ -36,9 +42,14 @@ type TrackingFileKind =
   | 'other'
 
 type TrackingFile = {
+  id: string
   kind: TrackingFileKind
   label: string
   url: string
+  approvalStatus: TrackingApprovalStatus
+  approvalComment: string | null
+  approvalRequestedAt: string | null
+  approvalRespondedAt: string | null
 }
 
 type PublicTrackingOrder = {
@@ -97,6 +108,13 @@ const paymentLabels: Record<PaymentStatus, string> = {
   unpaid: 'Pendiente de pago',
   partial: 'Pago parcial',
   paid: 'Pagado',
+}
+
+const approvalStatusLabels: Record<TrackingApprovalStatus, string> = {
+  not_required: 'Sin aprobación requerida',
+  pending: 'Esperando tu aprobación',
+  approved: 'Aprobado',
+  changes_requested: 'Cambios solicitados',
 }
 
 const fileKindLabels: Record<TrackingFileKind, string> = {
@@ -186,6 +204,8 @@ export default function PublicOrderTracking({ token }: { token: string }) {
   )
   const [message, setMessage] = useState('')
   const [lookupBusy, setLookupBusy] = useState(false)
+  const [approvalBusyId, setApprovalBusyId] = useState<string | null>(null)
+  const [approvalComments, setApprovalComments] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!activeToken) {
@@ -282,6 +302,60 @@ export default function PublicOrderTracking({ token }: { token: string }) {
       setState('error')
     } finally {
       setLookupBusy(false)
+    }
+  }
+
+  async function respondToDesign(
+    file: TrackingFile,
+    decision: 'approved' | 'changes_requested',
+  ) {
+    if (!activeToken || approvalBusyId) return
+
+    const comment = (approvalComments[file.id] ?? '').trim()
+    if (decision === 'changes_requested' && !comment) {
+      setMessage('Contanos qué cambios necesitás antes de enviar la solicitud.')
+      return
+    }
+
+    setApprovalBusyId(file.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/orders?action=file-approval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: activeToken,
+          fileId: file.id,
+          decision,
+          comment,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      const refresh = await fetch(
+        `/api/orders?action=tracking&token=${encodeURIComponent(activeToken)}`,
+        { cache: 'no-store' },
+      )
+      if (!refresh.ok) throw new Error(await responseMessage(refresh))
+
+      const data = (await refresh.json()) as { order: PublicTrackingOrder }
+      setOrder(data.order)
+      setApprovalComments((current) => ({ ...current, [file.id]: '' }))
+      setMessage(
+        decision === 'approved'
+          ? 'Gracias. Registramos tu aprobación.'
+          : 'Registramos los cambios que necesitás.',
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No pudimos guardar tu respuesta.',
+      )
+    } finally {
+      setApprovalBusyId(null)
     }
   }
 
@@ -484,22 +558,87 @@ export default function PublicOrderTracking({ token }: { token: string }) {
 
                 <div className="tracking-files-list">
                   {order.files.map((file) => (
-                    <article key={file.url}>
-                      <div>
+                    <article key={file.id}>
+                      <div className="tracking-file-main">
                         <span>{fileKindLabels[file.kind]}</span>
                         <strong>{file.label}</strong>
+
+                        {file.kind === 'design' &&
+                          file.approvalStatus !== 'not_required' && (
+                            <div
+                              className={`tracking-file-approval is-${file.approvalStatus}`}
+                            >
+                              <strong>{approvalStatusLabels[file.approvalStatus]}</strong>
+                              {file.approvalComment && (
+                                <p>{file.approvalComment}</p>
+                              )}
+                            </div>
+                          )}
                       </div>
-                      <a
-                        href={file.url}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                      >
-                        Abrir archivo ↗
-                      </a>
+
+                      <div className="tracking-file-actions">
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
+                          Abrir archivo ↗
+                        </a>
+
+                        {file.kind === 'design' &&
+                          file.approvalStatus === 'pending' && (
+                            <div className="tracking-file-approval-form">
+                              <label>
+                                Comentario opcional al aprobar; obligatorio si pedís cambios
+                                <textarea
+                                  value={approvalComments[file.id] ?? ''}
+                                  maxLength={500}
+                                  placeholder="Ej. Cambiar el color del nombre y agrandar el logo"
+                                  onChange={(event) =>
+                                    setApprovalComments((current) => ({
+                                      ...current,
+                                      [file.id]: event.target.value,
+                                    }))
+                                  }
+                                  disabled={approvalBusyId === file.id}
+                                />
+                              </label>
+
+                              <div>
+                                <button
+                                  type="button"
+                                  className="button button-primary"
+                                  onClick={() => void respondToDesign(file, 'approved')}
+                                  disabled={approvalBusyId === file.id}
+                                >
+                                  {approvalBusyId === file.id
+                                    ? 'Guardando…'
+                                    : 'Aprobar diseño'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="button button-secondary"
+                                  onClick={() =>
+                                    void respondToDesign(file, 'changes_requested')
+                                  }
+                                  disabled={approvalBusyId === file.id}
+                                >
+                                  Pedir cambios
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                      </div>
                     </article>
                   ))}
                 </div>
               </section>
+            )}
+
+            {message && (
+              <div className="tracking-feedback" role="status">
+                {message}
+              </div>
             )}
 
             <section className="tracking-help">

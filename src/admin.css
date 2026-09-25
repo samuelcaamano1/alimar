@@ -9190,3 +9190,30 @@
   border-color: rgba(63, 120, 138, .25);
   background: rgba(100, 175, 198, .12);
 }
+
+
+/* ALIMAR APROBACION DISENO 1.1.6 */
+.admin-order-file-approval {
+  display: grid;
+  gap: 3px;
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: rgba(12, 16, 20, .045);
+}
+
+.admin-order-file-approval.is-approved {
+  background: rgba(36, 122, 78, .10);
+}
+
+.admin-order-file-approval.is-changes_requested {
+  background: rgba(178, 91, 39, .10);
+}
+
+.admin-order-file-approval p {
+  margin: 0;
+}
+
+.admin-order-file-actions .admin-order-file-approval-action {
+  font-weight: 700;
+}

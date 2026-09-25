@@ -3876,3 +3876,75 @@
     box-sizing: border-box;
   }
 }
+
+
+/* ALIMAR APROBACION DISENO 1.1.6 */
+.tracking-feedback {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(36, 122, 78, .10);
+  font-weight: 700;
+}
+
+.tracking-file-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tracking-file-actions {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.tracking-file-approval {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(12, 16, 20, .045);
+}
+
+.tracking-file-approval.is-approved {
+  background: rgba(36, 122, 78, .10);
+}
+
+.tracking-file-approval.is-changes_requested {
+  background: rgba(178, 91, 39, .10);
+}
+
+.tracking-file-approval p {
+  margin: 0;
+}
+
+.tracking-file-approval-form {
+  width: min(440px, 100%);
+  display: grid;
+  gap: 8px;
+}
+
+.tracking-file-approval-form label {
+  display: grid;
+  gap: 5px;
+  font-size: .82rem;
+}
+
+.tracking-file-approval-form textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+}
+
+.tracking-file-approval-form > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .tracking-file-actions {
+    justify-items: stretch;
+  }
+}
