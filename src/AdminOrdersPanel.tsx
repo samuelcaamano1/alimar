@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import AdminOrderFiles, { type AdminOrderFile } from './AdminOrderFiles'
 import {
   customerWhatsappUrl,
   orderBalanceWhatsappMessage,
@@ -61,6 +62,7 @@ type AdminOrder = {
   balance_due: string | null
   payment_status: PaymentStatus
   payments: AdminOrderPayment[]
+  files: AdminOrderFile[]
   promised_for: string | null
   production_priority: ProductionPriority
   delivery_note: string | null
@@ -1305,6 +1307,13 @@ export default function AdminOrdersPanel() {
                     )}
                   </div>
                 </section>
+
+                <AdminOrderFiles
+                  orderId={order.id}
+                  files={order.files}
+                  disabled={order.status === 'cancelled'}
+                  onChanged={() => loadOrders()}
+                />
 
                 {order.customer_notes && (
                   <p className="admin-order-note">

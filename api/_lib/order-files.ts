@@ -1,0 +1,250 @@
+import { neon } from '@neondatabase/serverless'
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+const FILE_KINDS = new Set([
+  'reference',
+  'design',
+  'production',
+  'print',
+  '3d',
+  'other',
+])
+
+export type AdminOrderFile = {
+  id: string
+  order_id: string
+  kind: 'reference' | 'design' | 'production' | 'print' | '3d' | 'other'
+  label: string
+  url: string
+  note: string | null
+  created_at: string
+}
+
+function text(value: unknown, max: number) {
+  return typeof value === 'string' ? value.trim().slice(0, max) : ''
+}
+
+function httpsUrl(value: unknown) {
+  const raw = text(value, 4000)
+  if (!raw) return ''
+
+  try {
+    const url = new URL(raw)
+    if (url.protocol !== 'https:') return ''
+    return url.toString()
+  } catch {
+    return ''
+  }
+}
+
+export async function listRecentOrderFiles(databaseUrl: string) {
+  const sql = neon(databaseUrl)
+
+  return (await sql`
+    SELECT
+      f.id::text,
+      f.order_id::text,
+      f.kind,
+      f.label,
+      f.url,
+      f.note,
+      f.created_at::text
+    FROM order_files f
+    WHERE f.archived_at IS NULL
+      AND f.order_id IN (
+        SELECT id
+        FROM orders
+        ORDER BY created_at DESC
+        LIMIT 50
+      )
+    ORDER BY f.created_at DESC
+  `) as AdminOrderFile[]
+}
+
+export async function createOrderFile(
+  databaseUrl: string,
+  body: Record<string, unknown>,
+) {
+  const orderId = text(body.orderId, 40)
+  const kind = text(body.kind, 24) as AdminOrderFile['kind']
+  const label = text(body.label, 120)
+  const url = httpsUrl(body.url)
+  const note = text(body.note, 500)
+
+  if (!UUID_RE.test(orderId)) {
+    return Response.json({ error: 'Pedido inválido.' }, { status: 400 })
+  }
+
+  if (!FILE_KINDS.has(kind)) {
+    return Response.json({ error: 'Tipo de archivo inválido.' }, { status: 400 })
+  }
+
+  if (!label) {
+    return Response.json(
+      { error: 'Ingresá un nombre para el archivo.' },
+      { status: 400 },
+    )
+  }
+
+  if (!url) {
+    return Response.json(
+      { error: 'Ingresá un enlace HTTPS válido.' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+
+    const orderRows = await sql`
+      SELECT status
+      FROM orders
+      WHERE id = ${orderId}::uuid
+      LIMIT 1
+    `
+
+    if (orderRows.length === 0) {
+      return Response.json({ error: 'Pedido no encontrado.' }, { status: 404 })
+    }
+
+    const status = String(orderRows[0].status)
+    const eventNote = [
+      `Archivo: ${label}`,
+      `Tipo: ${kind}`,
+      note,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+      .slice(0, 300)
+
+    const rows = await sql.transaction([
+      sql`
+        INSERT INTO order_files (
+          order_id,
+          kind,
+          label,
+          url,
+          note
+        )
+        VALUES (
+          ${orderId}::uuid,
+          ${kind},
+          ${label},
+          ${url},
+          ${note || null}
+        )
+        RETURNING
+          id::text,
+          order_id::text,
+          kind,
+          label,
+          url,
+          note,
+          created_at::text
+      `,
+      sql`
+        INSERT INTO order_events (
+          order_id,
+          event_type,
+          from_status,
+          to_status,
+          note
+        )
+        VALUES (
+          ${orderId}::uuid,
+          'file_added',
+          ${status},
+          ${status},
+          ${eventNote}
+        )
+      `,
+    ])
+
+    const fileRows = rows[0] as AdminOrderFile[]
+
+    return Response.json(
+      { file: fileRows[0] },
+      { status: 201, headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudo agregar el archivo al pedido.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+export async function archiveOrderFile(
+  databaseUrl: string,
+  body: Record<string, unknown>,
+) {
+  const orderId = text(body.orderId, 40)
+  const fileId = text(body.fileId, 40)
+
+  if (!UUID_RE.test(orderId) || !UUID_RE.test(fileId)) {
+    return Response.json({ error: 'Archivo inválido.' }, { status: 400 })
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+
+    const rows = await sql`
+      SELECT
+        f.label,
+        o.status
+      FROM order_files f
+      JOIN orders o ON o.id = f.order_id
+      WHERE f.id = ${fileId}::uuid
+        AND f.order_id = ${orderId}::uuid
+        AND f.archived_at IS NULL
+      LIMIT 1
+    `
+
+    if (rows.length === 0) {
+      return Response.json({ error: 'Archivo no encontrado.' }, { status: 404 })
+    }
+
+    const status = String(rows[0].status)
+    const label = String(rows[0].label)
+
+    await sql.transaction([
+      sql`
+        UPDATE order_files
+        SET
+          archived_at = now(),
+          updated_at = now()
+        WHERE id = ${fileId}::uuid
+          AND order_id = ${orderId}::uuid
+          AND archived_at IS NULL
+      `,
+      sql`
+        INSERT INTO order_events (
+          order_id,
+          event_type,
+          from_status,
+          to_status,
+          note
+        )
+        VALUES (
+          ${orderId}::uuid,
+          'file_archived',
+          ${status},
+          ${status},
+          ${`Archivo archivado: ${label}`}
+        )
+      `,
+    ])
+
+    return Response.json(
+      { ok: true },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudo archivar el archivo.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}

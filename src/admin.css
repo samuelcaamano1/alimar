@@ -8971,3 +8971,197 @@
     grid-column: 3;
   }
 }
+
+
+/* ALIMAR ARCHIVOS PEDIDO 1.1.4 */
+.admin-order-files {
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(12, 16, 20, .07);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .34);
+}
+
+.admin-order-files-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-order-files-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-order-files-heading span {
+  color: var(--admin-blue-dark);
+  font-size: .5rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.admin-order-files-heading strong {
+  font-size: .58rem;
+}
+
+.admin-order-files-heading small,
+.admin-order-files-storage-note,
+.admin-order-files-message {
+  color: var(--admin-muted);
+  font-size: .46rem;
+}
+
+.admin-order-files-list {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-order-files-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  padding: 9px;
+  border: 1px solid rgba(12, 16, 20, .055);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .5);
+}
+
+.admin-order-file-main {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-order-file-main > span {
+  color: var(--admin-blue-dark);
+  font-size: .44rem;
+  font-weight: 850;
+}
+
+.admin-order-file-main > strong {
+  overflow: hidden;
+  font-size: .57rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-order-file-main p {
+  margin: 0;
+  color: var(--admin-ink);
+  font-size: .49rem;
+  line-height: 1.45;
+}
+
+.admin-order-file-main small {
+  color: var(--admin-muted);
+  font-size: .43rem;
+}
+
+.admin-order-file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.admin-order-file-actions a,
+.admin-order-file-actions button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border: 1px solid rgba(63, 120, 138, .16);
+  border-radius: 8px;
+  color: var(--admin-blue-dark);
+  background: rgba(255, 255, 255, .72);
+  font: inherit;
+  font-size: .46rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.admin-order-file-actions button {
+  color: var(--admin-muted);
+}
+
+.admin-order-file-form {
+  display: grid;
+  grid-template-columns: minmax(130px, .55fr) minmax(160px, .85fr) minmax(220px, 1.4fr) minmax(180px, 1fr) auto;
+  gap: 6px;
+  align-items: end;
+}
+
+.admin-order-file-form label {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  color: var(--admin-ink);
+  font-size: .46rem;
+  font-weight: 800;
+}
+
+.admin-order-file-form input,
+.admin-order-file-form select {
+  width: 100%;
+  min-height: 35px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid rgba(12, 16, 20, .1);
+  border-radius: 8px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.admin-order-file-form .admin-secondary {
+  min-height: 35px;
+  white-space: nowrap;
+}
+
+.admin-order-files-message {
+  color: var(--admin-blue-dark);
+  font-weight: 800;
+}
+
+@media (max-width: 950px) {
+  .admin-order-file-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-order-file-url,
+  .admin-order-file-note {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-order-files-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .admin-order-files-list article,
+  .admin-order-file-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-file-url,
+  .admin-order-file-note {
+    grid-column: auto;
+  }
+
+  .admin-order-file-actions {
+    justify-content: stretch;
+  }
+
+  .admin-order-file-actions > * {
+    flex: 1 1 120px;
+  }
+}

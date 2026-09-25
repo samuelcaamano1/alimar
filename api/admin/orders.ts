@@ -13,6 +13,12 @@ import {
   type AdminOrderPayment,
 } from '../_lib/order-payments.js'
 import {
+  archiveOrderFile,
+  createOrderFile,
+  listRecentOrderFiles,
+  type AdminOrderFile,
+} from '../_lib/order-files.js'
+import {
   listAdminCustomRequests,
   updateAdminCustomRequest,
 } from '../_lib/custom-requests.js'
@@ -281,6 +287,7 @@ export async function GET(request: Request) {
     `) as EventRow[]
 
     const paymentRows = await listRecentOrderPayments(databaseUrl)
+    const fileRows = await listRecentOrderFiles(databaseUrl)
 
     const orders = new Map<
       string,
@@ -313,6 +320,7 @@ export async function GET(request: Request) {
         balance_due: string | null
         payment_status: 'total_pending' | 'unpaid' | 'partial' | 'paid'
         payments: AdminOrderPayment[]
+        files: AdminOrderFile[]
         has_quote: boolean
         quote_code: string | null
         estimated_cost: string | null
@@ -360,6 +368,7 @@ export async function GET(request: Request) {
           balance_due: row.agreed_total,
           payment_status: row.agreed_total === null ? 'total_pending' : 'unpaid',
           payments: [],
+          files: [],
           has_quote: row.has_quote,
           quote_code: row.quote_code,
           estimated_cost: row.estimated_cost,
@@ -394,6 +403,10 @@ export async function GET(request: Request) {
 
     for (const payment of paymentRows) {
       orders.get(payment.order_id)?.payments.push(payment)
+    }
+
+    for (const file of fileRows) {
+      orders.get(file.order_id)?.files.push(file)
     }
 
     for (const order of orders.values()) {
@@ -478,6 +491,10 @@ export async function PATCH(request: Request) {
 
   if (requestUrl.searchParams.get('action') === 'payment-void') {
     return voidOrderPayment(databaseUrl, body)
+  }
+
+  if (requestUrl.searchParams.get('action') === 'file-archive') {
+    return archiveOrderFile(databaseUrl, body)
   }
 
   if (requestUrl.searchParams.get('action') === 'actual-cost') {
@@ -670,6 +687,10 @@ export async function POST(request: Request) {
     body = (await request.json()) as Record<string, unknown>
   } catch {
     return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  }
+
+  if (action === 'file') {
+    return createOrderFile(databaseUrl, body)
   }
 
   if (action === 'payment') {
