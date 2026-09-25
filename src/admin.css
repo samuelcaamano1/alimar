@@ -9260,3 +9260,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* ALIMAR CONTINUIDAD POST APROBACION 1.1.8 */
+.admin-order-file-actions .admin-order-file-continue {
+  color: #276b49;
+  border-color: rgba(39, 107, 73, .26);
+  background: rgba(39, 107, 73, .10);
+  font-weight: 900;
+}

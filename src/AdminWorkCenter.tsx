@@ -87,6 +87,14 @@ const productionStageLabels: Record<ProductionStage, string> = {
   ready_for_delivery: 'Listo para entregar',
 }
 
+function currentSharedDesign(order: WorkOrder) {
+  return (
+    (order.files ?? []).find(
+      (file) => file.kind === 'design' && file.customer_visible,
+    ) ?? null
+  )
+}
+
 function todayKey() {
   const now = new Date()
   const year = now.getFullYear()
@@ -287,18 +295,27 @@ export default function AdminWorkCenter() {
       return balance !== null && balance > 0 ? total + balance : total
     }, 0)
 
-    const approvalFiles = data.orders.flatMap((order) =>
-      (order.files ?? []).filter(
-        (file) =>
-          order.status !== 'cancelled' &&
-          file.kind === 'design' &&
-          file.customer_visible &&
-          (file.approval_status === 'pending' ||
-            file.approval_status === 'changes_requested'),
-      ),
-    )
-    const approvalChanges = approvalFiles.filter(
-      (file) => file.approval_status === 'changes_requested',
+    const approvalItems = data.orders.flatMap((order) => {
+      if (order.status === 'cancelled') return []
+      const file = currentSharedDesign(order)
+      if (!file) return []
+
+      const readyToContinue =
+        file.approval_status === 'approved' &&
+        (order.production_stage === 'design' ||
+          order.production_stage === 'awaiting_approval')
+
+      return file.approval_status === 'pending' ||
+        file.approval_status === 'changes_requested' ||
+        readyToContinue
+        ? [{ order, file, readyToContinue }]
+        : []
+    })
+    const approvalChanges = approvalItems.filter(
+      ({ file }) => file.approval_status === 'changes_requested',
+    ).length
+    const approvalReady = approvalItems.filter(
+      ({ readyToContinue }) => readyToContinue,
     ).length
 
     return {
@@ -307,8 +324,9 @@ export default function AdminWorkCenter() {
       activeOrders: activeOrders.length,
       todayOrders: todayOrders.length,
       overdueOrders: overdueOrders.length,
-      approvalAttention: approvalFiles.length,
+      approvalAttention: approvalItems.length,
       approvalChanges,
+      approvalReady,
       pendingBalance,
     }
   }, [data, today])
@@ -351,36 +369,51 @@ export default function AdminWorkCenter() {
     for (const order of data.orders) {
       if (order.status === 'cancelled') continue
 
-      for (const file of order.files ?? []) {
-        if (file.kind !== 'design' || !file.customer_visible) continue
+      const file = currentSharedDesign(order)
+      if (!file) continue
 
-        if (file.approval_status === 'changes_requested') {
-          next.push({
-            key: `approval-changes-${order.id}-${file.id}`,
-            score: 0.5,
-            kind: 'APROB',
-            title: `${order.public_code}: cliente pidió cambios`,
-            detail: `${order.customer_name} · ${file.label}`,
-            meta: file.approval_comment
-              ? file.approval_comment.slice(0, 90)
-              : 'Abrir el PED y revisar la devolución',
-            tone: 'danger',
-            target: '.admin-orders-panel',
-            orderId: order.id,
-          })
-        } else if (file.approval_status === 'pending') {
-          next.push({
-            key: `approval-pending-${order.id}-${file.id}`,
-            score: 4.5,
-            kind: 'APROB',
-            title: `${order.public_code}: diseño esperando aprobación`,
-            detail: `${order.customer_name} · ${file.label}`,
-            meta: 'Podés enviar o reenviar el link por WhatsApp desde el PED',
-            tone: 'approval',
-            target: '.admin-orders-panel',
-            orderId: order.id,
-          })
-        }
+      if (file.approval_status === 'changes_requested') {
+        next.push({
+          key: `approval-changes-${order.id}-${file.id}`,
+          score: 0.5,
+          kind: 'APROB',
+          title: `${order.public_code}: cliente pidió cambios`,
+          detail: `${order.customer_name} · ${file.label}`,
+          meta: file.approval_comment
+            ? file.approval_comment.slice(0, 90)
+            : 'Abrir el PED y revisar la devolución',
+          tone: 'danger',
+          target: '.admin-orders-panel',
+          orderId: order.id,
+        })
+      } else if (
+        file.approval_status === 'approved' &&
+        (order.production_stage === 'design' ||
+          order.production_stage === 'awaiting_approval')
+      ) {
+        next.push({
+          key: `approval-approved-${order.id}-${file.id}`,
+          score: 2.5,
+          kind: 'APROB',
+          title: `${order.public_code}: diseño aprobado`,
+          detail: `${order.customer_name} · ${file.label}`,
+          meta: 'Listo para continuar a Preparando materiales',
+          tone: 'approval',
+          target: '.admin-orders-panel',
+          orderId: order.id,
+        })
+      } else if (file.approval_status === 'pending') {
+        next.push({
+          key: `approval-pending-${order.id}-${file.id}`,
+          score: 4.5,
+          kind: 'APROB',
+          title: `${order.public_code}: diseño esperando aprobación`,
+          detail: `${order.customer_name} · ${file.label}`,
+          meta: 'Podés enviar o reenviar el link por WhatsApp desde el PED',
+          tone: 'approval',
+          target: '.admin-orders-panel',
+          orderId: order.id,
+        })
       }
     }
 
@@ -595,7 +628,9 @@ export default function AdminWorkCenter() {
           <small>
             {summary.approvalChanges > 0
               ? `${summary.approvalChanges} con cambios`
-              : 'diseños por revisar'}
+              : summary.approvalReady > 0
+                ? `${summary.approvalReady} listas para continuar`
+                : 'esperando cliente'}
           </small>
         </button>
 

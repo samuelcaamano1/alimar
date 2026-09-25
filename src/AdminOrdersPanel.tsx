@@ -1314,6 +1314,7 @@ export default function AdminOrdersPanel() {
                   trackingToken={order.tracking_token}
                   customerName={order.customer_name}
                   customerPhone={order.customer_phone}
+                  productionStage={order.production_stage}
                   files={order.files}
                   disabled={order.status === 'cancelled'}
                   onChanged={() => loadOrders()}

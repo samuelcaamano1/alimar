@@ -28,6 +28,15 @@ export type AdminOrderFile = {
   created_at: string
 }
 
+type ProductionStage =
+  | 'not_started'
+  | 'design'
+  | 'awaiting_approval'
+  | 'materials'
+  | 'production'
+  | 'finishing'
+  | 'ready_for_delivery'
+
 type FileDraft = {
   kind: AdminOrderFileKind
   label: string
@@ -83,6 +92,7 @@ type AdminOrderFilesProps = {
   trackingToken: string
   customerName: string
   customerPhone: string
+  productionStage: ProductionStage
   files: AdminOrderFile[]
   disabled?: boolean
   onChanged: () => void | Promise<void>
@@ -94,6 +104,7 @@ export default function AdminOrderFiles({
   trackingToken,
   customerName,
   customerPhone,
+  productionStage,
   files,
   disabled = false,
   onChanged,
@@ -103,9 +114,12 @@ export default function AdminOrderFiles({
   const [archivingId, setArchivingId] = useState<string | null>(null)
   const [sharingId, setSharingId] = useState<string | null>(null)
   const [approvalId, setApprovalId] = useState<string | null>(null)
+  const [continuingId, setContinuingId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
   const customerTrackingUrl = `${window.location.origin}/?pedido=${encodeURIComponent(trackingToken)}`
+  const latestSharedDesignId =
+    files.find((file) => file.kind === 'design' && file.customer_visible)?.id ?? null
 
   function designApprovalWhatsappUrl(file: AdminOrderFile) {
     return customerWhatsappUrl(
@@ -233,6 +247,40 @@ export default function AdminOrderFiles({
       )
     } finally {
       setApprovalId(null)
+    }
+  }
+
+  async function continueAfterApproval(file: AdminOrderFile) {
+    if (continuingId || disabled) return
+
+    setContinuingId(file.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=production-stage', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: orderId,
+          stage: 'materials',
+          note: `Diseño aprobado por el cliente: ${file.label}`,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      setMessage('Diseño aprobado: el PED pasó a Preparando materiales.')
+      await onChanged()
+      window.dispatchEvent(new Event('alimar:production-stage-changed'))
+      window.dispatchEvent(new Event('alimar:orders-changed'))
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo continuar la producción.',
+      )
+    } finally {
+      setContinuingId(null)
     }
   }
 
@@ -379,6 +427,21 @@ export default function AdminOrderFiles({
                     >
                       Confirmar cambios por WhatsApp
                     </a>
+                  )}
+                {file.id === latestSharedDesignId &&
+                  file.approval_status === 'approved' &&
+                  (productionStage === 'design' ||
+                    productionStage === 'awaiting_approval') && (
+                    <button
+                      type="button"
+                      className="admin-order-file-continue"
+                      onClick={() => void continueAfterApproval(file)}
+                      disabled={disabled || continuingId === file.id}
+                    >
+                      {continuingId === file.id
+                        ? 'Continuando…'
+                        : 'Continuar: preparar materiales'}
+                    </button>
                   )}
                 <button
                   type="button"
