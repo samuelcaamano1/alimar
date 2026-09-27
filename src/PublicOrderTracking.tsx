@@ -197,6 +197,14 @@ async function responseMessage(response: Response) {
   }
 }
 
+function redirectToAccountIfNeeded(response: Response) {
+  if (response.status !== 401) return false
+
+  const next = `${window.location.pathname}${window.location.search}`
+  window.location.assign(`/cuenta?next=${encodeURIComponent(next)}`)
+  return true
+}
+
 export default function PublicOrderTracking({ token }: { token: string }) {
   const [activeToken, setActiveToken] = useState(token)
   const [order, setOrder] = useState<PublicTrackingOrder | null>(null)
@@ -227,6 +235,9 @@ export default function PublicOrderTracking({ token }: { token: string }) {
       },
     )
       .then(async (response) => {
+        if (redirectToAccountIfNeeded(response)) {
+          throw new Error('Iniciá sesión para continuar.')
+        }
         if (!response.ok) throw new Error(await responseMessage(response))
 
         return (await response.json()) as { order: PublicTrackingOrder }
@@ -275,7 +286,10 @@ export default function PublicOrderTracking({ token }: { token: string }) {
         body: JSON.stringify({ orderCode, phone }),
       })
 
-      if (!response.ok) throw new Error(await responseMessage(response))
+      if (redirectToAccountIfNeeded(response)) {
+          throw new Error('Iniciá sesión para continuar.')
+        }
+        if (!response.ok) throw new Error(await responseMessage(response))
 
       const data = (await response.json()) as {
         trackingToken?: string
@@ -333,12 +347,18 @@ export default function PublicOrderTracking({ token }: { token: string }) {
         }),
       })
 
-      if (!response.ok) throw new Error(await responseMessage(response))
+      if (redirectToAccountIfNeeded(response)) {
+          throw new Error('Iniciá sesión para continuar.')
+        }
+        if (!response.ok) throw new Error(await responseMessage(response))
 
       const refresh = await fetch(
         `/api/orders?action=tracking&token=${encodeURIComponent(activeToken)}`,
         { cache: 'no-store' },
       )
+      if (redirectToAccountIfNeeded(refresh)) {
+        throw new Error('Iniciá sesión para continuar.')
+      }
       if (!refresh.ok) throw new Error(await responseMessage(refresh))
 
       const data = (await refresh.json()) as { order: PublicTrackingOrder }

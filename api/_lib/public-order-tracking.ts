@@ -160,6 +160,7 @@ async function selectPublicOrderTracking(
   const rows = (await sql`
     SELECT
       o.public_code,
+      o.customer_account_id::text AS customer_account_id,
       o.status,
       o.production_stage,
       o.promised_for::text,
@@ -242,12 +243,36 @@ async function selectPublicOrderTracking(
     LIMIT 1
   `) as Record<string, unknown>[]
 
-  return rows.length > 0 ? formatTrackingRow(rows[0]) : null
+  return rows.length > 0
+    ? {
+        order: formatTrackingRow(rows[0]),
+        customerAccountId: rows[0].customer_account_id
+          ? String(rows[0].customer_account_id)
+          : null,
+      }
+    : null
+}
+
+function ownershipError(ownerId: string | null, accountId: string | null) {
+  if (!ownerId || ownerId === accountId) return null
+
+  if (!accountId) {
+    return Response.json(
+      { error: 'Iniciá sesión para ver este pedido.' },
+      { status: 401, headers: { 'Cache-Control': 'private, no-store' } },
+    )
+  }
+
+  return Response.json(
+    { error: 'No encontramos este pedido en tu cuenta.' },
+    { status: 404, headers: { 'Cache-Control': 'private, no-store' } },
+  )
 }
 
 export async function getPublicOrderTracking(
   databaseUrl: string,
   token: string,
+  customerAccountId: string | null = null,
 ) {
   if (!UUID_RE.test(token)) {
     return Response.json(
@@ -257,17 +282,23 @@ export async function getPublicOrderTracking(
   }
 
   try {
-    const order = await selectPublicOrderTracking(databaseUrl, token)
+    const selected = await selectPublicOrderTracking(databaseUrl, token)
 
-    if (!order) {
+    if (!selected) {
       return Response.json(
         { error: 'No encontramos este pedido.' },
         { status: 404, headers: { 'Cache-Control': 'private, no-store' } },
       )
     }
 
+    const accessError = ownershipError(
+      selected.customerAccountId,
+      customerAccountId,
+    )
+    if (accessError) return accessError
+
     return Response.json(
-      { order },
+      { order: selected.order },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
   } catch {
@@ -281,6 +312,7 @@ export async function getPublicOrderTracking(
 export async function lookupPublicOrderTracking(
   databaseUrl: string,
   body: Record<string, unknown>,
+  customerAccountId: string | null = null,
 ) {
   const code = orderCode(body.orderCode)
   const digits = phoneDigits(body.phone)
@@ -303,7 +335,9 @@ export async function lookupPublicOrderTracking(
     const sql = neon(databaseUrl)
 
     const rows = await sql`
-      SELECT public_tracking_token::text
+      SELECT
+        public_tracking_token::text,
+        customer_account_id::text
       FROM orders
       WHERE UPPER(public_code) = ${code}
         AND RIGHT(
@@ -323,6 +357,12 @@ export async function lookupPublicOrderTracking(
       )
     }
 
+    const ownerId = rows[0].customer_account_id
+      ? String(rows[0].customer_account_id)
+      : null
+    const accessError = ownershipError(ownerId, customerAccountId)
+    if (accessError) return accessError
+
     const trackingToken = String(rows[0].public_tracking_token ?? '')
 
     if (!UUID_RE.test(trackingToken)) {
@@ -332,9 +372,9 @@ export async function lookupPublicOrderTracking(
       )
     }
 
-    const order = await selectPublicOrderTracking(databaseUrl, trackingToken)
+    const selected = await selectPublicOrderTracking(databaseUrl, trackingToken)
 
-    if (!order) {
+    if (!selected) {
       return Response.json(
         { error: 'No encontramos este pedido.' },
         { status: 404, headers: { 'Cache-Control': 'no-store' } },
@@ -342,7 +382,7 @@ export async function lookupPublicOrderTracking(
     }
 
     return Response.json(
-      { trackingToken, order },
+      { trackingToken, order: selected.order },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
   } catch {
@@ -357,6 +397,7 @@ export async function lookupPublicOrderTracking(
 export async function respondPublicOrderFileApproval(
   databaseUrl: string,
   body: Record<string, unknown>,
+  customerAccountId: string | null = null,
 ) {
   const token = typeof body.token === 'string' ? body.token.trim() : ''
   const fileId = typeof body.fileId === 'string' ? body.fileId.trim() : ''
@@ -396,7 +437,8 @@ export async function respondPublicOrderFileApproval(
         f.order_id::text,
         f.label,
         f.approval_status,
-        o.status
+        o.status,
+        o.customer_account_id::text
       FROM order_files f
       JOIN orders o ON o.id = f.order_id
       WHERE f.id = ${fileId}::uuid
@@ -413,6 +455,12 @@ export async function respondPublicOrderFileApproval(
         { status: 404, headers: { 'Cache-Control': 'no-store' } },
       )
     }
+
+    const ownerId = rows[0].customer_account_id
+      ? String(rows[0].customer_account_id)
+      : null
+    const accessError = ownershipError(ownerId, customerAccountId)
+    if (accessError) return accessError
 
     if (String(rows[0].approval_status) !== 'pending') {
       return Response.json(

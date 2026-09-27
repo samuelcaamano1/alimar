@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from '
 import { alimarLogoDataUrl } from './brand'
 import { site } from './site'
 import CheckoutForm from './CheckoutForm'
+import { loadCustomerSession, type CustomerSession } from './customerAccount'
 import PublicQuoteView from './PublicQuoteView'
 import PublicOrderTracking from './PublicOrderTracking'
 import {
@@ -414,6 +415,22 @@ function StorefrontApp() {
   const [customReferenceImageUrl, setCustomReferenceImageUrl] = useState('')
   const [customReferenceImageName, setCustomReferenceImageName] = useState('')
   const [customReferenceImageBusy, setCustomReferenceImageBusy] = useState(false)
+  const [customerSession, setCustomerSession] = useState<CustomerSession | null>(null)
+  const [customerSessionReady, setCustomerSessionReady] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    void loadCustomerSession().then((account) => {
+      if (cancelled) return
+      setCustomerSession(account)
+      setCustomerSessionReady(true)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -646,6 +663,11 @@ function StorefrontApp() {
   }, [])
 
   function openCustomRequest() {
+    if (!customerSessionReady || !customerSession) {
+      window.location.assign('/cuenta?next=/')
+      return
+    }
+
     setCustomRequestId(crypto.randomUUID())
     setCustomRequestMessage('')
     setCustomRequestSuccess(null)
@@ -732,6 +754,11 @@ function StorefrontApp() {
         whatsappMessage?: string
       }
 
+      if (response.status === 401) {
+        window.location.assign('/cuenta?next=/')
+        return
+      }
+
       if (!response.ok) {
         throw new Error(data.error || 'No pudimos guardar tu solicitud.')
       }
@@ -784,7 +811,7 @@ function StorefrontApp() {
         <nav className="main-nav" aria-label="Navegación principal">
           <a href="#servicios">Qué hacemos</a>
           <a href="#catalogo">Catálogo</a>
-          <a href="/?seguimiento=1">Seguir pedido</a>
+          <a href="/cuenta">Mis pedidos</a>
           <a href="#como-trabajamos">Cómo trabajamos</a>
         </nav>
 
@@ -795,9 +822,7 @@ function StorefrontApp() {
             <a href="#servicios">Qué hacemos</a>
             <a href="#catalogo">Catálogo</a>
             <a href="#como-trabajamos">Cómo trabajamos</a>
-            <a href="/admin">
-              Repositorio
-            </a>
+            <a href="/cuenta">Mi cuenta</a>
             <a href={site.instagramUrl} target="_blank" rel="noreferrer">
               Instagram ↗
             </a>
@@ -805,8 +830,8 @@ function StorefrontApp() {
         </details>
 
         <div className="header-actions">
-          <a className="repository-cta" href="/admin">
-            Repositorio
+          <a className="repository-cta" href="/cuenta">
+            {customerSession ? `Hola, ${customerSession.name.split(' ')[0]}` : 'Mi cuenta'}
             <span aria-hidden="true">→</span>
           </a>
 
@@ -1288,6 +1313,8 @@ function StorefrontApp() {
                           name="customerName"
                           autoComplete="name"
                           maxLength={120}
+                          value={customerSession?.name ?? ''}
+                          readOnly
                           required
                         />
                       </label>
@@ -1299,7 +1326,8 @@ function StorefrontApp() {
                           inputMode="tel"
                           autoComplete="tel"
                           maxLength={40}
-                          placeholder="Ej. 11 3568 2635"
+                          value={customerSession?.phone ?? ''}
+                          readOnly
                           required
                         />
                       </label>
@@ -1801,6 +1829,8 @@ function StorefrontApp() {
                   )}
 
                   <CheckoutForm
+                    session={customerSession}
+                    sessionReady={customerSessionReady}
                     items={cart.map((item) => ({
                       id: item.id,
                       variantId: item.variantId,

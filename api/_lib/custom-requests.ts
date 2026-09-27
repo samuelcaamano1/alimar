@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless'
+import { customerUnauthorized, getCustomerAccount } from './customer-auth.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const REQUEST_TYPES = new Set(['paper', '3d', 'event', 'design', 'other'])
@@ -145,6 +146,9 @@ export async function createPublicCustomRequest(request: Request) {
     )
   }
 
+  const account = await getCustomerAccount(databaseUrl, request)
+  if (!account) return customerUnauthorized()
+
   let body: Record<string, unknown>
 
   try {
@@ -157,8 +161,8 @@ export async function createPublicCustomRequest(request: Request) {
   }
 
   const requestId = text(body.requestId, 40)
-  const customerName = text(body.customerName, 120)
-  const customerPhone = text(body.customerPhone, 40)
+  const customerName = account.name
+  const customerPhone = account.phone
   const requestType = text(body.requestType, 24)
   const quantity = integerOrNull(body.quantity)
   const neededDate = dateOrNull(body.neededDate)
@@ -175,14 +179,6 @@ export async function createPublicCustomRequest(request: Request) {
 
   if (!UUID_RE.test(requestId)) {
     return Response.json({ error: 'Identificador de solicitud inválido.' }, { status: 400 })
-  }
-
-  if (customerName.length < 2) {
-    return Response.json({ error: 'Ingresá tu nombre.' }, { status: 400 })
-  }
-
-  if (customerPhone.replace(/\D/g, '').length < 6) {
-    return Response.json({ error: 'Ingresá un WhatsApp válido.' }, { status: 400 })
   }
 
   if (!REQUEST_TYPES.has(requestType)) {
@@ -251,13 +247,20 @@ export async function createPublicCustomRequest(request: Request) {
     }
 
     const existing = await sql`
-      SELECT request_number
+      SELECT request_number, customer_account_id::text
       FROM custom_requests
       WHERE request_id = ${requestId}::uuid
       LIMIT 1
     `
 
     if (existing.length > 0) {
+      if (String(existing[0].customer_account_id ?? '') !== account.id) {
+        return Response.json(
+          { error: 'Ese identificador de solicitud ya fue utilizado.' },
+          { status: 409, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+
       const code = publicCode(existing[0].request_number)
       return Response.json(
         {
@@ -283,6 +286,7 @@ export async function createPublicCustomRequest(request: Request) {
         request_id,
         customer_name,
         customer_phone,
+        customer_account_id,
         request_type,
         quantity,
         needed_date,
@@ -298,6 +302,7 @@ export async function createPublicCustomRequest(request: Request) {
         ${requestId}::uuid,
         ${customerName},
         ${customerPhone},
+        ${account.id}::uuid,
         ${resolvedRequestType},
         ${quantity},
         ${neededDate},

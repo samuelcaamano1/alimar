@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { saveRecoveredOrder, type RecoveredOrder } from './orderRecovery'
+import type { CustomerSession } from './customerAccount'
 import { site } from './site'
 
 type CheckoutItem = {
@@ -15,8 +16,11 @@ type CreateOrderResponse = {
   whatsappMessage: string
   trackingToken: string
 }
+
 type CheckoutFormProps = {
   items: CheckoutItem[]
+  session: CustomerSession | null
+  sessionReady: boolean
   onCreated: (order: RecoveredOrder) => void
 }
 
@@ -29,7 +33,12 @@ async function errorMessage(response: Response) {
   }
 }
 
-export default function CheckoutForm({ items, onCreated }: CheckoutFormProps) {
+export default function CheckoutForm({
+  items,
+  session,
+  sessionReady,
+  onCreated,
+}: CheckoutFormProps) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const requestId = useRef(crypto.randomUUID())
@@ -43,7 +52,7 @@ export default function CheckoutForm({ items, onCreated }: CheckoutFormProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (items.length === 0 || busy) return
+    if (items.length === 0 || busy || !session) return
 
     setBusy(true)
     setMessage('')
@@ -52,9 +61,6 @@ export default function CheckoutForm({ items, onCreated }: CheckoutFormProps) {
     const payload = {
       requestId: requestId.current,
       customer: {
-        name: String(form.get('name') ?? '').trim(),
-        phone: String(form.get('phone') ?? '').trim(),
-        email: String(form.get('email') ?? '').trim(),
         notes: String(form.get('notes') ?? '').trim(),
       },
       items,
@@ -66,6 +72,11 @@ export default function CheckoutForm({ items, onCreated }: CheckoutFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
+
+      if (response.status === 401) {
+        window.location.assign('/cuenta?next=/')
+        return
+      }
 
       if (!response.ok) throw new Error(await errorMessage(response))
 
@@ -86,35 +97,63 @@ export default function CheckoutForm({ items, onCreated }: CheckoutFormProps) {
     }
   }
 
+  if (!sessionReady) {
+    return (
+      <div className="checkout-login-gate is-loading">
+        <strong>Verificando tu cuenta…</strong>
+        <span>Tu carrito queda guardado mientras preparamos el checkout.</span>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="checkout-login-gate">
+        <div>
+          <span>Cuenta requerida</span>
+          <strong>Iniciá sesión para confirmar el pedido</strong>
+          <p>
+            Así el PED queda guardado en “Mi cuenta” y podés volver al seguimiento sin buscar el código.
+          </p>
+        </div>
+        <a className="button button-primary" href="/cuenta?next=/">
+          Ingresar o crear cuenta
+          <span aria-hidden="true">→</span>
+        </a>
+        <small>Tu carrito queda guardado en este dispositivo.</small>
+      </div>
+    )
+  }
+
   return (
     <form className="checkout-form" onSubmit={handleSubmit}>
       <div className="checkout-heading">
         <span>Confirmación</span>
-        <strong>Dejanos tus datos</strong>
-        <p>Primero registramos el pedido y después abrimos WhatsApp con el resumen listo.</p>
+        <strong>Pedido para {session.name}</strong>
+        <p>El pedido va a quedar vinculado automáticamente a tu cuenta.</p>
       </div>
 
-      <div className="checkout-grid">
-        <label>
-          Nombre *
-          <input name="name" type="text" autoComplete="name" maxLength={100} placeholder="Tu nombre" required />
-        </label>
-
-        <label>
-          WhatsApp *
-          <input name="phone" type="tel" autoComplete="tel" maxLength={40} placeholder="Ej. 11 1234 5678" required />
-        </label>
-
-        <label className="checkout-span-2">
-          Email
-          <input name="email" type="email" autoComplete="email" maxLength={160} placeholder="Opcional" />
-        </label>
-
-        <label className="checkout-span-2">
-          Nota general
-          <textarea name="notes" rows={2} maxLength={500} placeholder="Fecha del evento, aclaraciones generales, etc." />
-        </label>
+      <div className="checkout-account-summary">
+        <div>
+          <span>Cuenta</span>
+          <strong>{session.email}</strong>
+        </div>
+        <div>
+          <span>WhatsApp</span>
+          <strong>{session.phone}</strong>
+        </div>
+        <a href="/cuenta">Mi cuenta</a>
       </div>
+
+      <label className="checkout-note-only">
+        Nota general
+        <textarea
+          name="notes"
+          rows={2}
+          maxLength={500}
+          placeholder="Fecha del evento, aclaraciones generales, etc."
+        />
+      </label>
 
       {message && <p className="checkout-error">{message}</p>}
 

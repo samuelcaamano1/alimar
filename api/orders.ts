@@ -1,6 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import { neon } from '@neondatabase/serverless'
 import { createPublicCustomRequest } from './_lib/custom-requests.js'
+import {
+  customerOverviewResponse,
+  customerSessionResponse,
+  customerUnauthorized,
+  getCustomerAccount,
+  loginCustomer,
+  logoutCustomer,
+  registerCustomer,
+} from './_lib/customer-auth.js'
 import { acceptPublicQuote } from './_lib/public-quotes.js'
 import {
   getPublicOrderTracking,
@@ -14,7 +23,6 @@ import {
 } from './_lib/request-security.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_ITEMS = 25
 
 type IncomingCustomization = {
@@ -146,20 +154,28 @@ function buildWhatsappMessage(args: {
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
-
-  if (requestUrl.searchParams.get('action') !== 'tracking') {
-    return Response.json(
-      { error: 'Acción inválida.' },
-      { status: 400, headers: { 'Cache-Control': 'no-store' } },
-    )
-  }
-
+  const action = requestUrl.searchParams.get('action')
   const databaseUrl = process.env.DATABASE_URL
 
   if (!databaseUrl) {
     return Response.json(
-      { error: 'Seguimiento no disponible temporalmente.' },
+      { error: 'Servicio temporalmente no disponible.' },
       { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  if (action === 'account-session') {
+    return customerSessionResponse(databaseUrl, request)
+  }
+
+  if (action === 'account-overview') {
+    return customerOverviewResponse(databaseUrl, request)
+  }
+
+  if (action !== 'tracking') {
+    return Response.json(
+      { error: 'Acción inválida.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
     )
   }
 
@@ -171,9 +187,11 @@ export async function GET(request: Request) {
 
   if (rateLimitError) return rateLimitError
 
+  const account = await getCustomerAccount(databaseUrl, request)
   return getPublicOrderTracking(
     databaseUrl,
     requestUrl.searchParams.get('token')?.trim() ?? '',
+    account?.id ?? null,
   )
 }
 
@@ -196,35 +214,53 @@ export async function POST(request: Request) {
   }
 
   const rateLimitOptions =
-    action === 'file-approval'
+    action === 'account-login'
       ? {
-          scope: 'public-order-file-approval',
-          limit: 20,
-          windowSeconds: 10 * 60,
+          scope: 'customer-login',
+          limit: 8,
+          windowSeconds: 15 * 60,
         }
-      : action === 'tracking-lookup'
-      ? {
-          scope: 'public-order-tracking-lookup',
-          limit: 20,
-          windowSeconds: 10 * 60,
-        }
-      : action === 'custom-request'
+      : action === 'account-register'
         ? {
-            scope: 'public-custom-request',
-            limit: 8,
-            windowSeconds: 30 * 60,
+            scope: 'customer-register',
+            limit: 5,
+            windowSeconds: 60 * 60,
           }
-        : action === 'quote-response'
-        ? {
-            scope: 'public-quote-response',
-            limit: 20,
-            windowSeconds: 10 * 60,
-          }
-        : {
-            scope: 'public-order',
-            limit: 12,
-            windowSeconds: 10 * 60,
-          }
+        : action === 'account-logout'
+          ? {
+              scope: 'customer-logout',
+              limit: 30,
+              windowSeconds: 10 * 60,
+            }
+          : action === 'file-approval'
+            ? {
+                scope: 'public-order-file-approval',
+                limit: 20,
+                windowSeconds: 10 * 60,
+              }
+            : action === 'tracking-lookup'
+              ? {
+                  scope: 'public-order-tracking-lookup',
+                  limit: 20,
+                  windowSeconds: 10 * 60,
+                }
+              : action === 'custom-request'
+                ? {
+                    scope: 'public-custom-request',
+                    limit: 8,
+                    windowSeconds: 30 * 60,
+                  }
+                : action === 'quote-response'
+                  ? {
+                      scope: 'public-quote-response',
+                      limit: 20,
+                      windowSeconds: 10 * 60,
+                    }
+                  : {
+                      scope: 'public-order',
+                      limit: 12,
+                      windowSeconds: 10 * 60,
+                    }
 
   const rateLimitError = await enforceRateLimit(
     request,
@@ -233,6 +269,35 @@ export async function POST(request: Request) {
   )
 
   if (rateLimitError) return rateLimitError
+
+  if (
+    action === 'account-register' ||
+    action === 'account-login' ||
+    action === 'account-logout'
+  ) {
+    let body: Record<string, unknown> = {}
+
+    if (action !== 'account-logout') {
+      try {
+        body = (await request.json()) as Record<string, unknown>
+      } catch {
+        return Response.json(
+          { error: 'Solicitud inválida.' },
+          { status: 400, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+    }
+
+    if (action === 'account-register') {
+      return registerCustomer(rateDatabaseUrl, request, body)
+    }
+
+    if (action === 'account-login') {
+      return loginCustomer(rateDatabaseUrl, request, body)
+    }
+
+    return logoutCustomer(rateDatabaseUrl, request)
+  }
 
   if (action === 'file-approval') {
     let body: Record<string, unknown>
@@ -246,7 +311,12 @@ export async function POST(request: Request) {
       )
     }
 
-    return respondPublicOrderFileApproval(rateDatabaseUrl, body)
+    const account = await getCustomerAccount(rateDatabaseUrl, request)
+    return respondPublicOrderFileApproval(
+      rateDatabaseUrl,
+      body,
+      account?.id ?? null,
+    )
   }
 
   if (action === 'tracking-lookup') {
@@ -261,7 +331,12 @@ export async function POST(request: Request) {
       )
     }
 
-    return lookupPublicOrderTracking(rateDatabaseUrl, body)
+    const account = await getCustomerAccount(rateDatabaseUrl, request)
+    return lookupPublicOrderTracking(
+      rateDatabaseUrl,
+      body,
+      account?.id ?? null,
+    )
   }
 
   if (requestUrl.searchParams.get('action') === 'quote-response') {
@@ -279,13 +354,9 @@ export async function POST(request: Request) {
     )
   }
 
-  const databaseUrl = process.env.DATABASE_URL
-  if (!databaseUrl) {
-    return Response.json(
-      { error: 'Pedidos no disponibles temporalmente.' },
-      { status: 503, headers: { 'Cache-Control': 'no-store' } },
-    )
-  }
+  const databaseUrl = rateDatabaseUrl
+  const account = await getCustomerAccount(databaseUrl, request)
+  if (!account) return customerUnauthorized()
 
   let body: Record<string, unknown>
 
@@ -305,25 +376,13 @@ export async function POST(request: Request) {
       : {}
   const rawItems = Array.isArray(body.items) ? body.items : []
 
-  const customerName = text(customer.name, 100)
-  const customerPhone = text(customer.phone, 40)
-  const customerEmail = text(customer.email, 160)
+  const customerName = account.name
+  const customerPhone = account.phone
+  const customerEmail = account.email
   const customerNotes = text(customer.notes, 500)
 
   if (!UUID_RE.test(requestId)) {
     return Response.json({ error: 'Identificador de pedido inválido.' }, { status: 400 })
-  }
-
-  if (customerName.length < 2) {
-    return Response.json({ error: 'Ingresá tu nombre.' }, { status: 400 })
-  }
-
-  if (customerPhone.replace(/\D/g, '').length < 6) {
-    return Response.json({ error: 'Ingresá un WhatsApp válido.' }, { status: 400 })
-  }
-
-  if (customerEmail && !EMAIL_RE.test(customerEmail)) {
-    return Response.json({ error: 'El email no es válido.' }, { status: 400 })
   }
 
   if (rawItems.length < 1 || rawItems.length > MAX_ITEMS) {
@@ -414,13 +473,24 @@ export async function POST(request: Request) {
 
   try {
     const existing = await sql`
-      SELECT public_code, whatsapp_message, public_tracking_token::text
+      SELECT
+        public_code,
+        whatsapp_message,
+        public_tracking_token::text,
+        customer_account_id::text
       FROM orders
       WHERE request_id = ${requestId}::uuid
       LIMIT 1
     `
 
     if (existing.length > 0) {
+      if (String(existing[0].customer_account_id ?? '') !== account.id) {
+        return Response.json(
+          { error: 'Ese identificador de pedido ya fue utilizado.' },
+          { status: 409, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+
       return Response.json(
         {
           orderCode: String(existing[0].public_code),
@@ -653,6 +723,7 @@ export async function POST(request: Request) {
           customer_phone,
           customer_email,
           customer_notes,
+          customer_account_id,
           known_total,
           agreed_total,
           has_quote,
@@ -669,6 +740,7 @@ export async function POST(request: Request) {
           ${customerPhone},
           ${customerEmail || null},
           ${customerNotes || null},
+          ${account.id}::uuid,
           ${knownTotal},
           ${hasQuote ? null : knownTotal},
           ${hasQuote},
@@ -731,19 +803,26 @@ export async function POST(request: Request) {
   } catch {
     try {
       const existing = await sql`
-        SELECT public_code, whatsapp_message, public_tracking_token::text
+        SELECT
+          public_code,
+          whatsapp_message,
+          public_tracking_token::text,
+          customer_account_id::text
         FROM orders
         WHERE request_id = ${requestId}::uuid
         LIMIT 1
       `
 
-      if (existing.length > 0) {
+      if (
+        existing.length > 0 &&
+        String(existing[0].customer_account_id ?? '') === account.id
+      ) {
         return Response.json(
           {
             orderCode: String(existing[0].public_code),
             whatsappMessage: String(existing[0].whatsapp_message),
-          trackingToken: String(existing[0].public_tracking_token),
-          existing: true,
+            trackingToken: String(existing[0].public_tracking_token),
+            existing: true,
           },
           { headers: { 'Cache-Control': 'no-store' } },
         )

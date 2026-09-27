@@ -81,18 +81,26 @@ export async function createOrderFromQuote(
 
     const rows = await sql`
       SELECT
-        id::text,
-        quote_number,
-        status,
-        title,
-        customer_name,
-        customer_phone,
-        quantity,
-        notes,
-        suggested_unit_price::text,
-        total_price::text
-      FROM quotes
-      WHERE id = ${quoteId}::uuid
+        quote.id::text,
+        quote.quote_number,
+        quote.status,
+        quote.title,
+        quote.customer_name,
+        quote.customer_phone,
+        quote.quantity,
+        quote.notes,
+        quote.suggested_unit_price::text,
+        quote.total_price::text,
+        (
+          SELECT request.customer_account_id::text
+          FROM custom_requests request
+          WHERE request.quote_id = quote.id
+            AND request.customer_account_id IS NOT NULL
+          ORDER BY request.created_at DESC
+          LIMIT 1
+        ) AS customer_account_id
+      FROM quotes quote
+      WHERE quote.id = ${quoteId}::uuid
       LIMIT 1
     `
 
@@ -112,6 +120,9 @@ export async function createOrderFromQuote(
 
     const customerName = String(quote.customer_name ?? '').trim()
     const customerPhone = String(quote.customer_phone ?? '').trim()
+    const customerAccountId = quote.customer_account_id
+      ? String(quote.customer_account_id)
+      : null
 
     if (customerName.length < 2 || customerPhone.replace(/\D/g, '').length < 6) {
       return Response.json(
@@ -168,6 +179,7 @@ export async function createOrderFromQuote(
           status,
           customer_name,
           customer_phone,
+          customer_account_id,
           customer_notes,
           known_total,
           agreed_total,
@@ -183,6 +195,7 @@ export async function createOrderFromQuote(
           'confirmed',
           ${customerName},
           ${customerPhone},
+          ${customerAccountId}::uuid,
           ${notes},
           ${totalPrice},
           ${totalPrice},
