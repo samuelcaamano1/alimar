@@ -154,6 +154,23 @@ export default function AdminOrderFiles({
     )
   }
 
+  function designRevisionTrail(file: AdminOrderFile) {
+    if (file.kind !== 'design' || !file.design_series_id) return []
+
+    return files
+      .filter(
+        (candidate) =>
+          candidate.kind === 'design' &&
+          candidate.design_series_id === file.design_series_id &&
+          Boolean(candidate.revision_number),
+      )
+      .slice()
+      .sort(
+        (left, right) =>
+          Number(left.revision_number ?? 0) - Number(right.revision_number ?? 0),
+      )
+  }
+
   function startRevision(file: AdminOrderFile) {
     const nextRevision = (file.revision_number ?? 1) + 1
     setRevisionSourceId(file.id)
@@ -429,16 +446,68 @@ export default function AdminOrderFiles({
 
       {files.length > 0 && (
         <div className="admin-order-files-list">
-          {files.map((file) => (
-            <article key={file.id} className={`is-${file.kind}`}>
+          {files.map((file) => {
+            const historicalRevision =
+              file.kind === 'design' && hasNewerRevision(file)
+            const revisionTrail =
+              file.kind === 'design' && !historicalRevision
+                ? designRevisionTrail(file)
+                : []
+
+            return (
+            <article
+              key={file.id}
+              className={[
+                `is-${file.kind}`,
+                file.kind === 'design'
+                  ? historicalRevision
+                    ? 'is-historical-revision'
+                    : 'is-current-revision'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               <div className="admin-order-file-main">
                 <span>{kindLabels[file.kind]}</span>
                 <strong>{file.label}</strong>
                 {file.kind === 'design' && file.revision_number && (
                   <small className="admin-order-file-revision-badge">
                     Revisión {file.revision_number}
-                    {hasNewerRevision(file) ? ' · superada' : ' · vigente'}
+                    {historicalRevision ? ' · historial' : ' · vigente'}
                   </small>
+                )}
+                {revisionTrail.length > 1 && (
+                  <div className="admin-order-file-revision-history">
+                    <div className="admin-order-file-revision-history-heading">
+                      <span>Historial de revisiones</span>
+                      <strong>{revisionTrail.length} versiones</strong>
+                    </div>
+                    <div className="admin-order-file-revision-history-list">
+                      {revisionTrail.map((revision) => (
+                        <a
+                          key={revision.id}
+                          className={[
+                            `is-${revision.approval_status}`,
+                            revision.id === file.id ? 'is-current' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          href={revision.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={revision.label}
+                        >
+                          <strong>R{revision.revision_number}</strong>
+                          <small>{approvalLabels[revision.approval_status]}</small>
+                        </a>
+                      ))}
+                    </div>
+                    <small>
+                      R{file.revision_number} es la versión vigente. Las anteriores
+                      quedan como historial interno y conservan la respuesta del cliente.
+                    </small>
+                  </div>
                 )}
                 {file.note && <p>{file.note}</p>}
                 <small
@@ -648,7 +717,8 @@ export default function AdminOrderFiles({
                 </div>
               )}
             </article>
-          ))}
+            )
+          })}
         </div>
       )}
 

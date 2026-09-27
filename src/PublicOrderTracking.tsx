@@ -568,6 +568,11 @@ export default function PublicOrderTracking({ token }: { token: string }) {
                             : ''}
                         </span>
                         <strong>{file.label}</strong>
+                        {file.kind === 'design' && file.revisionNumber && (
+                          <small className="tracking-file-current-revision">
+                            Versión vigente compartida por Alimar
+                          </small>
+                        )}
 
                         {file.kind === 'design' &&
                           file.approvalStatus !== 'not_required' && (

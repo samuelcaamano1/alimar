@@ -3948,3 +3948,15 @@
     justify-items: stretch;
   }
 }
+
+/* ALIMAR VERSION VIGENTE DE DISENO 1.1.12 */
+.tracking-file-current-revision {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 2px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(36, 122, 78, 0.1);
+  color: #286847;
+  font-weight: 750;
+}
