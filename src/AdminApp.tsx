@@ -52,8 +52,6 @@ type AdminCatalog = {
 type SessionResponse = {
   configured: boolean
   authenticated: boolean
-  bootstrapRequired: boolean
-  bootstrapAvailable: boolean
   account: {
     id: string
     email: string
@@ -138,8 +136,6 @@ export default function AdminApp() {
       setSession((current) => ({
         configured: current?.configured ?? true,
         authenticated: false,
-        bootstrapRequired: current?.bootstrapRequired ?? false,
-        bootstrapAvailable: current?.bootstrapAvailable ?? false,
         account: null,
       }))
       throw new Error('Tu sesión venció. Volvé a iniciar sesión.')
@@ -164,7 +160,7 @@ export default function AdminApp() {
       } catch (error) {
         if (!active) return
         setMessage(error instanceof Error ? error.message : 'Error de sesión.')
-        setSession({ configured: false, authenticated: false, bootstrapRequired: false, bootstrapAvailable: false, account: null })
+        setSession({ configured: false, authenticated: false, account: null })
         return
       }
 
@@ -300,28 +296,11 @@ export default function AdminApp() {
     setMessage('')
 
     const form = new FormData(event.currentTarget)
-    const bootstrap = session?.bootstrapRequired === true
-    const password = String(form.get('password') ?? '')
-
-    if (bootstrap && password !== String(form.get('confirmPassword') ?? '')) {
-      setMessage('Las contraseñas nuevas no coinciden.')
-      setBusy(false)
-      return
+    const payload = {
+      mode: 'login',
+      email: String(form.get('email') ?? '').trim(),
+      password: String(form.get('password') ?? ''),
     }
-
-    const payload = bootstrap
-      ? {
-          mode: 'bootstrap',
-          name: String(form.get('name') ?? '').trim(),
-          email: String(form.get('email') ?? '').trim(),
-          legacyPassword: String(form.get('legacyPassword') ?? ''),
-          password,
-        }
-      : {
-          mode: 'login',
-          email: String(form.get('email') ?? '').trim(),
-          password,
-        }
 
     try {
       const response = await fetch('/api/admin/login', {
@@ -339,8 +318,6 @@ export default function AdminApp() {
       setSession({
         configured: true,
         authenticated: true,
-        bootstrapRequired: false,
-        bootstrapAvailable: false,
         account: data.account ?? null,
       })
 
@@ -372,8 +349,6 @@ export default function AdminApp() {
       setSession((current) => ({
         configured: current?.configured ?? true,
         authenticated: false,
-        bootstrapRequired: current?.bootstrapRequired ?? false,
-        bootstrapAvailable: current?.bootstrapAvailable ?? false,
         account: null,
       }))
     } catch (error) {
@@ -674,78 +649,45 @@ export default function AdminApp() {
   }
 
   if (!session.authenticated) {
-    const bootstrap = session.bootstrapRequired
-
     return (
       <main className="admin-login-shell">
         <section className="admin-login-card admin-login-account-card">
           <img className="admin-login-logo" src={alimarLogoDataUrl} alt="Alimar" />
           <p className="admin-kicker">Administración privada</p>
-          <h1>{bootstrap ? 'Crear cuenta administrativa' : 'Ingresar a Alimar'}</h1>
+          <h1>Ingresar a Alimar</h1>
           <p className="admin-login-copy">
-            {bootstrap
-              ? 'Este paso reemplaza el acceso por contraseña global. La contraseña administrativa actual se usa una sola vez para validar la creación.'
-              : 'Usá el email y la contraseña de tu cuenta administrativa.'}
+            Acceso exclusivo para la cuenta administrativa configurada.
           </p>
 
-          {bootstrap && !session.bootstrapAvailable && (
+          {!session.configured && (
             <div className="admin-warning">
-              No está disponible la validación del acceso anterior. Verificá que la configuración administrativa existente siga presente.
-            </div>
-          )}
-
-          {!bootstrap && !session.configured && (
-            <div className="admin-warning">
-              La sesión administrativa no está configurada correctamente.
+              La cuenta administrativa no está disponible. Revisá la configuración del sitio.
             </div>
           )}
 
           <form onSubmit={handleLogin}>
-            {bootstrap && (
-              <label>
-                Nombre del administrador
-                <input type="text" name="name" autoComplete="name" maxLength={100} required />
-              </label>
-            )}
-
             <label>
               Email
               <input type="email" name="email" autoComplete="username" maxLength={160} required />
             </label>
 
-            {bootstrap && (
-              <label>
-                Contraseña administrativa actual
-                <input type="password" name="legacyPassword" autoComplete="current-password" maxLength={128} required />
-                <small>Se usa sólo para autorizar la creación inicial de la cuenta.</small>
-              </label>
-            )}
-
             <label>
-              {bootstrap ? 'Nueva contraseña' : 'Contraseña'}
+              Contraseña
               <input
                 type="password"
                 name="password"
-                autoComplete={bootstrap ? 'new-password' : 'current-password'}
-                minLength={bootstrap ? 8 : undefined}
+                autoComplete="current-password"
                 maxLength={128}
                 required
               />
             </label>
 
-            {bootstrap && (
-              <label>
-                Repetir nueva contraseña
-                <input type="password" name="confirmPassword" autoComplete="new-password" minLength={8} maxLength={128} required />
-              </label>
-            )}
-
             <button
               className="admin-primary"
               type="submit"
-              disabled={busy || (bootstrap ? !session.bootstrapAvailable : !session.configured)}
+              disabled={busy || !session.configured}
             >
-              {busy ? 'Procesando…' : bootstrap ? 'Crear cuenta administrativa' : 'Entrar'}
+              {busy ? 'Procesando…' : 'Entrar'}
             </button>
           </form>
 

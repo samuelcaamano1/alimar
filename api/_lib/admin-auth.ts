@@ -4,7 +4,7 @@ const COOKIE_NAME = 'alimar_admin'
 const SESSION_SECONDS = 60 * 60 * 8
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-function env(name: 'ADMIN_PASSWORD' | 'ADMIN_SESSION_SECRET') {
+function env(name: 'ADMIN_SESSION_SECRET') {
   return process.env[name]?.trim() ?? ''
 }
 
@@ -41,15 +41,6 @@ export function isAdminSessionConfigured() {
   return env('ADMIN_SESSION_SECRET').length >= 32
 }
 
-export function isLegacyAdminBootstrapConfigured() {
-  return env('ADMIN_PASSWORD').length >= 8 && isAdminSessionConfigured()
-}
-
-export function verifyLegacyAdminPassword(password: string) {
-  const expected = env('ADMIN_PASSWORD')
-  return expected.length >= 8 && safeEqual(password, expected)
-}
-
 export function getAdminSessionAccountId(request: Request) {
   if (!isAdminSessionConfigured()) return null
 
@@ -57,7 +48,7 @@ export function getAdminSessionAccountId(request: Request) {
   if (!token) return null
 
   const [version, accountId, expiresAt, signature] = token.split('.')
-  if (version !== 'v2' || !UUID_RE.test(accountId ?? '') || !expiresAt || !signature) {
+  if (version !== 'v3' || !UUID_RE.test(accountId ?? '') || !expiresAt || !signature) {
     return null
   }
 
@@ -105,7 +96,7 @@ export function requireSameOrigin(request: Request) {
 
 export function createAdminSessionCookie(request: Request, accountId: string) {
   const expiresAt = String(Date.now() + SESSION_SECONDS * 1000)
-  const token = `v2.${accountId}.${expiresAt}.${sign(accountId, expiresAt)}`
+  const token = `v3.${accountId}.${expiresAt}.${sign(accountId, expiresAt)}`
   const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : ''
 
   return `${COOKIE_NAME}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_SECONDS}; Priority=High${secure}`

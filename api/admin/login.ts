@@ -1,15 +1,9 @@
 import {
   createAdminSessionCookie,
   isAdminSessionConfigured,
-  isLegacyAdminBootstrapConfigured,
   requireSameOrigin,
-  verifyLegacyAdminPassword,
 } from '../_lib/admin-auth.js'
-import {
-  authenticateAdminAccount,
-  bootstrapAdminAccount,
-  countActiveAdminAccounts,
-} from '../_lib/admin-account-store.js'
+import { authenticateAdminAccount } from '../_lib/admin-account-store.js'
 import {
   enforceRateLimit,
   requireJsonBodyWithinLimit,
@@ -57,58 +51,14 @@ export async function POST(request: Request) {
     )
   }
 
-  const mode = body.mode === 'bootstrap' ? 'bootstrap' : 'login'
+  if (body.mode !== undefined && body.mode !== 'login') {
+    return Response.json(
+      { error: 'El registro de administradores está deshabilitado.' },
+      { status: 403, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
 
   try {
-    if (mode === 'bootstrap') {
-      const activeAdmins = await countActiveAdminAccounts(databaseUrl)
-      if (activeAdmins > 0) {
-        return Response.json(
-          { error: 'La cuenta administrativa ya fue creada.' },
-          { status: 409, headers: { 'Cache-Control': 'no-store' } },
-        )
-      }
-
-      if (!isLegacyAdminBootstrapConfigured()) {
-        return Response.json(
-          { error: 'El acceso administrativo anterior no está disponible para validar la creación inicial.' },
-          { status: 503, headers: { 'Cache-Control': 'no-store' } },
-        )
-      }
-
-      const legacyPassword =
-        typeof body.legacyPassword === 'string' ? body.legacyPassword : ''
-      if (!verifyLegacyAdminPassword(legacyPassword)) {
-        return Response.json(
-          { error: 'La contraseña administrativa actual no es correcta.' },
-          { status: 401, headers: { 'Cache-Control': 'no-store' } },
-        )
-      }
-
-      const result = await bootstrapAdminAccount(databaseUrl, body)
-      if (!result.account) {
-        return Response.json(
-          { error: result.error || 'No pudimos crear la cuenta administrativa.' },
-          {
-            status: result.status || 500,
-            headers: { 'Cache-Control': 'no-store' },
-          },
-        )
-      }
-
-      await resetRateLimit(request, databaseUrl, LOGIN_SCOPE)
-      return Response.json(
-        { ok: true, account: result.account },
-        {
-          status: 201,
-          headers: {
-            'Cache-Control': 'no-store',
-            'Set-Cookie': createAdminSessionCookie(request, result.account.id),
-          },
-        },
-      )
-    }
-
     const result = await authenticateAdminAccount(databaseUrl, body)
     if (!result.account) {
       return Response.json(

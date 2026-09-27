@@ -2,7 +2,6 @@ import {
   createAdminSessionCookie,
   getAdminSessionAccountId,
   isAdminSessionConfigured,
-  isLegacyAdminBootstrapConfigured,
   requireSameOrigin,
 } from '../_lib/admin-auth.js'
 import {
@@ -38,9 +37,6 @@ export async function GET(request: Request) {
       {
         configured: activeAdmins > 0 && sessionConfigured,
         authenticated: Boolean(account),
-        bootstrapRequired: activeAdmins === 0,
-        bootstrapAvailable:
-          activeAdmins === 0 && isLegacyAdminBootstrapConfigured(),
         account,
       },
       { headers: { 'Cache-Control': 'no-store' } },
