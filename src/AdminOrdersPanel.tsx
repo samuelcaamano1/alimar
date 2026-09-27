@@ -450,6 +450,7 @@ export default function AdminOrdersPanel() {
     useState<Record<string, string>>({})
   const [savingDeliveryCheckId, setSavingDeliveryCheckId] =
     useState<string | null>(null)
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null)
 
   const applyOrders = useCallback((nextOrders: AdminOrder[]) => {
     setOrders(nextOrders)
@@ -571,6 +572,43 @@ export default function AdminOrdersPanel() {
       window.removeEventListener('alimar:orders-changed', onOrdersChanged)
     }
   }, [loadOrders])
+
+  useEffect(() => {
+    function onOpenOrder(event: Event) {
+      const orderId = (event as CustomEvent<{ orderId?: string }>).detail?.orderId
+      if (!orderId) return
+
+      setStatusFilter('all')
+      setSearchQuery('')
+      setDateFilter('all')
+      setPaymentFilter('all')
+      setOpenOrderId(orderId)
+    }
+
+    window.addEventListener('alimar:open-order', onOpenOrder)
+
+    return () => {
+      window.removeEventListener('alimar:open-order', onOpenOrder)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!openOrderId) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpenOrderId(null)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [openOrderId])
 
   const orderCounts = useMemo(
     () => ({
@@ -1264,13 +1302,9 @@ export default function AdminOrdersPanel() {
                 <strong>{promisedTimingLabel(order.promised_for)}</strong>
                 <button
                   type="button"
-                  onClick={() =>
-                    document
-                      .getElementById(`order-${order.id}`)
-                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  }
+                  onClick={() => setOpenOrderId(order.id)}
                 >
-                  Ver PED
+                  Abrir PED
                 </button>
               </div>
             ))}
@@ -1286,6 +1320,14 @@ export default function AdminOrdersPanel() {
       {state === 'error' && orders.length === 0 && <div className="admin-empty">No se pudieron cargar los pedidos.</div>}
       {state === 'ready' && visibleOrders.length === 0 && (
         <div className="admin-empty">No hay pedidos para este estado.</div>
+      )}
+
+      {openOrderId && (
+        <div
+          className="admin-order-popup-backdrop"
+          role="presentation"
+          onClick={() => setOpenOrderId(null)}
+        />
       )}
 
       {visibleOrders.length > 0 && (
@@ -1395,13 +1437,28 @@ export default function AdminOrdersPanel() {
               actualCost !== null && estimatedCost !== null
                 ? actualCost - estimatedCost
                 : null
+            const orderPopupOpen = openOrderId === order.id
 
             return (
               <article
-              className="admin-order-card"
-              id={`order-${order.id}`}
-              key={order.id}
-            >
+                className={`admin-order-card ${
+                  orderPopupOpen ? 'is-popup' : 'is-compact'
+                }`}
+                id={`order-${order.id}`}
+                key={order.id}
+                role={orderPopupOpen ? 'dialog' : undefined}
+                aria-modal={orderPopupOpen ? true : undefined}
+                aria-label={orderPopupOpen ? `Pedido ${order.public_code}` : undefined}
+              >
+                <button
+                  className="admin-order-popup-close"
+                  type="button"
+                  onClick={() => setOpenOrderId(null)}
+                  aria-label={`Cerrar pedido ${order.public_code}`}
+                >
+                  Cerrar ×
+                </button>
+
                 <div className="admin-order-top">
                   <div>
                     <span className="admin-order-code">{order.public_code}</span>
@@ -1412,6 +1469,55 @@ export default function AdminOrdersPanel() {
                   <span className={`admin-order-status is-${order.status}`}>
                     {statusLabels[order.status]}
                   </span>
+                </div>
+
+                <div className="admin-order-compact-summary">
+                  <div className="admin-order-compact-metrics">
+                    <span>
+                      <small>Etapa</small>
+                      <strong>{productionStageLabels[order.production_stage]}</strong>
+                    </span>
+                    <span>
+                      <small>Entrega</small>
+                      <strong>{promisedTimingLabel(order.promised_for)}</strong>
+                    </span>
+                    <span>
+                      <small>Cobro</small>
+                      <strong>{paymentStatusLabels[order.payment_status]}</strong>
+                    </span>
+                    <span>
+                      <small>Saldo</small>
+                      <strong>
+                        {order.balance_due === null ? '—' : money(order.balance_due)}
+                      </strong>
+                    </span>
+                  </div>
+
+                  <div className="admin-order-compact-actions">
+                    <button
+                      className="admin-primary"
+                      type="button"
+                      onClick={() => setOpenOrderId(order.id)}
+                    >
+                      Abrir PED
+                    </button>
+                    <a
+                      className="admin-secondary"
+                      href={whatsappContactUrl(order)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      WhatsApp ↗
+                    </a>
+                    <a
+                      className="admin-secondary"
+                      href={trackingUrl(order)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Seguimiento ↗
+                    </a>
+                  </div>
                 </div>
 
                 <div className="admin-order-contact">

@@ -178,13 +178,14 @@ function daysUntilQuote(value: string | null, today: string) {
   return dayDifference(value, today)
 }
 
-function scrollToTarget(task: WorkTask) {
+function openTaskTarget(task: WorkTask) {
   if (task.orderId) {
-    const order = document.getElementById(`order-${task.orderId}`)
-    if (order) {
-      order.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      return
-    }
+    window.dispatchEvent(
+      new CustomEvent('alimar:open-order', {
+        detail: { orderId: task.orderId },
+      }),
+    )
+    return
   }
 
   document
@@ -907,7 +908,7 @@ export default function AdminWorkCenter() {
                   key={task.key}
                   type="button"
                   className={`admin-work-task is-${task.tone}`}
-                  onClick={() => scrollToTarget(task)}
+                  onClick={() => openTaskTarget(task)}
                 >
                   <span className="admin-work-task-number">
                     {String(index + 1).padStart(2, '0')}
@@ -948,7 +949,7 @@ export default function AdminWorkCenter() {
                   type="button"
                   key={order.id}
                   onClick={() =>
-                    scrollToTarget({
+                    openTaskTarget({
                       key: order.id,
                       score: 0,
                       kind: 'PED',

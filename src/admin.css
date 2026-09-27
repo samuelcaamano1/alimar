@@ -9805,3 +9805,180 @@
     width: 100%;
   }
 }
+/* ALIMAR NAVEGACION COMPACTA Y POPUPS 1.1.15 */
+.admin-orders-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.admin-order-card.is-compact {
+  min-width: 0;
+  padding: 16px;
+}
+
+.admin-order-card.is-compact > * {
+  display: none !important;
+}
+
+.admin-order-card.is-compact > .admin-order-top {
+  display: flex !important;
+}
+
+.admin-order-card.is-compact > .admin-order-compact-summary {
+  display: grid !important;
+}
+
+.admin-order-compact-summary {
+  display: none;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.admin-order-compact-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.admin-order-compact-metrics > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.admin-order-compact-metrics small {
+  color: var(--admin-muted);
+  font-size: 0.49rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-order-compact-metrics strong {
+  overflow: hidden;
+  color: var(--admin-ink);
+  font-size: 0.61rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-order-compact-actions {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) repeat(2, auto);
+  gap: 7px;
+}
+
+.admin-order-compact-actions .admin-primary,
+.admin-order-compact-actions .admin-secondary {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding-inline: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.admin-order-popup-backdrop {
+  position: fixed;
+  z-index: 89;
+  inset: 0;
+  background: rgba(7, 11, 14, 0.68);
+  backdrop-filter: blur(7px);
+}
+
+.admin-order-card.is-popup {
+  position: fixed;
+  z-index: 90;
+  inset: max(18px, 4vh) max(18px, 4vw);
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 24px;
+  border-color: rgba(63, 120, 138, 0.22);
+  border-radius: 22px;
+  background: #fff9eb;
+  box-shadow: 0 34px 100px rgba(0, 0, 0, 0.34);
+}
+
+.admin-order-card.is-popup > .admin-order-compact-summary {
+  display: none;
+}
+
+.admin-order-popup-close {
+  display: none;
+}
+
+.admin-order-card.is-popup > .admin-order-popup-close {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  margin: 0 0 6px auto;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid rgba(12, 16, 20, 0.1);
+  border-radius: 999px;
+  color: var(--admin-ink);
+  background: rgba(255, 253, 248, 0.94);
+  box-shadow: 0 8px 22px rgba(12, 16, 20, 0.08);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.58rem;
+  font-weight: 900;
+}
+
+.admin-order-card.is-popup .admin-order-top {
+  padding-right: 4px;
+}
+
+.admin-order-card.is-popup .admin-order-delivery-check,
+.admin-order-card.is-popup .admin-order-files,
+.admin-order-card.is-popup .admin-order-schedule,
+.admin-order-card.is-popup .admin-order-payments,
+.admin-order-card.is-popup .admin-order-actual-cost,
+.admin-order-card.is-popup .admin-order-workflow,
+.admin-order-card.is-popup .admin-order-history {
+  scroll-margin-top: 58px;
+}
+
+@media (max-width: 1050px) {
+  .admin-orders-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .admin-order-card.is-popup {
+    inset: 0;
+    padding: 18px;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .admin-order-compact-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-order-compact-actions .admin-primary {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-order-compact-metrics,
+  .admin-order-compact-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-compact-actions .admin-primary {
+    grid-column: auto;
+  }
+}
