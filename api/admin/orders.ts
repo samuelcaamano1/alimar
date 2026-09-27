@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
+import { createAdminOrderFileUploadTicket } from '../_lib/order-file-upload.js'
 import { createOrderFromQuote } from '../_lib/quote-orders.js'
 import { updateOrderDeliveryCheck } from '../_lib/order-delivery-check.js'
 import {
@@ -713,6 +714,10 @@ export async function POST(request: Request) {
     body = (await request.json()) as Record<string, unknown>
   } catch {
     return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  }
+
+  if (action === 'file-upload-ticket') {
+    return createAdminOrderFileUploadTicket(request, databaseUrl, body)
   }
 
   if (action === 'file') {

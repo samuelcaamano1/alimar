@@ -82,6 +82,88 @@ const emptyRevisionDraft: RevisionDraft = {
   note: '',
 }
 
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024
+
+type UploadTicket = {
+  uploadUrl: string
+  blobUrl: string
+  maximumSizeInBytes: number
+  expiresAt: number
+}
+
+function fileSize(value: number) {
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`
+  return `${(value / (1024 * 1024)).toFixed(value >= 10 * 1024 * 1024 ? 0 : 1)} MB`
+}
+
+function safeUploadFilename(filename: string) {
+  const normalized = filename
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(-120)
+
+  return normalized || 'archivo.bin'
+}
+
+function uploadPath(orderId: string, filename: string) {
+  const unique = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
+  return `orders/${orderId}/${unique}-${safeUploadFilename(filename)}`
+}
+
+async function uploadOrderFileFromDevice(
+  orderId: string,
+  file: File,
+  onProgress: (percentage: number) => void,
+) {
+  if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
+    throw new Error('El archivo debe pesar entre 1 byte y 100 MB.')
+  }
+
+  const pathname = uploadPath(orderId, file.name)
+  const ticketResponse = await fetch('/api/admin/orders?action=file-upload-ticket', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderId, pathname, size: file.size }),
+  })
+
+  if (!ticketResponse.ok) throw new Error(await responseMessage(ticketResponse))
+
+  const ticket = (await ticketResponse.json()) as UploadTicket
+  if (!ticket.uploadUrl || !ticket.blobUrl) {
+    throw new Error('Vercel Blob no devolvió una autorización de subida válida.')
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', ticket.uploadUrl, true)
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || event.total <= 0) return
+      onProgress(Math.max(1, Math.min(99, Math.round((event.loaded / event.total) * 100))))
+    }
+
+    xhr.onerror = () => reject(new Error('Se cortó la conexión durante la subida.'))
+    xhr.onabort = () => reject(new Error('La subida fue cancelada.'))
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress(100)
+        resolve()
+        return
+      }
+
+      reject(new Error(`Vercel Blob rechazó la subida (HTTP ${xhr.status}).`))
+    }
+
+    xhr.send(file)
+  })
+
+  return ticket.blobUrl
+}
+
 function dateTime(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
@@ -125,6 +207,8 @@ export default function AdminOrderFiles({
   onChanged,
 }: AdminOrderFilesProps) {
   const [draft, setDraft] = useState<FileDraft>(emptyDraft)
+  const [deviceFile, setDeviceFile] = useState<File | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [saving, setSaving] = useState(false)
   const [archivingId, setArchivingId] = useState<string | null>(null)
   const [sharingId, setSharingId] = useState<string | null>(null)
@@ -133,6 +217,8 @@ export default function AdminOrderFiles({
   const [revisionSourceId, setRevisionSourceId] = useState<string | null>(null)
   const [revisionDraft, setRevisionDraft] =
     useState<RevisionDraft>(emptyRevisionDraft)
+  const [revisionDeviceFile, setRevisionDeviceFile] = useState<File | null>(null)
+  const [revisionUploadProgress, setRevisionUploadProgress] = useState(0)
   const [revisionSaving, setRevisionSaving] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -179,6 +265,8 @@ export default function AdminOrderFiles({
       url: '',
       note: '',
     })
+    setRevisionDeviceFile(null)
+    setRevisionUploadProgress(0)
     setMessage('')
   }
 
@@ -206,22 +294,30 @@ export default function AdminOrderFiles({
     if (saving || disabled) return
 
     const label = draft.label.trim()
-    const url = draft.url.trim()
+    let url = draft.url.trim()
 
     if (!label) {
       setMessage('Poné un nombre para identificar el archivo.')
       return
     }
 
-    if (!/^https:\/\//i.test(url)) {
-      setMessage('Pegá un enlace HTTPS válido.')
+    if (!deviceFile && !/^https:\/\//i.test(url)) {
+      setMessage('Elegí un archivo del dispositivo o pegá un enlace HTTPS válido.')
       return
     }
 
     setSaving(true)
-    setMessage('')
+    setUploadProgress(0)
+    setMessage(deviceFile ? 'Subiendo archivo…' : '')
 
     try {
+      if (deviceFile) {
+        url = await uploadOrderFileFromDevice(orderId, deviceFile, setUploadProgress)
+        setDeviceFile(null)
+        setDraft((current) => ({ ...current, url }))
+        setMessage('Subida completa. Vinculando al PED…')
+      }
+
       const response = await fetch('/api/admin/orders?action=file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -237,6 +333,8 @@ export default function AdminOrderFiles({
       if (!response.ok) throw new Error(await responseMessage(response))
 
       setDraft(emptyDraft)
+      setDeviceFile(null)
+      setUploadProgress(0)
       setMessage('Archivo agregado al pedido.')
       await onChanged()
       window.dispatchEvent(new Event('alimar:order-files-changed'))
@@ -315,22 +413,34 @@ export default function AdminOrderFiles({
     if (revisionSaving || disabled) return
 
     const label = revisionDraft.label.trim()
-    const url = revisionDraft.url.trim()
+    let url = revisionDraft.url.trim()
 
     if (!label) {
       setMessage('Poné un nombre para la nueva revisión.')
       return
     }
 
-    if (!/^https:\/\//i.test(url)) {
-      setMessage('Pegá un enlace HTTPS válido para la nueva revisión.')
+    if (!revisionDeviceFile && !/^https:\/\//i.test(url)) {
+      setMessage('Elegí el archivo de la revisión o pegá un enlace HTTPS válido.')
       return
     }
 
     setRevisionSaving(true)
-    setMessage('')
+    setRevisionUploadProgress(0)
+    setMessage(revisionDeviceFile ? 'Subiendo nueva revisión…' : '')
 
     try {
+      if (revisionDeviceFile) {
+        url = await uploadOrderFileFromDevice(
+          orderId,
+          revisionDeviceFile,
+          setRevisionUploadProgress,
+        )
+        setRevisionDeviceFile(null)
+        setRevisionDraft((current) => ({ ...current, url }))
+        setMessage('Subida completa. Creando revisión…')
+      }
+
       const response = await fetch('/api/admin/orders?action=file-revision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -348,6 +458,8 @@ export default function AdminOrderFiles({
       const data = (await response.json()) as { revisionNumber?: number }
       setRevisionSourceId(null)
       setRevisionDraft(emptyRevisionDraft)
+      setRevisionDeviceFile(null)
+      setRevisionUploadProgress(0)
       setMessage(
         data.revisionNumber
           ? `Revisión ${data.revisionNumber} creada. Compartila cuando esté lista para el cliente.`
@@ -595,11 +707,15 @@ export default function AdminOrderFiles({
                     <button
                       type="button"
                       className="admin-order-file-revision-action"
-                      onClick={() =>
-                        revisionSourceId === file.id
-                          ? setRevisionSourceId(null)
-                          : startRevision(file)
-                      }
+                      onClick={() => {
+                        if (revisionSourceId === file.id) {
+                          setRevisionSourceId(null)
+                          setRevisionDeviceFile(null)
+                          setRevisionUploadProgress(0)
+                        } else {
+                          startRevision(file)
+                        }
+                      }}
                       disabled={disabled || revisionSaving}
                     >
                       {revisionSourceId === file.id
@@ -654,6 +770,31 @@ export default function AdminOrderFiles({
                     </small>
                   </div>
 
+                  <label className="admin-order-file-device-picker">
+                    Archivo del dispositivo
+                    <input
+                      type="file"
+                      onChange={(event) => {
+                        const nextFile = event.target.files?.[0] ?? null
+                        setRevisionDeviceFile(nextFile)
+                        setRevisionUploadProgress(0)
+                        if (nextFile && !revisionDraft.label.trim()) {
+                          setRevisionDraft((current) => ({
+                            ...current,
+                            label: nextFile.name.slice(0, 120),
+                          }))
+                        }
+                      }}
+                      disabled={revisionSaving}
+                    />
+                    {revisionDeviceFile && (
+                      <small>{revisionDeviceFile.name} · {fileSize(revisionDeviceFile.size)}</small>
+                    )}
+                    {revisionSaving && revisionDeviceFile && (
+                      <progress value={revisionUploadProgress} max={100} />
+                    )}
+                  </label>
+
                   <label>
                     Nombre
                     <input
@@ -670,7 +811,7 @@ export default function AdminOrderFiles({
                   </label>
 
                   <label className="admin-order-file-revision-url">
-                    Enlace HTTPS
+                    Enlace HTTPS (alternativa)
                     <input
                       value={revisionDraft.url}
                       maxLength={4000}
@@ -709,10 +850,16 @@ export default function AdminOrderFiles({
                     disabled={
                       revisionSaving ||
                       !revisionDraft.label.trim() ||
-                      !revisionDraft.url.trim()
+                      (!revisionDeviceFile && !revisionDraft.url.trim())
                     }
                   >
-                    {revisionSaving ? 'Creando…' : 'Crear nueva revisión'}
+                    {revisionSaving
+                      ? revisionDeviceFile
+                        ? `Subiendo ${revisionUploadProgress}%…`
+                        : 'Creando…'
+                      : revisionDeviceFile
+                        ? 'Subir y crear revisión'
+                        : 'Crear revisión desde enlace'}
                   </button>
                 </div>
               )}
@@ -763,8 +910,33 @@ export default function AdminOrderFiles({
           />
         </label>
 
+        <label className="admin-order-file-device-picker">
+          Archivo del dispositivo
+          <input
+            type="file"
+            onChange={(event) => {
+              const nextFile = event.target.files?.[0] ?? null
+              setDeviceFile(nextFile)
+              setUploadProgress(0)
+              if (nextFile && !draft.label.trim()) {
+                setDraft((current) => ({
+                  ...current,
+                  label: nextFile.name.slice(0, 120),
+                }))
+              }
+            }}
+            disabled={disabled || saving}
+          />
+          {deviceFile && (
+            <small>{deviceFile.name} · {fileSize(deviceFile.size)}</small>
+          )}
+          {saving && deviceFile && (
+            <progress value={uploadProgress} max={100} />
+          )}
+        </label>
+
         <label className="admin-order-file-url">
-          Enlace HTTPS
+          Enlace HTTPS (alternativa)
           <input
             value={draft.url}
             maxLength={4000}
@@ -800,14 +972,25 @@ export default function AdminOrderFiles({
           className="admin-secondary"
           type="button"
           onClick={() => void addFile()}
-          disabled={disabled || saving || !draft.label.trim() || !draft.url.trim()}
+          disabled={
+            disabled ||
+            saving ||
+            !draft.label.trim() ||
+            (!deviceFile && !draft.url.trim())
+          }
         >
-          {saving ? 'Agregando…' : 'Agregar archivo'}
+          {saving
+            ? deviceFile
+              ? `Subiendo ${uploadProgress}%…`
+              : 'Agregando…'
+            : deviceFile
+              ? 'Subir y agregar'
+              : 'Agregar enlace'}
         </button>
       </div>
 
       <small className="admin-order-files-storage-note">
-        Alimar guarda el enlace, no el archivo pesado. Usá Drive, Dropbox u otro enlace HTTPS.
+        Podés subir archivos de hasta 100 MB directamente desde el dispositivo. Si Vercel Blob todavía no está conectado, el enlace HTTPS manual sigue funcionando.
       </small>
 
       {message && <small className="admin-order-files-message">{message}</small>}

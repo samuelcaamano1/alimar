@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless'
+import { resolveOrderFileUrls } from './blob-order-files.js'
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -243,14 +244,17 @@ async function selectPublicOrderTracking(
     LIMIT 1
   `) as Record<string, unknown>[]
 
-  return rows.length > 0
-    ? {
-        order: formatTrackingRow(rows[0]),
-        customerAccountId: rows[0].customer_account_id
-          ? String(rows[0].customer_account_id)
-          : null,
-      }
-    : null
+  if (rows.length === 0) return null
+
+  const order = formatTrackingRow(rows[0])
+  order.files = await resolveOrderFileUrls(order.files)
+
+  return {
+    order,
+    customerAccountId: rows[0].customer_account_id
+      ? String(rows[0].customer_account_id)
+      : null,
+  }
 }
 
 function ownershipError(ownerId: string | null, accountId: string | null) {
