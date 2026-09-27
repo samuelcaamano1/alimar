@@ -169,6 +169,40 @@ const productionStageLabels: Record<ProductionStage, string> = {
   ready_for_delivery: 'Listo para entregar',
 }
 
+type GuidedProductionStep = {
+  stage: ProductionStage
+  label: string
+  note: string
+}
+
+const guidedProductionSteps: Partial<Record<ProductionStage, GuidedProductionStep>> = {
+  not_started: {
+    stage: 'design',
+    label: 'Iniciar diseño / armado',
+    note: 'Flujo guiado: inicio de diseño / armado.',
+  },
+  design: {
+    stage: 'materials',
+    label: 'Continuar a preparar materiales',
+    note: 'Flujo guiado: diseño resuelto; preparar materiales.',
+  },
+  materials: {
+    stage: 'production',
+    label: 'Comenzar producción',
+    note: 'Flujo guiado: materiales listos; producción iniciada.',
+  },
+  production: {
+    stage: 'finishing',
+    label: 'Pasar a terminaciones',
+    note: 'Flujo guiado: producción principal terminada; iniciar terminaciones.',
+  },
+  finishing: {
+    stage: 'ready_for_delivery',
+    label: 'Marcar listo para entregar',
+    note: 'Flujo guiado: terminaciones completadas; listo para entregar.',
+  },
+}
+
 function money(value: string | null) {
   if (!value) return 'A consultar'
   const amount = Number(value)
@@ -802,6 +836,45 @@ export default function AdminOrdersPanel() {
     }
   }
 
+  async function advanceProductionStage(
+    order: AdminOrder,
+    step: GuidedProductionStep,
+  ) {
+    if (savingProductionStageId) return
+
+    setSavingProductionStageId(order.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=production-stage', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: order.id,
+          stage: step.stage,
+          note: step.note,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      await loadOrders()
+      window.dispatchEvent(new Event('alimar:production-stage-changed'))
+      window.dispatchEvent(new Event('alimar:orders-changed'))
+      setMessage(
+        `${order.public_code}: ${productionStageLabels[step.stage]}.`,
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo avanzar la etapa de producción.',
+      )
+    } finally {
+      setSavingProductionStageId(null)
+    }
+  }
+
   async function saveAgreedTotal(order: AdminOrder) {
     const raw = (draftAgreedTotal[order.id] ?? '').trim()
     const agreedTotal = Number(raw.replace(',', '.'))
@@ -1134,6 +1207,7 @@ export default function AdminOrdersPanel() {
                   <strong>{order.customer_name}</strong>
                   <small>
                     {statusLabels[order.status]} ·{' '}
+                    {productionStageLabels[order.production_stage]} ·{' '}
                     {productionPriorityLabels[order.production_priority]}
                   </small>
                 </div>
@@ -1194,6 +1268,36 @@ export default function AdminOrdersPanel() {
             draftProductionStage[order.id] ?? order.production_stage
           const productionStageNote =
             draftProductionStageNote[order.id] ?? ''
+          const productionActive = ['confirmed', 'in_progress', 'ready'].includes(
+            order.status,
+          )
+          const approvalPending = order.files.some(
+            (file) =>
+              file.kind === 'design' &&
+              file.customer_visible &&
+              file.approval_status === 'pending',
+          )
+          const approvalChangesRequested = order.files.some(
+            (file) =>
+              file.kind === 'design' &&
+              file.customer_visible &&
+              file.approval_status === 'changes_requested',
+          )
+          const approvedSharedDesign = order.files.some(
+            (file) =>
+              file.kind === 'design' &&
+              file.customer_visible &&
+              file.approval_status === 'approved',
+          )
+          const guidedProductionStep = guidedProductionSteps[order.production_stage]
+          const designApprovalOwnsNextStep =
+            order.production_stage === 'design' &&
+            (approvalPending || approvalChangesRequested || approvedSharedDesign)
+          const guidedCanAdvance =
+            productionActive &&
+            Boolean(guidedProductionStep) &&
+            order.production_stage !== 'awaiting_approval' &&
+            !designApprovalOwnsNextStep
           const promisedFor = draftPromisedFor[order.id] ?? ''
           const productionPriority =
             draftProductionPriority[order.id] ?? order.production_priority
@@ -1684,9 +1788,87 @@ export default function AdminOrdersPanel() {
                                     </button>
                                   </div>
 
-                                  {!['confirmed', 'in_progress', 'ready'].includes(
-                                    order.status,
-                                  ) && (
+                                  {productionActive && (
+                                    <div
+                                      className={`admin-order-production-guide is-${order.production_stage}`}
+                                    >
+                                      <div>
+                                        <span>Siguiente paso</span>
+                                        <strong>
+                                          {order.production_stage === 'awaiting_approval'
+                                            ? 'Esperando aprobación del cliente'
+                                            : approvalChangesRequested &&
+                                                order.production_stage === 'design'
+                                              ? 'Resolver los cambios solicitados'
+                                              : approvalPending &&
+                                                  order.production_stage === 'design'
+                                                ? 'Esperar la respuesta del cliente'
+                                                : approvedSharedDesign &&
+                                                    order.production_stage === 'design'
+                                                  ? 'Continuar desde el diseño aprobado'
+                                                  : order.production_stage === 'ready_for_delivery'
+                                                    ? 'Coordinar entrega y cierre'
+                                                    : guidedProductionStep?.label ??
+                                                      'Sin siguiente paso automático'}
+                                        </strong>
+                                        <small>
+                                          {order.production_stage === 'awaiting_approval'
+                                            ? 'Esta etapa nunca se salta con el flujo guiado. La producción continúa desde el diseño aprobado.'
+                                            : approvalChangesRequested &&
+                                                order.production_stage === 'design'
+                                              ? 'Creá y compartí la nueva revisión antes de continuar la producción.'
+                                              : approvalPending &&
+                                                  order.production_stage === 'design'
+                                                ? 'La aprobación está pendiente. Esperá la respuesta antes de avanzar.'
+                                                : approvedSharedDesign &&
+                                                    order.production_stage === 'design'
+                                                  ? 'Usá “Continuar: preparar materiales” en Archivos del trabajo para conservar la referencia de la aprobación.'
+                                                  : order.production_stage === 'design'
+                                                    ? 'Usalo sólo cuando este trabajo no requiera aprobación del cliente.'
+                                                    : order.production_stage === 'ready_for_delivery'
+                                                      ? 'La producción ya terminó. El siguiente paso se gestiona en Entrega y cierre.'
+                                                      : guidedProductionStep
+                                                        ? `Avanza a ${productionStageLabels[guidedProductionStep.stage]} y registra el cambio en el historial.`
+                                                        : 'Podés seguir usando el selector manual de etapa si necesitás corregir el flujo.'}
+                                        </small>
+                                      </div>
+
+                                      {guidedCanAdvance && guidedProductionStep && (
+                                        <button
+                                          className="admin-primary admin-order-production-next"
+                                          type="button"
+                                          onClick={() =>
+                                            void advanceProductionStage(
+                                              order,
+                                              guidedProductionStep,
+                                            )
+                                          }
+                                          disabled={savingProductionStage}
+                                        >
+                                          {savingProductionStage
+                                            ? 'Avanzando…'
+                                            : guidedProductionStep.label}
+                                        </button>
+                                      )}
+
+                                      {!guidedCanAdvance &&
+                                        order.production_stage !== 'ready_for_delivery' && (
+                                          <span className="admin-order-production-guide-lock">
+                                            {order.production_stage === 'awaiting_approval' ||
+                                            approvalPending
+                                              ? 'Aprobación en curso'
+                                              : approvalChangesRequested
+                                                ? 'Cambios pendientes'
+                                                : approvedSharedDesign &&
+                                                    order.production_stage === 'design'
+                                                  ? 'Continuar desde archivo aprobado'
+                                                  : 'Sin avance rápido'}
+                                          </span>
+                                        )}
+                                    </div>
+                                  )}
+
+                                  {!productionActive && (
                                     <small>
                                       El seguimiento fino se habilita al confirmar el pedido.
                                     </small>
