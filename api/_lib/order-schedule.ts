@@ -323,6 +323,14 @@ export async function updateOrderProductionStage(
           production_stage = ${stage},
           production_stage_note = ${note || null},
           production_stage_updated_at = now(),
+          delivery_checked_at = CASE
+            WHEN ${stage} = 'ready_for_delivery' THEN delivery_checked_at
+            ELSE NULL
+          END,
+          delivery_check_note = CASE
+            WHEN ${stage} = 'ready_for_delivery' THEN delivery_check_note
+            ELSE NULL
+          END,
           updated_at = now()
         WHERE id = ${id}::uuid
       `,

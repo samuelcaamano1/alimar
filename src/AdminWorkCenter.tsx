@@ -56,6 +56,7 @@ type WorkOrder = {
   quote_code: string | null
   estimated_cost: string | null
   actual_cost: string | null
+  delivery_checked_at: string | null
   files: WorkApprovalFile[]
   created_at: string
 }
@@ -75,6 +76,7 @@ type WorkTask = {
     | 'PED'
     | 'COBRO'
     | 'APROB'
+    | 'CONTROL'
     | 'ENTREGA'
     | 'CIERRE'
     | 'RENT'
@@ -270,6 +272,7 @@ export default function AdminWorkCenter() {
       'alimar:quote-metrics-changed',
       'alimar:requests-changed',
       'alimar:order-files-changed',
+      'alimar:delivery-check-changed',
     ]
 
     for (const eventName of events) {
@@ -314,14 +317,26 @@ export default function AdminWorkCenter() {
       return balance !== null && balance > 0 ? total + balance : total
     }, 0)
 
+    const deliveryControlPending = data.orders.filter(
+      (order) =>
+        order.status !== 'cancelled' &&
+        order.status !== 'completed' &&
+        order.production_stage === 'ready_for_delivery' &&
+        !order.delivery_checked_at,
+    ).length
+
     const readyForDelivery = data.orders.filter(
       (order) =>
         (order.status === 'confirmed' || order.status === 'in_progress') &&
-        order.production_stage === 'ready_for_delivery',
+        order.production_stage === 'ready_for_delivery' &&
+        Boolean(order.delivery_checked_at),
     ).length
 
     const readyToClose = data.orders.filter(
-      (order) => order.status === 'ready' && order.payment_status === 'paid',
+      (order) =>
+        order.status === 'ready' &&
+        order.payment_status === 'paid' &&
+        Boolean(order.delivery_checked_at),
     ).length
 
     const profitabilityPending = data.orders.filter(
@@ -381,9 +396,11 @@ export default function AdminWorkCenter() {
       approvalChanges,
       approvalReady,
       approvalRevisionReady: revisionNeedsShare.length,
+      deliveryControlPending,
       readyForDelivery,
       readyToClose,
-      deliveryAttention: readyForDelivery + readyToClose,
+      deliveryAttention:
+        deliveryControlPending + readyForDelivery + readyToClose,
       profitabilityPending,
       pendingBalance,
     }
@@ -426,23 +443,42 @@ export default function AdminWorkCenter() {
 
     for (const order of data.orders) {
       if (
+        order.status !== 'cancelled' &&
+        order.status !== 'completed' &&
+        order.production_stage === 'ready_for_delivery' &&
+        !order.delivery_checked_at
+      ) {
+        next.push({
+          key: `delivery-control-${order.id}`,
+          score: 1.25,
+          kind: 'CONTROL',
+          title: `${order.public_code}: control final pendiente`,
+          detail: order.customer_name,
+          meta: 'Revisar terminación, diseño, cobro y coordinación de entrega',
+          tone: 'delivery',
+          target: '.admin-orders-panel',
+          orderId: order.id,
+        })
+      } else if (
         (order.status === 'confirmed' || order.status === 'in_progress') &&
-        order.production_stage === 'ready_for_delivery'
+        order.production_stage === 'ready_for_delivery' &&
+        order.delivery_checked_at
       ) {
         next.push({
           key: `delivery-ready-${order.id}`,
           score: 1.5,
           kind: 'ENTREGA',
-          title: `${order.public_code}: producción terminada`,
+          title: `${order.public_code}: producción controlada`,
           detail: order.customer_name,
-          meta: 'Marcar PED como Listo y coordinar entrega con el cliente',
+          meta: 'Control final confirmado · marcar PED como Listo y coordinar entrega',
           tone: 'delivery',
           target: '.admin-orders-panel',
           orderId: order.id,
         })
       } else if (
         order.status === 'ready' &&
-        order.payment_status === 'paid'
+        order.payment_status === 'paid' &&
+        order.delivery_checked_at
       ) {
         next.push({
           key: `delivery-close-${order.id}`,
@@ -450,7 +486,7 @@ export default function AdminWorkCenter() {
           kind: 'CIERRE',
           title: `${order.public_code}: listo para cerrar`,
           detail: order.customer_name,
-          meta: 'Pedido listo y saldo cobrado · confirmar entrega',
+          meta: 'Control final confirmado y saldo cobrado · confirmar entrega',
           tone: 'delivery',
           target: '.admin-orders-panel',
           orderId: order.id,

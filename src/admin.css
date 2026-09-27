@@ -9643,3 +9643,165 @@
     width: fit-content;
   }
 }
+
+/* ALIMAR CHECKLIST ENTREGA 1.1.14 */
+.admin-order-delivery-check {
+  display: grid;
+  gap: 11px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(181, 126, 62, 0.2);
+  border-radius: 14px;
+  background: rgba(181, 126, 62, 0.045);
+}
+
+.admin-order-delivery-check.is-checked {
+  border-color: rgba(58, 133, 95, 0.26);
+  background: rgba(58, 133, 95, 0.055);
+}
+
+.admin-order-delivery-check-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.admin-order-delivery-check-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-order-delivery-check-heading span:first-child {
+  color: var(--admin-blue-dark);
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.admin-order-delivery-check-heading strong {
+  font-size: 0.72rem;
+}
+
+.admin-order-delivery-check-heading small,
+.admin-order-delivery-check-confirmed {
+  color: var(--admin-muted);
+  font-size: 0.51rem;
+  line-height: 1.45;
+}
+
+.admin-order-delivery-check-status {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 0.49rem;
+  font-weight: 900;
+}
+
+.admin-order-delivery-check-status.is-ok {
+  color: #2d6f4d;
+  background: rgba(58, 133, 95, 0.1);
+}
+
+.admin-order-delivery-check-status.is-warning {
+  color: #8a5a2d;
+  background: rgba(181, 126, 62, 0.1);
+}
+
+.admin-order-delivery-check-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.admin-order-delivery-check-list > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid rgba(12, 16, 20, 0.07);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.admin-order-delivery-check-list > div.is-ok {
+  border-color: rgba(58, 133, 95, 0.18);
+  background: rgba(58, 133, 95, 0.06);
+}
+
+.admin-order-delivery-check-list > div.is-warning {
+  border-color: rgba(181, 126, 62, 0.18);
+  background: rgba(181, 126, 62, 0.055);
+}
+
+.admin-order-delivery-check-list span,
+.admin-order-delivery-check-list small {
+  overflow: hidden;
+  color: var(--admin-muted);
+  font-size: 0.48rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.admin-order-delivery-check-list strong {
+  font-size: 0.59rem;
+}
+
+.admin-order-delivery-check-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.admin-order-delivery-check-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--admin-ink);
+  font-size: 0.54rem;
+  font-weight: 800;
+}
+
+.admin-order-delivery-check-form input {
+  width: 100%;
+  min-height: 39px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border: 1px solid rgba(12, 16, 20, 0.1);
+  border-radius: 9px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+}
+
+.admin-order-delivery-check-confirmed {
+  color: #2d6f4d;
+  font-weight: 750;
+}
+
+@media (max-width: 900px) {
+  .admin-order-delivery-check-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .admin-order-delivery-check-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-order-delivery-check-status {
+    width: fit-content;
+  }
+
+  .admin-order-delivery-check-list,
+  .admin-order-delivery-check-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-delivery-check-form button {
+    width: 100%;
+  }
+}

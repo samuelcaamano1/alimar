@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 import { createOrderFromQuote } from '../_lib/quote-orders.js'
+import { updateOrderDeliveryCheck } from '../_lib/order-delivery-check.js'
 import {
   updateOrderProductionStage,
   updateOrderSchedule,
@@ -78,6 +79,8 @@ type OrderRow = {
     | 'ready_for_delivery'
   production_stage_note: string | null
   production_stage_updated_at: string | null
+  delivery_checked_at: string | null
+  delivery_check_note: string | null
   has_quote: boolean
   quote_code: string | null
   estimated_cost: string | null
@@ -221,6 +224,8 @@ export async function GET(request: Request) {
           production_stage,
           production_stage_note,
           production_stage_updated_at,
+          delivery_checked_at,
+          delivery_check_note,
           created_at
         FROM orders
         ORDER BY created_at DESC
@@ -244,6 +249,8 @@ export async function GET(request: Request) {
         o.production_stage,
         o.production_stage_note,
         o.production_stage_updated_at::text,
+        o.delivery_checked_at::text,
+        o.delivery_check_note,
         o.has_quote,
         CASE
           WHEN linked_quote.quote_number IS NULL THEN NULL
@@ -319,6 +326,8 @@ export async function GET(request: Request) {
           | 'ready_for_delivery'
         production_stage_note: string | null
         production_stage_updated_at: string | null
+        delivery_checked_at: string | null
+        delivery_check_note: string | null
         paid_total: string
         balance_due: string | null
         payment_status: 'total_pending' | 'unpaid' | 'partial' | 'paid'
@@ -367,6 +376,8 @@ export async function GET(request: Request) {
           production_stage: row.production_stage,
           production_stage_note: row.production_stage_note,
           production_stage_updated_at: row.production_stage_updated_at,
+          delivery_checked_at: row.delivery_checked_at,
+          delivery_check_note: row.delivery_check_note,
           paid_total: '0',
           balance_due: row.agreed_total,
           payment_status: row.agreed_total === null ? 'total_pending' : 'unpaid',
@@ -486,6 +497,10 @@ export async function PATCH(request: Request) {
 
   if (requestUrl.searchParams.get('action') === 'production-stage') {
     return updateOrderProductionStage(databaseUrl, body)
+  }
+
+  if (requestUrl.searchParams.get('action') === 'delivery-check') {
+    return updateOrderDeliveryCheck(databaseUrl, body)
   }
 
   if (requestUrl.searchParams.get('action') === 'agreed-total') {

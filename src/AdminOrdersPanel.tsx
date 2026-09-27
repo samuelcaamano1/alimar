@@ -70,6 +70,8 @@ type AdminOrder = {
   production_stage: ProductionStage
   production_stage_note: string | null
   production_stage_updated_at: string | null
+  delivery_checked_at: string | null
+  delivery_check_note: string | null
   has_quote: boolean
   quote_code: string | null
   estimated_cost: string | null
@@ -444,6 +446,10 @@ export default function AdminOrdersPanel() {
     useState<Record<string, string>>({})
   const [savingProductionStageId, setSavingProductionStageId] =
     useState<string | null>(null)
+  const [draftDeliveryCheckNote, setDraftDeliveryCheckNote] =
+    useState<Record<string, string>>({})
+  const [savingDeliveryCheckId, setSavingDeliveryCheckId] =
+    useState<string | null>(null)
 
   const applyOrders = useCallback((nextOrders: AdminOrder[]) => {
     setOrders(nextOrders)
@@ -491,6 +497,11 @@ export default function AdminOrdersPanel() {
     setDraftProductionStageNote(
       Object.fromEntries(
         nextOrders.map((order) => [order.id, order.production_stage_note ?? '']),
+      ) as Record<string, string>,
+    )
+    setDraftDeliveryCheckNote(
+      Object.fromEntries(
+        nextOrders.map((order) => [order.id, order.delivery_check_note ?? '']),
       ) as Record<string, string>,
     )
     setPaymentDrafts(
@@ -875,6 +886,45 @@ export default function AdminOrdersPanel() {
     }
   }
 
+  async function saveDeliveryCheck(order: AdminOrder, checked: boolean) {
+    if (savingDeliveryCheckId) return
+
+    const note = (draftDeliveryCheckNote[order.id] ?? '').trim()
+    setSavingDeliveryCheckId(order.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=delivery-check', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: order.id,
+          checked,
+          note,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      await loadOrders()
+      window.dispatchEvent(new Event('alimar:delivery-check-changed'))
+      window.dispatchEvent(new Event('alimar:orders-changed'))
+      setMessage(
+        checked
+          ? `Control final de ${order.public_code} confirmado.`
+          : `Control final de ${order.public_code} reabierto.`,
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el control final.',
+      )
+    } finally {
+      setSavingDeliveryCheckId(null)
+    }
+  }
+
   async function saveAgreedTotal(order: AdminOrder) {
     const raw = (draftAgreedTotal[order.id] ?? '').trim()
     const agreedTotal = Number(raw.replace(',', '.'))
@@ -1252,6 +1302,21 @@ export default function AdminOrdersPanel() {
               order.status === 'ready' && order.payment_status === 'paid'
             const closeBlockedByPayment =
               order.status === 'ready' && order.payment_status !== 'paid'
+            const deliveryChecked = Boolean(order.delivery_checked_at)
+            const deliveryCheckSaving = savingDeliveryCheckId === order.id
+            const currentSharedDesign =
+              order.files.find(
+                (file) => file.kind === 'design' && file.customer_visible,
+              ) ?? null
+            const designDeliveryState = !currentSharedDesign
+              ? 'not-applicable'
+              : currentSharedDesign.approval_status === 'approved'
+                ? 'approved'
+                : currentSharedDesign.approval_status
+            const deliveryChecklistVisible =
+              order.production_stage === 'ready_for_delivery' ||
+              order.status === 'ready' ||
+              order.status === 'completed'
             const profitabilityPending =
               Boolean(order.quote_code) &&
               order.estimated_cost !== null &&
@@ -1468,6 +1533,128 @@ export default function AdminOrdersPanel() {
                   </div>
                 </section>
 
+                {deliveryChecklistVisible && (
+                  <section
+                    className={`admin-order-delivery-check ${
+                      deliveryChecked ? 'is-checked' : 'is-pending'
+                    }`}
+                  >
+                    <div className="admin-order-delivery-check-heading">
+                      <div>
+                        <span>Checklist de entrega</span>
+                        <strong>Control final antes de entregar</strong>
+                        <small>
+                          Es una guía operativa: te avisa qué revisar, pero no reemplaza tu decisión de entrega.
+                        </small>
+                      </div>
+                      <span className={`admin-order-delivery-check-status ${
+                        deliveryChecked ? 'is-ok' : 'is-warning'
+                      }`}>
+                        {deliveryChecked ? 'Control confirmado' : 'Control pendiente'}
+                      </span>
+                    </div>
+
+                    <div className="admin-order-delivery-check-list">
+                      <div className={order.production_stage === 'ready_for_delivery' ? 'is-ok' : 'is-warning'}>
+                        <span>Producción</span>
+                        <strong>
+                          {order.production_stage === 'ready_for_delivery'
+                            ? 'Terminada'
+                            : productionStageLabels[order.production_stage]}
+                        </strong>
+                        <small>La etapa debe quedar en Listo para entregar.</small>
+                      </div>
+                      <div
+                        className={
+                          designDeliveryState === 'approved' ||
+                          designDeliveryState === 'not-applicable'
+                            ? 'is-ok'
+                            : 'is-warning'
+                        }
+                      >
+                        <span>Diseño</span>
+                        <strong>
+                          {designDeliveryState === 'not-applicable'
+                            ? 'No aplica'
+                            : designDeliveryState === 'approved'
+                              ? 'Aprobado'
+                              : designDeliveryState === 'pending'
+                                ? 'Aprobación pendiente'
+                                : designDeliveryState === 'changes_requested'
+                                  ? 'Cambios solicitados'
+                                  : 'Sin aprobación solicitada'}
+                        </strong>
+                        <small>Se toma la versión compartida vigente del PED.</small>
+                      </div>
+                      <div className={order.payment_status === 'paid' ? 'is-ok' : 'is-warning'}>
+                        <span>Cobro</span>
+                        <strong>{paymentStatusLabels[order.payment_status]}</strong>
+                        <small>El control puede confirmarse aunque el cobro siga pendiente.</small>
+                      </div>
+                      <div className={order.promised_for || order.delivery_note ? 'is-ok' : 'is-neutral'}>
+                        <span>Entrega</span>
+                        <strong>
+                          {order.promised_for
+                            ? promisedTimingLabel(order.promised_for)
+                            : order.delivery_note
+                              ? 'Coordinación anotada'
+                              : 'Sin coordinación cargada'}
+                        </strong>
+                        <small>{order.delivery_note || 'Podés completar fecha o nota de entrega si hace falta.'}</small>
+                      </div>
+                    </div>
+
+                    <div className="admin-order-delivery-check-form">
+                      <label>
+                        Nota del control final
+                        <input
+                          type="text"
+                          maxLength={500}
+                          value={draftDeliveryCheckNote[order.id] ?? ''}
+                          placeholder="Ej. revisado corte, impresión, terminación y cantidad"
+                          onChange={(event) =>
+                            setDraftDeliveryCheckNote((current) => ({
+                              ...current,
+                              [order.id]: event.target.value,
+                            }))
+                          }
+                          disabled={
+                            deliveryCheckSaving ||
+                            order.status === 'cancelled' ||
+                            order.status === 'completed'
+                          }
+                        />
+                      </label>
+
+                      {order.status !== 'completed' && (
+                        <button
+                          type="button"
+                          className={deliveryChecked ? 'admin-secondary' : 'admin-primary'}
+                          onClick={() => void saveDeliveryCheck(order, !deliveryChecked)}
+                          disabled={
+                            deliveryCheckSaving ||
+                            order.status === 'cancelled' ||
+                            (!deliveryChecked &&
+                              order.production_stage !== 'ready_for_delivery')
+                          }
+                        >
+                          {deliveryCheckSaving
+                            ? 'Guardando…'
+                            : deliveryChecked
+                              ? 'Reabrir control'
+                              : 'Confirmar control final'}
+                        </button>
+                      )}
+                    </div>
+
+                    {deliveryChecked && order.delivery_checked_at && (
+                      <small className="admin-order-delivery-check-confirmed">
+                        Confirmado {dateTime(order.delivery_checked_at)}. Si la producción vuelve a una etapa anterior, este control se reinicia automáticamente.
+                      </small>
+                    )}
+                  </section>
+                )}
+
                 {(canMarkReady || canComplete || closeBlockedByPayment) && (
                   <section
                     className={`admin-order-delivery-close ${
@@ -1489,11 +1676,15 @@ export default function AdminOrdersPanel() {
                       </strong>
                       <small>
                         {canMarkReady
-                          ? 'Esto habilita el cierre operativo de la entrega sin tocar la etapa de producción.'
+                          ? deliveryChecked
+                            ? 'Control final confirmado. Esto habilita el cierre operativo de la entrega sin tocar la etapa de producción.'
+                            : 'El control final todavía está pendiente. Podés seguir, pero conviene revisarlo antes de entregar.'
                           : canComplete && profitabilityPending
                             ? 'Podés completar la entrega, pero todavía falta cargar el costo real final para cerrar la rentabilidad.'
                             : canComplete
-                              ? 'Usá el cierre rápido cuando la entrega ya fue confirmada.'
+                              ? deliveryChecked
+                                ? 'Usá el cierre rápido cuando la entrega ya fue confirmada.'
+                                : 'El pedido está cobrado, pero el control final figura pendiente. Revisalo antes de cerrar si todavía corresponde.'
                               : order.payment_status === 'total_pending'
                               ? 'Definí el total acordado y registrá el cobro antes del cierre rápido.'
                               : `Falta cobrar ${money(order.balance_due)} antes del cierre rápido.`}
