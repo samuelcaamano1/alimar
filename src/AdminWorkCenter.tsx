@@ -49,6 +49,10 @@ type WorkOrder = {
   production_stage: ProductionStage
   balance_due: string | null
   payment_status: PaymentStatus
+  has_quote: boolean
+  quote_code: string | null
+  estimated_cost: string | null
+  actual_cost: string | null
   files: WorkApprovalFile[]
   created_at: string
 }
@@ -62,7 +66,15 @@ type WorkCenterResponse = {
 type WorkTask = {
   key: string
   score: number
-  kind: 'SOL' | 'PRE' | 'PED' | 'COBRO' | 'APROB' | 'ENTREGA' | 'CIERRE'
+  kind:
+    | 'SOL'
+    | 'PRE'
+    | 'PED'
+    | 'COBRO'
+    | 'APROB'
+    | 'ENTREGA'
+    | 'CIERRE'
+    | 'RENT'
   title: string
   detail: string
   meta: string
@@ -305,6 +317,14 @@ export default function AdminWorkCenter() {
       (order) => order.status === 'ready' && order.payment_status === 'paid',
     ).length
 
+    const profitabilityPending = data.orders.filter(
+      (order) =>
+        order.status === 'completed' &&
+        Boolean(order.quote_code) &&
+        order.estimated_cost !== null &&
+        order.actual_cost === null,
+    ).length
+
     const approvalItems = data.orders.flatMap((order) => {
       if (order.status === 'cancelled') return []
       const file = currentSharedDesign(order)
@@ -340,6 +360,7 @@ export default function AdminWorkCenter() {
       readyForDelivery,
       readyToClose,
       deliveryAttention: readyForDelivery + readyToClose,
+      profitabilityPending,
       pendingBalance,
     }
   }, [data, today])
@@ -407,6 +428,27 @@ export default function AdminWorkCenter() {
           detail: order.customer_name,
           meta: 'Pedido listo y saldo cobrado · confirmar entrega',
           tone: 'delivery',
+          target: '.admin-orders-panel',
+          orderId: order.id,
+        })
+      }
+    }
+
+    for (const order of data.orders) {
+      if (
+        order.status === 'completed' &&
+        order.quote_code &&
+        order.estimated_cost !== null &&
+        order.actual_cost === null
+      ) {
+        next.push({
+          key: `profitability-pending-${order.id}`,
+          score: 5.5,
+          kind: 'RENT',
+          title: `${order.public_code}: falta costo real final`,
+          detail: order.customer_name,
+          meta: `${order.quote_code} · cerrá la rentabilidad del trabajo`,
+          tone: 'money',
           target: '.admin-orders-panel',
           orderId: order.id,
         })
@@ -699,6 +741,20 @@ export default function AdminWorkCenter() {
                 ? `${summary.readyToClose} para completar`
                 : 'sin pendientes'}
           </small>
+        </button>
+
+        <button
+          type="button"
+          className={summary.profitabilityPending > 0 ? 'is-profitability' : ''}
+          onClick={() =>
+            document
+              .querySelector('.admin-orders-panel')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        >
+          <span>Rentabilidad</span>
+          <strong>{summary.profitabilityPending}</strong>
+          <small>costo real pendiente</small>
         </button>
 
         <button

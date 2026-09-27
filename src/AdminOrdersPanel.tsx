@@ -1178,6 +1178,12 @@ export default function AdminOrdersPanel() {
               order.status === 'ready' && order.payment_status === 'paid'
             const closeBlockedByPayment =
               order.status === 'ready' && order.payment_status !== 'paid'
+            const profitabilityPending =
+              Boolean(order.quote_code) &&
+              order.estimated_cost !== null &&
+              order.actual_cost === null
+            const completedProfitabilityPending =
+              order.status === 'completed' && profitabilityPending
             const savingActualCost = savingActualCostId === order.id
             const savingAgreedTotal = savingAgreedTotalId === order.id
             const savingPayment = savingPaymentId === order.id
@@ -1362,7 +1368,11 @@ export default function AdminOrdersPanel() {
                   <section
                     className={`admin-order-delivery-close ${
                       canComplete ? 'is-completable' : ''
-                    } ${closeBlockedByPayment ? 'is-payment-blocked' : ''}`}
+                    } ${closeBlockedByPayment ? 'is-payment-blocked' : ''} ${
+                      canComplete && profitabilityPending
+                        ? 'is-profitability-pending'
+                        : ''
+                    }`}
                   >
                     <div>
                       <span>Entrega y cierre</span>
@@ -1376,9 +1386,11 @@ export default function AdminOrdersPanel() {
                       <small>
                         {canMarkReady
                           ? 'Esto habilita el cierre operativo de la entrega sin tocar la etapa de producción.'
-                          : canComplete
-                            ? 'Usá el cierre rápido cuando la entrega ya fue confirmada.'
-                            : order.payment_status === 'total_pending'
+                          : canComplete && profitabilityPending
+                            ? 'Podés completar la entrega, pero todavía falta cargar el costo real final para cerrar la rentabilidad.'
+                            : canComplete
+                              ? 'Usá el cierre rápido cuando la entrega ya fue confirmada.'
+                              : order.payment_status === 'total_pending'
                               ? 'Definí el total acordado y registrá el cobro antes del cierre rápido.'
                               : `Falta cobrar ${money(order.balance_due)} antes del cierre rápido.`}
                       </small>
@@ -1411,6 +1423,20 @@ export default function AdminOrdersPanel() {
                             Avisar al cliente ↗
                           </a>
                         </>
+                      )}
+
+                      {canComplete && profitabilityPending && (
+                        <button
+                          className="admin-secondary admin-order-profitability-jump"
+                          type="button"
+                          onClick={() =>
+                            document
+                              .getElementById(`profitability-${order.id}`)
+                              ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                          }
+                        >
+                          Cargar costo real
+                        </button>
                       )}
 
                       {canComplete && (
@@ -1967,7 +1993,12 @@ export default function AdminOrdersPanel() {
               </section>
 
 {order.quote_code && order.estimated_cost && (
-                  <section className="admin-order-actual-cost">
+                  <section
+                    id={`profitability-${order.id}`}
+                    className={`admin-order-actual-cost ${
+                      completedProfitabilityPending ? 'is-pending-close' : ''
+                    }`}
+                  >
                     <div className="admin-order-actual-cost-heading">
                       <div>
                         <span>Control de rentabilidad</span>
@@ -1977,6 +2008,11 @@ export default function AdminOrdersPanel() {
                       {order.actual_cost_updated_at && (
                         <small>
                           Actualizado {dateTime(order.actual_cost_updated_at)}
+                        </small>
+                      )}
+                      {completedProfitabilityPending && (
+                        <small className="admin-order-profitability-warning">
+                          PED completado · falta costo real para cerrar la rentabilidad
                         </small>
                       )}
                     </div>

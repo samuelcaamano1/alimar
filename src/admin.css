@@ -9365,3 +9365,29 @@
     text-align: left;
   }
 }
+
+/* ALIMAR RENTABILIDAD FINAL PENDIENTE 1.1.10 */
+.admin-work-center-summary button.is-profitability {
+  border-color: rgba(157, 101, 42, 0.28);
+  background: rgba(157, 101, 42, 0.08);
+}
+
+.admin-order-delivery-close.is-profitability-pending {
+  border-color: rgba(157, 101, 42, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(157, 101, 42, 0.05);
+}
+
+.admin-order-profitability-jump {
+  border-color: rgba(157, 101, 42, 0.26) !important;
+  background: rgba(157, 101, 42, 0.08) !important;
+}
+
+.admin-order-actual-cost.is-pending-close {
+  border-color: rgba(157, 101, 42, 0.32);
+  background: rgba(157, 101, 42, 0.06);
+}
+
+.admin-order-profitability-warning {
+  color: #855323;
+  font-weight: 850;
+}
