@@ -10097,3 +10097,243 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ALIMAR CUSTOMER ACCOUNT ADMIN 1.1.21 */
+.admin-customers-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.admin-customer-accounts-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(12, 16, 20, 0.66);
+  backdrop-filter: blur(8px);
+}
+
+.admin-customer-accounts-dialog {
+  width: min(980px, 100%);
+  max-height: min(88vh, 860px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--admin-line);
+  border-radius: 28px;
+  background: var(--admin-card);
+  box-shadow: 0 28px 90px rgba(12, 16, 20, 0.28);
+}
+
+.admin-customer-accounts-dialog > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.35rem 1.4rem 1rem;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.admin-customer-accounts-dialog > header h3 {
+  margin: 0.15rem 0 0.35rem;
+  font-size: clamp(1.35rem, 2.4vw, 2rem);
+}
+
+.admin-customer-accounts-dialog > header p {
+  margin: 0;
+  color: var(--admin-muted);
+}
+
+.admin-customer-accounts-close {
+  width: 2.65rem;
+  height: 2.65rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--admin-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--admin-ink);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-customer-accounts-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 1rem 1.4rem 0;
+}
+
+.admin-customer-accounts-summary span {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.44);
+  color: var(--admin-muted);
+}
+
+.admin-customer-accounts-summary strong {
+  color: var(--admin-ink);
+}
+
+.admin-customer-accounts-toolbar {
+  display: flex;
+  gap: 0.8rem;
+  align-items: end;
+  padding: 1rem 1.4rem;
+}
+
+.admin-customer-accounts-toolbar label {
+  flex: 1 1 320px;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--admin-muted);
+  font-size: 0.86rem;
+}
+
+.admin-customer-accounts-toolbar input {
+  width: 100%;
+}
+
+.admin-customer-accounts-message {
+  margin: 0 1.4rem 0.8rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--admin-line);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.admin-customer-accounts-list {
+  min-height: 180px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0 1.4rem 1.4rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.admin-customer-account-card {
+  padding: 1rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.admin-customer-account-card.is-inactive {
+  opacity: 0.72;
+}
+
+.admin-customer-account-main,
+.admin-customer-account-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.admin-customer-account-main > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.admin-customer-account-main small,
+.admin-customer-account-footer small {
+  color: var(--admin-muted);
+}
+
+.admin-customer-account-status {
+  width: fit-content;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--admin-line);
+}
+
+.admin-customer-account-status.is-active {
+  background: rgba(49, 126, 82, 0.12);
+}
+
+.admin-customer-account-status.is-inactive {
+  background: rgba(174, 65, 55, 0.1);
+}
+
+.admin-customer-account-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.admin-customer-account-metrics span {
+  padding: 0.45rem 0.6rem;
+  border-radius: 12px;
+  background: var(--admin-bg);
+  color: var(--admin-muted);
+}
+
+.admin-customer-account-metrics strong {
+  color: var(--admin-ink);
+}
+
+.admin-customer-account-footer {
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--admin-line);
+}
+
+.admin-danger-soft {
+  border: 1px solid rgba(174, 65, 55, 0.36);
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  background: rgba(174, 65, 55, 0.08);
+  color: var(--admin-ink);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-danger-soft:disabled,
+.admin-customer-accounts-close:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+@media (max-width: 760px) {
+  .admin-customers-heading-actions,
+  .admin-customer-accounts-toolbar,
+  .admin-customer-account-main,
+  .admin-customer-account-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-customers-heading-actions > button,
+  .admin-customer-accounts-toolbar > button,
+  .admin-customer-account-footer > button {
+    width: 100%;
+  }
+
+  .admin-customer-account-metrics {
+    justify-content: flex-start;
+  }
+
+  .admin-customer-accounts-backdrop {
+    padding: 0.65rem;
+  }
+
+  .admin-customer-accounts-dialog {
+    max-height: 94vh;
+    border-radius: 22px;
+  }
+}

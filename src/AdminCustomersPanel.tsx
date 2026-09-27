@@ -34,6 +34,20 @@ type CustomerDetail = {
   timeline: CustomerTimelineItem[]
 }
 
+type CustomerAccountSummary = {
+  id: string
+  email: string
+  name: string
+  phone: string
+  active: boolean
+  created_at: string
+  updated_at: string
+  order_count: number
+  request_count: number
+  active_session_count: number
+  last_session_at: string | null
+}
+
 type CustomerFilter = 'all' | 'buyers' | 'repeat' | 'active'
 
 const kindLabels: Record<CustomerTimelineItem['kind'], string> = {
@@ -117,6 +131,12 @@ export default function AdminCustomersPanel() {
     'idle' | 'loading' | 'ready' | 'error'
   >('idle')
   const [message, setMessage] = useState('')
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false)
+  const [accounts, setAccounts] = useState<CustomerAccountSummary[]>([])
+  const [accountQuery, setAccountQuery] = useState('')
+  const [accountState, setAccountState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [accountMessage, setAccountMessage] = useState('')
+  const [accountBusyId, setAccountBusyId] = useState<string | null>(null)
 
   const loadCustomers = useCallback(async () => {
     setState('loading')
@@ -144,6 +164,79 @@ export default function AdminCustomersPanel() {
       setState('error')
     }
   }, [])
+
+  const loadCustomerAccounts = useCallback(async () => {
+    setAccountState('loading')
+    setAccountMessage('')
+
+    try {
+      const response = await fetch('/api/admin/catalog?action=customer-accounts', {
+        cache: 'no-store',
+      })
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      const data = (await response.json()) as { accounts: CustomerAccountSummary[] }
+      setAccounts(data.accounts)
+      setAccountState('ready')
+    } catch (error) {
+      setAccountMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudieron cargar las cuentas de clientes.',
+      )
+      setAccountState('error')
+    }
+  }, [])
+
+  function openCustomerAccounts() {
+    setAccountDialogOpen(true)
+    setAccountQuery('')
+    void loadCustomerAccounts()
+  }
+
+  async function setCustomerAccountActive(
+    account: CustomerAccountSummary,
+    active: boolean,
+  ) {
+    if (accountBusyId) return
+
+    if (!active) {
+      const confirmed = window.confirm(
+        `¿Desactivar la cuenta de ${account.name}? Se cerrarán sus sesiones, pero no se borrará ningún pedido.`,
+      )
+      if (!confirmed) return
+    }
+
+    setAccountBusyId(account.id)
+    setAccountMessage('')
+
+    try {
+      const response = await fetch(
+        `/api/admin/catalog?action=customer-account-status&id=${encodeURIComponent(account.id)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active }),
+        },
+      )
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      await loadCustomerAccounts()
+      setAccountMessage(
+        active
+          ? `Cuenta de ${account.name} reactivada.`
+          : `Cuenta de ${account.name} desactivada.`,
+      )
+    } catch (error) {
+      setAccountMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo actualizar la cuenta.',
+      )
+    } finally {
+      setAccountBusyId(null)
+    }
+  }
 
   const loadCustomerDetail = useCallback(async (phone: string) => {
     setDetailState('loading')
@@ -183,6 +276,25 @@ export default function AdminCustomersPanel() {
 
     void loadCustomerDetail(selectedPhone)
   }, [loadCustomerDetail, selectedPhone])
+
+  useEffect(() => {
+    if (!accountDialogOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !accountBusyId) {
+        setAccountDialogOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [accountBusyId, accountDialogOpen])
 
   useEffect(() => {
     function refreshCustomers() {
@@ -244,6 +356,27 @@ export default function AdminCustomersPanel() {
     })
   }, [customers, filter, query])
 
+  const visibleAccounts = useMemo(() => {
+    const normalized = accountQuery.trim().toLocaleLowerCase('es-AR')
+    if (!normalized) return accounts
+
+    return accounts.filter((account) =>
+      [account.name, account.email, account.phone]
+        .join(' ')
+        .toLocaleLowerCase('es-AR')
+        .includes(normalized),
+    )
+  }, [accountQuery, accounts])
+
+  const accountTotals = useMemo(
+    () => ({
+      total: accounts.length,
+      active: accounts.filter((account) => account.active).length,
+      inactive: accounts.filter((account) => !account.active).length,
+    }),
+    [accounts],
+  )
+
   return (
     <section className="admin-panel admin-customers">
       <div className="admin-customers-heading">
@@ -256,14 +389,23 @@ export default function AdminCustomersPanel() {
           </p>
         </div>
 
-        <button
-          className="admin-secondary"
-          type="button"
-          onClick={() => void loadCustomers()}
-          disabled={state === 'loading'}
-        >
-          {state === 'loading' ? 'Actualizando…' : 'Actualizar'}
-        </button>
+        <div className="admin-customers-heading-actions">
+          <button
+            className="admin-primary"
+            type="button"
+            onClick={openCustomerAccounts}
+          >
+            Cuentas registradas
+          </button>
+          <button
+            className="admin-secondary"
+            type="button"
+            onClick={() => void loadCustomers()}
+            disabled={state === 'loading'}
+          >
+            {state === 'loading' ? 'Actualizando…' : 'Actualizar'}
+          </button>
+        </div>
       </div>
 
       {message && <div className="admin-message">{message}</div>}
@@ -517,6 +659,135 @@ export default function AdminCustomersPanel() {
           )}
         </aside>
       </div>
+
+      {accountDialogOpen && (
+        <div
+          className="admin-customer-accounts-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !accountBusyId) {
+              setAccountDialogOpen(false)
+            }
+          }}
+        >
+          <section
+            className="admin-customer-accounts-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="customer-accounts-title"
+          >
+            <header>
+              <div>
+                <span className="admin-kicker">Accesos de clientes</span>
+                <h3 id="customer-accounts-title">Cuentas registradas</h3>
+                <p>
+                  Administrá el acceso sin borrar pedidos, pagos, archivos ni historial.
+                </p>
+              </div>
+              <button
+                className="admin-customer-accounts-close"
+                type="button"
+                onClick={() => setAccountDialogOpen(false)}
+                disabled={Boolean(accountBusyId)}
+                aria-label="Cerrar cuentas de clientes"
+              >
+                ×
+              </button>
+            </header>
+
+            <div className="admin-customer-accounts-summary">
+              <span>Total <strong>{accountTotals.total}</strong></span>
+              <span>Activas <strong>{accountTotals.active}</strong></span>
+              <span>Desactivadas <strong>{accountTotals.inactive}</strong></span>
+            </div>
+
+            <div className="admin-customer-accounts-toolbar">
+              <label>
+                Buscar cuenta
+                <input
+                  type="search"
+                  value={accountQuery}
+                  placeholder="Nombre, email o WhatsApp"
+                  onChange={(event) => setAccountQuery(event.target.value)}
+                />
+              </label>
+              <button
+                className="admin-secondary"
+                type="button"
+                onClick={() => void loadCustomerAccounts()}
+                disabled={accountState === 'loading' || Boolean(accountBusyId)}
+              >
+                {accountState === 'loading' ? 'Actualizando…' : 'Actualizar'}
+              </button>
+            </div>
+
+            {accountMessage && (
+              <div className="admin-customer-accounts-message">
+                {accountMessage}
+              </div>
+            )}
+
+            <div className="admin-customer-accounts-list">
+              {accountState === 'loading' && accounts.length === 0 && (
+                <div className="admin-empty">Cargando cuentas…</div>
+              )}
+
+              {accountState === 'error' && accounts.length === 0 && (
+                <div className="admin-empty">No se pudieron cargar las cuentas.</div>
+              )}
+
+              {accountState === 'ready' && visibleAccounts.length === 0 && (
+                <div className="admin-empty">No hay cuentas para esta búsqueda.</div>
+              )}
+
+              {visibleAccounts.map((account) => (
+                <article
+                  className={`admin-customer-account-card${account.active ? '' : ' is-inactive'}`}
+                  key={account.id}
+                >
+                  <div className="admin-customer-account-main">
+                    <div>
+                      <span className={`admin-customer-account-status${account.active ? ' is-active' : ' is-inactive'}`}>
+                        {account.active ? 'Activa' : 'Desactivada'}
+                      </span>
+                      <strong>{account.name}</strong>
+                      <small>{account.email}</small>
+                      <small>{account.phone}</small>
+                    </div>
+
+                    <div className="admin-customer-account-metrics">
+                      <span>PED <strong>{account.order_count}</strong></span>
+                      <span>SOL <strong>{account.request_count}</strong></span>
+                      <span>Sesiones <strong>{account.active_session_count}</strong></span>
+                    </div>
+                  </div>
+
+                  <div className="admin-customer-account-footer">
+                    <small>
+                      Alta {dateTime(account.created_at)}
+                      {account.last_session_at
+                        ? ` · Última sesión ${dateTime(account.last_session_at)}`
+                        : ' · Sin sesión activa registrada'}
+                    </small>
+                    <button
+                      className={account.active ? 'admin-danger-soft' : 'admin-primary'}
+                      type="button"
+                      onClick={() => void setCustomerAccountActive(account, !account.active)}
+                      disabled={Boolean(accountBusyId)}
+                    >
+                      {accountBusyId === account.id
+                        ? 'Guardando…'
+                        : account.active
+                          ? 'Desactivar'
+                          : 'Reactivar'}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   )
 }

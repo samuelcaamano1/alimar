@@ -361,6 +361,134 @@ async function customerDetail(databaseUrl: string, phone: string) {
   }
 }
 
+
+function formatAccountRow(row: Record<string, unknown>) {
+  return {
+    id: String(row.id ?? ''),
+    email: String(row.email ?? ''),
+    name: String(row.name ?? 'Cliente'),
+    phone: String(row.phone ?? ''),
+    active: Boolean(row.active),
+    created_at: String(row.created_at ?? ''),
+    updated_at: String(row.updated_at ?? ''),
+    order_count: Number(row.order_count ?? 0),
+    request_count: Number(row.request_count ?? 0),
+    active_session_count: Number(row.active_session_count ?? 0),
+    last_session_at:
+      row.last_session_at === null || row.last_session_at === undefined
+        ? null
+        : String(row.last_session_at),
+  }
+}
+
+export async function listAdminCustomerAccounts(databaseUrl: string) {
+  const sql = neon(databaseUrl)
+
+  try {
+    const rows = (await sql`
+      SELECT
+        account.id::text,
+        account.email,
+        account.name,
+        account.phone,
+        account.active,
+        account.created_at::text,
+        account.updated_at::text,
+        COUNT(DISTINCT order_row.id)::int AS order_count,
+        COUNT(DISTINCT request.id)::int AS request_count,
+        COUNT(DISTINCT session.id) FILTER (
+          WHERE session.expires_at > now()
+        )::int AS active_session_count,
+        MAX(session.created_at)::text AS last_session_at
+      FROM customer_accounts account
+      LEFT JOIN orders order_row
+        ON order_row.customer_account_id = account.id
+      LEFT JOIN custom_requests request
+        ON request.customer_account_id = account.id
+      LEFT JOIN customer_sessions session
+        ON session.account_id = account.id
+      GROUP BY account.id
+      ORDER BY account.created_at DESC
+      LIMIT 500
+    `) as Record<string, unknown>[]
+
+    return Response.json(
+      { accounts: rows.map(formatAccountRow) },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudieron cargar las cuentas de clientes.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+export async function updateAdminCustomerAccountStatus(
+  databaseUrl: string,
+  accountId: string,
+  body: Record<string, unknown>,
+) {
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  if (!UUID_RE.test(accountId)) {
+    return Response.json(
+      { error: 'Cuenta de cliente inválida.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  if (typeof body.active !== 'boolean') {
+    return Response.json(
+      { error: 'Estado de cuenta inválido.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const sql = neon(databaseUrl)
+
+  try {
+    const updateQuery = sql`
+      UPDATE customer_accounts
+      SET
+        active = ${body.active},
+        updated_at = now()
+      WHERE id = ${accountId}::uuid
+      RETURNING id::text
+    `
+
+    let updatedRows: Record<string, unknown>[]
+    if (body.active) {
+      updatedRows = (await updateQuery) as Record<string, unknown>[]
+    } else {
+      const results = await sql.transaction([
+        updateQuery,
+        sql`
+          DELETE FROM customer_sessions
+          WHERE account_id = ${accountId}::uuid
+        `,
+      ])
+      updatedRows = results[0] as Record<string, unknown>[]
+    }
+
+    if (updatedRows.length === 0) {
+      return Response.json(
+        { error: 'Cuenta de cliente no encontrada.' },
+        { status: 404, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    return Response.json(
+      { ok: true, accountId, active: body.active },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudo actualizar la cuenta de cliente.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
 export async function getAdminCustomers(
   databaseUrl: string,
   requestUrl: URL,

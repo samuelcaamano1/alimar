@@ -1,7 +1,11 @@
 import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 import { getAdminBusinessDashboard } from '../_lib/admin-dashboard.js'
-import { getAdminCustomers } from '../_lib/admin-customers.js'
+import {
+  getAdminCustomers,
+  listAdminCustomerAccounts,
+  updateAdminCustomerAccountStatus,
+} from '../_lib/admin-customers.js'
 import {
   createAdminCustomRequestExample,
   listAdminCustomRequestExamples,
@@ -68,6 +72,10 @@ export async function GET(request: Request) {
 
   if (action === 'customers') {
     return getAdminCustomers(databaseUrl, requestUrl)
+  }
+
+  if (action === 'customer-accounts') {
+    return listAdminCustomerAccounts(databaseUrl)
   }
 
   if (action === 'custom-examples') {
@@ -150,7 +158,8 @@ async function adminMutationContext(request: Request) {
   if (
     action !== 'cost-resources' &&
     action !== 'quotes' &&
-    action !== 'custom-examples'
+    action !== 'custom-examples' &&
+    action !== 'customer-account-status'
   ) {
     return {
       error: Response.json(
@@ -175,6 +184,13 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
   }
 
+  if (context.action === 'customer-account-status') {
+    return Response.json(
+      { error: 'Invalid method' },
+      { status: 405, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
   if (context.action === 'quotes') {
     return createAdminQuote(context.databaseUrl, body)
   }
@@ -196,6 +212,14 @@ export async function PATCH(request: Request) {
     body = (await request.json()) as Record<string, unknown>
   } catch {
     return Response.json({ error: 'Solicitud inválida.' }, { status: 400 })
+  }
+
+  if (context.action === 'customer-account-status') {
+    return updateAdminCustomerAccountStatus(
+      context.databaseUrl,
+      context.requestUrl.searchParams.get('id') ?? '',
+      body,
+    )
   }
 
   if (context.action === 'quotes') {
@@ -224,6 +248,13 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   const context = await adminMutationContext(request)
   if ('error' in context) return context.error
+
+  if (context.action === 'customer-account-status') {
+    return Response.json(
+      { error: 'Invalid method' },
+      { status: 405, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
 
   if (context.action !== 'cost-resources') {
     return Response.json(
