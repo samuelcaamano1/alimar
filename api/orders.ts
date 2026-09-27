@@ -3,6 +3,7 @@ import { neon } from '@neondatabase/serverless'
 import { createPublicCustomRequest } from './_lib/custom-requests.js'
 import {
   changeCustomerPassword,
+  claimHistoricalOrder,
   customerOverviewResponse,
   customerSessionResponse,
   customerUnauthorized,
@@ -246,7 +247,13 @@ export async function POST(request: Request) {
                   limit: 8,
                   windowSeconds: 60 * 60,
                 }
-              : action === 'file-approval'
+              : action === 'account-claim-order'
+                ? {
+                    scope: 'customer-claim-order',
+                    limit: 8,
+                    windowSeconds: 60 * 60,
+                  }
+                : action === 'file-approval'
             ? {
                 scope: 'public-order-file-approval',
                 limit: 20,
@@ -289,7 +296,8 @@ export async function POST(request: Request) {
     action === 'account-login' ||
     action === 'account-logout' ||
     action === 'account-profile' ||
-    action === 'account-password'
+    action === 'account-password' ||
+    action === 'account-claim-order'
   ) {
     let body: Record<string, unknown> = {}
 
@@ -318,6 +326,10 @@ export async function POST(request: Request) {
 
     if (action === 'account-password') {
       return changeCustomerPassword(rateDatabaseUrl, request, body)
+    }
+
+    if (action === 'account-claim-order') {
+      return claimHistoricalOrder(rateDatabaseUrl, request, body)
     }
 
     return logoutCustomer(rateDatabaseUrl, request)

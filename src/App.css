@@ -4646,3 +4646,34 @@
     border-radius: 20px 20px 14px 14px;
   }
 }
+
+/* ALIMAR VINCULAR PEDIDOS HISTORICOS 1.1.18 */
+.customer-account-section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.customer-account-section-actions > strong {
+  min-width: 34px;
+  text-align: center;
+}
+
+.customer-account-claim-copy {
+  margin: 0;
+  color: rgba(25, 25, 25, 0.72);
+  line-height: 1.55;
+}
+
+@media (max-width: 720px) {
+  .customer-account-section-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .customer-account-section-actions .button {
+    flex: 1;
+  }
+}

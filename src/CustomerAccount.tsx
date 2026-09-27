@@ -106,7 +106,7 @@ export default function CustomerAccount() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
-  const [accountPanel, setAccountPanel] = useState<'profile' | 'password' | null>(null)
+  const [accountPanel, setAccountPanel] = useState<'profile' | 'password' | 'claim' | null>(null)
 
   async function loadOverview() {
     setLoading(true)
@@ -266,6 +266,50 @@ export default function CustomerAccount() {
     }
   }
 
+  async function claimHistoricalOrder(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (busy) return
+
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+    const orderCode = String(form.get('orderCode') ?? '').trim().toUpperCase()
+    const phone = String(form.get('phone') ?? '').trim()
+
+    setBusy(true)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/orders?action=account-claim-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderCode, phone }),
+      })
+      if (!response.ok) throw new Error(await responseError(response))
+
+      const data = (await response.json()) as {
+        orderCode?: string
+        alreadyLinked?: boolean
+      }
+
+      formElement.reset()
+      setAccountPanel(null)
+      await loadOverview()
+      setMessage(
+        data.alreadyLinked
+          ? `${data.orderCode || orderCode} ya estaba vinculado a tu cuenta.`
+          : `${data.orderCode || orderCode} quedó vinculado a tu cuenta.`,
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No pudimos vincular ese pedido.',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function logout() {
     if (busy) return
     setBusy(true)
@@ -359,7 +403,11 @@ export default function CustomerAccount() {
                     <div>
                       <span>Mi cuenta</span>
                       <h2 id="customer-account-modal-title">
-                        {accountPanel === 'profile' ? 'Editar mis datos' : 'Cambiar contraseña'}
+                        {accountPanel === 'profile'
+                          ? 'Editar mis datos'
+                          : accountPanel === 'password'
+                            ? 'Cambiar contraseña'
+                            : 'Vincular pedido anterior'}
                       </h2>
                     </div>
                     <button
@@ -395,7 +443,7 @@ export default function CustomerAccount() {
                         </button>
                       </div>
                     </form>
-                  ) : (
+                  ) : accountPanel === 'password' ? (
                     <form className="customer-account-settings-form" onSubmit={changePassword}>
                       <label>
                         Contraseña actual
@@ -420,6 +468,44 @@ export default function CustomerAccount() {
                         </button>
                       </div>
                     </form>
+                  ) : (
+                    <form className="customer-account-settings-form" onSubmit={claimHistoricalOrder}>
+                      <p className="customer-account-claim-copy">
+                        Si hiciste un pedido antes de crear tu cuenta, podés incorporarlo usando el código PED y el mismo WhatsApp que figura en ese pedido.
+                      </p>
+                      <label>
+                        Código del pedido
+                        <input
+                          name="orderCode"
+                          autoCapitalize="characters"
+                          autoComplete="off"
+                          maxLength={32}
+                          placeholder="PED-2026-XXXXXXXX"
+                          required
+                        />
+                      </label>
+                      <label>
+                        WhatsApp usado en el pedido
+                        <input
+                          name="phone"
+                          type="tel"
+                          inputMode="tel"
+                          autoComplete="tel"
+                          maxLength={40}
+                          placeholder="Ej. 11 1234 5678"
+                          required
+                        />
+                      </label>
+                      <p className="customer-account-security-note">
+                        Sólo se puede vincular un PED que todavía no pertenezca a ninguna cuenta. No movemos pedidos entre usuarios.
+                      </p>
+                      <div className="customer-account-modal-actions">
+                        <button className="button button-secondary" type="button" onClick={() => setAccountPanel(null)} disabled={busy}>Cancelar</button>
+                        <button className="button button-primary" type="submit" disabled={busy}>
+                          {busy ? 'Verificando…' : 'Vincular pedido'}
+                        </button>
+                      </div>
+                    </form>
                   )}
                 </section>
               </div>
@@ -433,7 +519,17 @@ export default function CustomerAccount() {
                   <span>Pedidos</span>
                   <h2>Mis PED</h2>
                 </div>
-                <strong>{overview.orders.length}</strong>
+                <div className="customer-account-section-actions">
+                  <strong>{overview.orders.length}</strong>
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    onClick={() => { setAccountPanel('claim'); setMessage('') }}
+                    disabled={busy}
+                  >
+                    Vincular pedido anterior
+                  </button>
+                </div>
               </div>
 
               {overview.orders.length === 0 ? (
@@ -498,7 +594,7 @@ export default function CustomerAccount() {
             </section>
 
             <p className="customer-account-legacy-note">
-              Los pedidos anteriores a la creación de cuentas siguen funcionando con su enlace de seguimiento original; no se reasignan automáticamente por seguridad.
+              Los pedidos anteriores a la creación de cuentas no se reasignan automáticamente. Si son tuyos, podés vincularlos de forma explícita con el código PED y el WhatsApp original.
             </p>
           </>
         ) : (

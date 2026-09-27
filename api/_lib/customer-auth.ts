@@ -11,6 +11,7 @@ import { neon } from '@neondatabase/serverless'
 const COOKIE_NAME = 'alimar_customer'
 const SESSION_SECONDS = 60 * 60 * 24 * 14
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const ORDER_CODE_RE = /^PED-\d{4}-[A-Z0-9]{6,12}$/i
 const scryptAsync = promisify(scryptCallback)
 
 export type CustomerAccount = {
@@ -481,6 +482,136 @@ export async function changeCustomerPassword(
   } catch {
     return Response.json(
       { error: 'No pudimos cambiar la contraseña.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+
+export async function claimHistoricalOrder(
+  databaseUrl: string,
+  request: Request,
+  body: Record<string, unknown>,
+) {
+  const account = await getCustomerAccount(databaseUrl, request)
+  if (!account) return customerUnauthorized()
+
+  const orderCode =
+    typeof body.orderCode === 'string'
+      ? body.orderCode.trim().toUpperCase().slice(0, 32)
+      : ''
+  const phone =
+    typeof body.phone === 'string' ? body.phone.replace(/\D/g, '') : ''
+
+  if (!ORDER_CODE_RE.test(orderCode)) {
+    return Response.json(
+      { error: 'Ingresá un código PED válido.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  if (phone.length < 10) {
+    return Response.json(
+      { error: 'Ingresá el WhatsApp usado en ese pedido.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+    const rows = await sql`
+      SELECT
+        id::text,
+        status,
+        customer_account_id::text,
+        public_tracking_token::text
+      FROM orders
+      WHERE UPPER(public_code) = ${orderCode}
+        AND RIGHT(
+          regexp_replace(customer_phone, '[^0-9]', '', 'g'),
+          10
+        ) = RIGHT(${phone}, 10)
+      LIMIT 1
+    `
+
+    if (rows.length === 0) {
+      return Response.json(
+        { error: 'No encontramos un PED con ese código y WhatsApp.' },
+        { status: 404, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const row = rows[0]
+    const currentOwner = row.customer_account_id
+      ? String(row.customer_account_id)
+      : null
+    const trackingToken = String(row.public_tracking_token ?? '')
+
+    if (currentOwner === account.id) {
+      return Response.json(
+        {
+          ok: true,
+          alreadyLinked: true,
+          orderCode,
+          trackingToken,
+        },
+        { headers: { 'Cache-Control': 'private, no-store' } },
+      )
+    }
+
+    if (currentOwner) {
+      return Response.json(
+        { error: 'Ese PED ya está vinculado a otra cuenta.' },
+        { status: 409, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const claimed = await sql`
+      WITH updated AS (
+        UPDATE orders
+        SET
+          customer_account_id = ${account.id}::uuid,
+          updated_at = now()
+        WHERE id = ${String(row.id)}::uuid
+          AND customer_account_id IS NULL
+        RETURNING id, status
+      )
+      INSERT INTO order_events (
+        order_id,
+        event_type,
+        from_status,
+        to_status,
+        note
+      )
+      SELECT
+        id,
+        'customer_account_linked',
+        status,
+        status,
+        'Pedido histórico vinculado desde Mi cuenta'
+      FROM updated
+      RETURNING order_id::text
+    `
+
+    if (claimed.length === 0) {
+      return Response.json(
+        { error: 'Ese PED acaba de ser vinculado a otra cuenta.' },
+        { status: 409, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    return Response.json(
+      {
+        ok: true,
+        alreadyLinked: false,
+        orderCode,
+        trackingToken,
+      },
+      { headers: { 'Cache-Control': 'private, no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No pudimos vincular ese pedido a tu cuenta.' },
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }
