@@ -62,11 +62,11 @@ type WorkCenterResponse = {
 type WorkTask = {
   key: string
   score: number
-  kind: 'SOL' | 'PRE' | 'PED' | 'COBRO' | 'APROB'
+  kind: 'SOL' | 'PRE' | 'PED' | 'COBRO' | 'APROB' | 'ENTREGA' | 'CIERRE'
   title: string
   detail: string
   meta: string
-  tone: 'danger' | 'today' | 'info' | 'money' | 'approval'
+  tone: 'danger' | 'today' | 'info' | 'money' | 'approval' | 'delivery'
   target: '.admin-custom-requests' | '.admin-cost-calculator' | '.admin-orders-panel'
   orderId?: string
 }
@@ -295,6 +295,16 @@ export default function AdminWorkCenter() {
       return balance !== null && balance > 0 ? total + balance : total
     }, 0)
 
+    const readyForDelivery = data.orders.filter(
+      (order) =>
+        (order.status === 'confirmed' || order.status === 'in_progress') &&
+        order.production_stage === 'ready_for_delivery',
+    ).length
+
+    const readyToClose = data.orders.filter(
+      (order) => order.status === 'ready' && order.payment_status === 'paid',
+    ).length
+
     const approvalItems = data.orders.flatMap((order) => {
       if (order.status === 'cancelled') return []
       const file = currentSharedDesign(order)
@@ -327,6 +337,9 @@ export default function AdminWorkCenter() {
       approvalAttention: approvalItems.length,
       approvalChanges,
       approvalReady,
+      readyForDelivery,
+      readyToClose,
+      deliveryAttention: readyForDelivery + readyToClose,
       pendingBalance,
     }
   }, [data, today])
@@ -360,6 +373,40 @@ export default function AdminWorkCenter() {
           detail: order.customer_name,
           meta: productionStageLabels[order.production_stage],
           tone: 'today',
+          target: '.admin-orders-panel',
+          orderId: order.id,
+        })
+      }
+    }
+
+    for (const order of data.orders) {
+      if (
+        (order.status === 'confirmed' || order.status === 'in_progress') &&
+        order.production_stage === 'ready_for_delivery'
+      ) {
+        next.push({
+          key: `delivery-ready-${order.id}`,
+          score: 1.5,
+          kind: 'ENTREGA',
+          title: `${order.public_code}: producción terminada`,
+          detail: order.customer_name,
+          meta: 'Marcar PED como Listo y coordinar entrega con el cliente',
+          tone: 'delivery',
+          target: '.admin-orders-panel',
+          orderId: order.id,
+        })
+      } else if (
+        order.status === 'ready' &&
+        order.payment_status === 'paid'
+      ) {
+        next.push({
+          key: `delivery-close-${order.id}`,
+          score: 3.5,
+          kind: 'CIERRE',
+          title: `${order.public_code}: listo para cerrar`,
+          detail: order.customer_name,
+          meta: 'Pedido listo y saldo cobrado · confirmar entrega',
+          tone: 'delivery',
           target: '.admin-orders-panel',
           orderId: order.id,
         })
@@ -631,6 +678,26 @@ export default function AdminWorkCenter() {
               : summary.approvalReady > 0
                 ? `${summary.approvalReady} listas para continuar`
                 : 'esperando cliente'}
+          </small>
+        </button>
+
+        <button
+          type="button"
+          className={summary.deliveryAttention > 0 ? 'is-delivery' : ''}
+          onClick={() =>
+            document
+              .querySelector('.admin-orders-panel')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        >
+          <span>Entrega y cierre</span>
+          <strong>{summary.deliveryAttention}</strong>
+          <small>
+            {summary.readyForDelivery > 0
+              ? `${summary.readyForDelivery} para marcar Listo`
+              : summary.readyToClose > 0
+                ? `${summary.readyToClose} para completar`
+                : 'sin pendientes'}
           </small>
         </button>
 

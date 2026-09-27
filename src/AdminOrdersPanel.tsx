@@ -385,6 +385,7 @@ export default function AdminOrdersPanel() {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all')
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null)
+  const [quickStatusOrderId, setQuickStatusOrderId] = useState<string | null>(null)
   const [draftStatus, setDraftStatus] = useState<Record<string, OrderStatus>>({})
   const [draftNote, setDraftNote] = useState<Record<string, string>>({})
   const [draftActualCost, setDraftActualCost] = useState<Record<string, string>>({})
@@ -685,6 +686,47 @@ export default function AdminOrdersPanel() {
       setMessage(error instanceof Error ? error.message : 'No se pudo actualizar el pedido.')
     } finally {
       setSavingOrderId(null)
+    }
+  }
+
+  async function setQuickStatus(
+    order: AdminOrder,
+    status: OrderStatus,
+    note: string,
+  ) {
+    if (quickStatusOrderId || savingOrderId) return
+
+    setQuickStatusOrderId(order.id)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: order.id,
+          status,
+          note,
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      await loadOrders()
+      window.dispatchEvent(new Event('alimar:orders-changed'))
+      setMessage(
+        status === 'ready'
+          ? `${order.public_code} quedó Listo para entrega.`
+          : `${order.public_code} quedó Completado.`,
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo actualizar el estado del pedido.',
+      )
+    } finally {
+      setQuickStatusOrderId(null)
     }
   }
 
@@ -1128,6 +1170,14 @@ export default function AdminOrdersPanel() {
             const selectedStatus = draftStatus[order.id] ?? order.status
             const note = draftNote[order.id] ?? ''
             const saving = savingOrderId === order.id
+            const quickStatusSaving = quickStatusOrderId === order.id
+            const canMarkReady =
+              (order.status === 'confirmed' || order.status === 'in_progress') &&
+              order.production_stage === 'ready_for_delivery'
+            const canComplete =
+              order.status === 'ready' && order.payment_status === 'paid'
+            const closeBlockedByPayment =
+              order.status === 'ready' && order.payment_status !== 'paid'
             const savingActualCost = savingActualCostId === order.id
             const savingAgreedTotal = savingAgreedTotalId === order.id
             const savingPayment = savingPaymentId === order.id
@@ -1307,6 +1357,89 @@ export default function AdminOrdersPanel() {
                     )}
                   </div>
                 </section>
+
+                {(canMarkReady || canComplete || closeBlockedByPayment) && (
+                  <section
+                    className={`admin-order-delivery-close ${
+                      canComplete ? 'is-completable' : ''
+                    } ${closeBlockedByPayment ? 'is-payment-blocked' : ''}`}
+                  >
+                    <div>
+                      <span>Entrega y cierre</span>
+                      <strong>
+                        {canMarkReady
+                          ? 'Producción terminada: pasá el PED a Listo'
+                          : canComplete
+                            ? 'Pedido listo y cobrado'
+                            : 'Pedido listo con cobro pendiente'}
+                      </strong>
+                      <small>
+                        {canMarkReady
+                          ? 'Esto habilita el cierre operativo de la entrega sin tocar la etapa de producción.'
+                          : canComplete
+                            ? 'Usá el cierre rápido cuando la entrega ya fue confirmada.'
+                            : order.payment_status === 'total_pending'
+                              ? 'Definí el total acordado y registrá el cobro antes del cierre rápido.'
+                              : `Falta cobrar ${money(order.balance_due)} antes del cierre rápido.`}
+                      </small>
+                    </div>
+
+                    <div className="admin-order-delivery-close-actions">
+                      {canMarkReady && (
+                        <>
+                          <button
+                            className="admin-primary"
+                            type="button"
+                            onClick={() =>
+                              void setQuickStatus(
+                                order,
+                                'ready',
+                                'Producción finalizada: listo para coordinar entrega.',
+                              )
+                            }
+                            disabled={quickStatusSaving || saving}
+                          >
+                            {quickStatusSaving ? 'Guardando…' : 'Marcar PED como Listo'}
+                          </button>
+
+                          <a
+                            className="admin-secondary"
+                            href={readyWhatsappUrl(order)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Avisar al cliente ↗
+                          </a>
+                        </>
+                      )}
+
+                      {canComplete && (
+                        <button
+                          className="admin-primary"
+                          type="button"
+                          onClick={() =>
+                            void setQuickStatus(
+                              order,
+                              'completed',
+                              'Pedido entregado y cobrado.',
+                            )
+                          }
+                          disabled={quickStatusSaving || saving}
+                        >
+                          {quickStatusSaving
+                            ? 'Cerrando…'
+                            : 'Marcar entregado y completar'}
+                        </button>
+                      )}
+
+                      {closeBlockedByPayment && (
+                        <span className="admin-order-delivery-close-lock">
+                          Cierre rápido bloqueado hasta dejar el saldo en cero.
+                        </span>
+                      )}
+                    </div>
+                  </section>
+                )}
 
                 <AdminOrderFiles
                   orderId={order.id}
