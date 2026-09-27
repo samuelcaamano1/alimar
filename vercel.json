@@ -10,6 +10,14 @@
     {
       "source": "/admin/:path*",
       "destination": "/"
+    },
+    {
+      "source": "/cuenta",
+      "destination": "/"
+    },
+    {
+      "source": "/cuenta/:path*",
+      "destination": "/"
     }
   ],
   "headers": [
