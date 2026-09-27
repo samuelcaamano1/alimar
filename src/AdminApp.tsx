@@ -111,6 +111,8 @@ export default function AdminApp() {
   const [catalog, setCatalog] = useState<AdminCatalog>(emptyCatalog)
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [adminSettingsOpen, setAdminSettingsOpen] = useState(false)
+  const [adminSettingsMessage, setAdminSettingsMessage] = useState('')
 
   const [createPricingMode, setCreatePricingMode] =
     useState<'fixed' | 'from' | 'quote'>('fixed')
@@ -188,6 +190,26 @@ export default function AdminApp() {
       active = false
     }
   }, [loadCatalog])
+
+  useEffect(() => {
+    if (!adminSettingsOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !busy) {
+        setAdminSettingsOpen(false)
+        setAdminSettingsMessage('')
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [adminSettingsOpen, busy])
 
   async function refreshCatalogAfterMutation(successMessage: string) {
     try {
@@ -323,6 +345,92 @@ export default function AdminApp() {
       }))
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo cerrar la sesión.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function openAdminSettings() {
+    setAdminSettingsMessage('')
+    setAdminSettingsOpen(true)
+  }
+
+  function closeAdminSettings() {
+    if (busy) return
+    setAdminSettingsOpen(false)
+    setAdminSettingsMessage('')
+  }
+
+  async function handleAdminProfileUpdate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (busy || !session?.account) return
+
+    setBusy(true)
+    setAdminSettingsMessage('')
+    const form = new FormData(event.currentTarget)
+
+    try {
+      const response = await fetch('/api/admin/session?action=profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: String(form.get('name') ?? '').trim(),
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      const data = (await response.json()) as {
+        account?: SessionResponse['account']
+      }
+      if (!data.account) throw new Error('La respuesta de la cuenta fue incompleta.')
+
+      setSession((current) =>
+        current ? { ...current, account: data.account ?? null } : current,
+      )
+      setAdminSettingsMessage('Nombre actualizado.')
+    } catch (error) {
+      setAdminSettingsMessage(
+        error instanceof Error ? error.message : 'No pudimos actualizar la cuenta.',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleAdminPasswordChange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (busy || !session?.account) return
+
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+    const currentPassword = String(form.get('currentPassword') ?? '')
+    const newPassword = String(form.get('newPassword') ?? '')
+    const confirmPassword = String(form.get('confirmPassword') ?? '')
+
+    if (newPassword !== confirmPassword) {
+      setAdminSettingsMessage('Las contraseñas nuevas no coinciden.')
+      return
+    }
+
+    setBusy(true)
+    setAdminSettingsMessage('')
+
+    try {
+      const response = await fetch('/api/admin/session?action=password', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      formElement.reset()
+      setAdminSettingsMessage('Contraseña actualizada. Tu sesión actual fue renovada.')
+    } catch (error) {
+      setAdminSettingsMessage(
+        error instanceof Error ? error.message : 'No pudimos cambiar la contraseña.',
+      )
     } finally {
       setBusy(false)
     }
@@ -626,6 +734,9 @@ export default function AdminApp() {
               <small>{session.account.email}</small>
             </span>
           )}
+          <button type="button" onClick={openAdminSettings} disabled={busy}>
+            Mi cuenta
+          </button>
           <a href="/" target="_blank" rel="noreferrer">
             Ver tienda ↗
           </a>
@@ -1010,6 +1121,124 @@ export default function AdminApp() {
           )}
         </section>
       </main>
+
+      {adminSettingsOpen && session.account && (
+        <div
+          className="admin-dialog-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeAdminSettings()
+          }}
+        >
+          <section
+            className="admin-dialog admin-account-settings-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-account-settings-title"
+          >
+            <button
+              className="admin-dialog-close"
+              type="button"
+              aria-label="Cerrar ajustes de cuenta"
+              onClick={closeAdminSettings}
+              disabled={busy}
+            >
+              ×
+            </button>
+
+            <div className="admin-dialog-heading">
+              <p className="admin-kicker">Cuenta administrativa</p>
+              <h2 id="admin-account-settings-title">Mi cuenta</h2>
+              <p className="admin-account-settings-copy">
+                Actualizá tu nombre o cambiá la contraseña sin salir del panel. El email queda fijo para mantener estable la identidad administrativa.
+              </p>
+            </div>
+
+            <div className="admin-account-settings-grid">
+              <form className="admin-form admin-account-settings-card" onSubmit={handleAdminProfileUpdate}>
+                <div>
+                  <span className="admin-account-settings-label">Perfil</span>
+                  <h3>Datos visibles</h3>
+                </div>
+
+                <label>
+                  Nombre
+                  <input
+                    name="name"
+                    defaultValue={session.account.name}
+                    autoComplete="name"
+                    maxLength={100}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Email
+                  <input value={session.account.email} readOnly disabled />
+                  <small>El email administrativo no se cambia desde el panel.</small>
+                </label>
+
+                <button className="admin-primary" type="submit" disabled={busy}>
+                  {busy ? 'Guardando…' : 'Guardar nombre'}
+                </button>
+              </form>
+
+              <form className="admin-form admin-account-settings-card" onSubmit={handleAdminPasswordChange}>
+                <div>
+                  <span className="admin-account-settings-label">Seguridad</span>
+                  <h3>Cambiar contraseña</h3>
+                </div>
+
+                <label>
+                  Contraseña actual
+                  <input
+                    name="currentPassword"
+                    type="password"
+                    autoComplete="current-password"
+                    maxLength={128}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Nueva contraseña
+                  <input
+                    name="newPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={128}
+                    required
+                  />
+                  <small>Mínimo 8 caracteres y distinta de la actual.</small>
+                </label>
+
+                <label>
+                  Repetir nueva contraseña
+                  <input
+                    name="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={128}
+                    required
+                  />
+                </label>
+
+                <button className="admin-primary" type="submit" disabled={busy}>
+                  {busy ? 'Actualizando…' : 'Cambiar contraseña'}
+                </button>
+              </form>
+            </div>
+
+            {adminSettingsMessage && (
+              <p className="admin-account-settings-message" aria-live="polite">
+                {adminSettingsMessage}
+              </p>
+            )}
+          </section>
+        </div>
+      )}
 
       {editingProduct && (
         <div

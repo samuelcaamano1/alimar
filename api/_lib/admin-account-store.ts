@@ -186,3 +186,96 @@ export async function authenticateAdminAccount(
 
   return { account }
 }
+
+export async function updateAdminAccountProfile(
+  databaseUrl: string,
+  accountId: string,
+  body: Record<string, unknown>,
+): Promise<{ account?: AdminAccount; error?: string; status?: number }> {
+  const name = text(body.name, 100)
+
+  if (name.length < 2) {
+    return { error: 'Ingresá el nombre del administrador.', status: 400 }
+  }
+
+  const sql = neon(databaseUrl)
+
+  try {
+    const rows = await sql`
+      UPDATE admin_accounts
+      SET name = ${name}, updated_at = now()
+      WHERE id = ${accountId}::uuid
+        AND active = true
+      RETURNING id::text, email, name
+    `
+
+    if (rows.length === 0) {
+      return { error: 'La cuenta administrativa no está disponible.', status: 401 }
+    }
+
+    return { account: accountFromRow(rows[0]) }
+  } catch {
+    return { error: 'No pudimos actualizar la cuenta administrativa.', status: 500 }
+  }
+}
+
+export async function changeAdminAccountPassword(
+  databaseUrl: string,
+  accountId: string,
+  body: Record<string, unknown>,
+): Promise<{ ok?: true; error?: string; status?: number }> {
+  const currentPassword =
+    typeof body.currentPassword === 'string' ? body.currentPassword : ''
+  const newPassword =
+    typeof body.newPassword === 'string' ? body.newPassword : ''
+
+  if (currentPassword.length < 1 || currentPassword.length > 128) {
+    return { error: 'Ingresá tu contraseña actual.', status: 400 }
+  }
+  if (newPassword.length < 8 || newPassword.length > 128) {
+    return {
+      error: 'La nueva contraseña debe tener entre 8 y 128 caracteres.',
+      status: 400,
+    }
+  }
+  if (currentPassword === newPassword) {
+    return { error: 'La nueva contraseña debe ser distinta de la actual.', status: 400 }
+  }
+
+  const sql = neon(databaseUrl)
+
+  try {
+    const rows = await sql`
+      SELECT password_hash
+      FROM admin_accounts
+      WHERE id = ${accountId}::uuid
+        AND active = true
+      LIMIT 1
+    `
+
+    if (rows.length === 0) {
+      return { error: 'La cuenta administrativa no está disponible.', status: 401 }
+    }
+
+    const valid = await verifyPassword(
+      currentPassword,
+      String(rows[0].password_hash ?? ''),
+    )
+
+    if (!valid) {
+      return { error: 'La contraseña actual no es correcta.', status: 401 }
+    }
+
+    const passwordHash = await hashPassword(newPassword)
+    await sql`
+      UPDATE admin_accounts
+      SET password_hash = ${passwordHash}, updated_at = now()
+      WHERE id = ${accountId}::uuid
+        AND active = true
+    `
+
+    return { ok: true }
+  } catch {
+    return { error: 'No pudimos cambiar la contraseña administrativa.', status: 500 }
+  }
+}

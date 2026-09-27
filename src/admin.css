@@ -10033,3 +10033,67 @@
     display: none;
   }
 }
+
+/* ALIMAR ADMIN ACCOUNT SETTINGS 1.1.20 */
+.admin-account-settings-dialog {
+  width: min(880px, 100%);
+}
+
+.admin-account-settings-copy {
+  max-width: 680px;
+  margin: 0.8rem 0 0;
+  color: var(--admin-muted);
+  line-height: 1.55;
+}
+
+.admin-account-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.admin-account-settings-card {
+  align-content: start;
+  padding: 20px;
+  border: 1px solid var(--admin-line);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.78);
+}
+
+.admin-account-settings-card h3 {
+  margin: 0.2rem 0 0;
+  color: var(--admin-ink);
+  font-size: 1.25rem;
+}
+
+.admin-account-settings-card label small {
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.admin-account-settings-label {
+  color: var(--admin-blue-dark);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-account-settings-message {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: var(--admin-ink);
+  background: rgba(100, 175, 198, 0.13);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .admin-account-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
