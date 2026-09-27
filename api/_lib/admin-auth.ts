@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 
 const COOKIE_NAME = 'alimar_admin'
 const SESSION_SECONDS = 60 * 60 * 8
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function env(name: 'ADMIN_PASSWORD' | 'ADMIN_SESSION_SECRET') {
   return process.env[name]?.trim() ?? ''
@@ -15,10 +16,12 @@ function safeEqual(left: string, right: string) {
   return timingSafeEqual(a, b)
 }
 
-function sign(expiresAt: string) {
+function sign(accountId: string, expiresAt: string) {
   const secret = env('ADMIN_SESSION_SECRET')
   if (secret.length < 32) return ''
-  return createHmac('sha256', secret).update(expiresAt).digest('hex')
+  return createHmac('sha256', secret)
+    .update(`${accountId}.${expiresAt}`)
+    .digest('hex')
 }
 
 function parseCookies(request: Request) {
@@ -34,36 +37,43 @@ function parseCookies(request: Request) {
   return result
 }
 
-export function isAdminConfigured() {
-  return (
-    env('ADMIN_PASSWORD').length >= 8 &&
-    env('ADMIN_SESSION_SECRET').length >= 32
-  )
+export function isAdminSessionConfigured() {
+  return env('ADMIN_SESSION_SECRET').length >= 32
 }
 
-export function verifyAdminPassword(password: string) {
+export function isLegacyAdminBootstrapConfigured() {
+  return env('ADMIN_PASSWORD').length >= 8 && isAdminSessionConfigured()
+}
+
+export function verifyLegacyAdminPassword(password: string) {
   const expected = env('ADMIN_PASSWORD')
   return expected.length >= 8 && safeEqual(password, expected)
 }
 
-export function isAdminAuthenticated(request: Request) {
-  if (!isAdminConfigured()) return false
+export function getAdminSessionAccountId(request: Request) {
+  if (!isAdminSessionConfigured()) return null
 
   const token = parseCookies(request).get(COOKIE_NAME)
-  if (!token) return false
+  if (!token) return null
 
-  const [expiresAt, signature] = token.split('.')
-  if (!expiresAt || !signature) return false
-
-  const expiresAtNumber = Number(expiresAt)
-
-  if (!Number.isFinite(expiresAtNumber) || expiresAtNumber <= Date.now()) {
-    return false
+  const [version, accountId, expiresAt, signature] = token.split('.')
+  if (version !== 'v2' || !UUID_RE.test(accountId ?? '') || !expiresAt || !signature) {
+    return null
   }
 
-  const expectedSignature = sign(expiresAt)
+  const expiresAtNumber = Number(expiresAt)
+  if (!Number.isFinite(expiresAtNumber) || expiresAtNumber <= Date.now()) {
+    return null
+  }
 
-  return Boolean(expectedSignature) && safeEqual(signature, expectedSignature)
+  const expectedSignature = sign(accountId, expiresAt)
+  if (!expectedSignature || !safeEqual(signature, expectedSignature)) return null
+
+  return accountId
+}
+
+export function isAdminAuthenticated(request: Request) {
+  return Boolean(getAdminSessionAccountId(request))
 }
 
 export function requireAdmin(request: Request) {
@@ -93,9 +103,9 @@ export function requireSameOrigin(request: Request) {
   )
 }
 
-export function createAdminSessionCookie(request: Request) {
+export function createAdminSessionCookie(request: Request, accountId: string) {
   const expiresAt = String(Date.now() + SESSION_SECONDS * 1000)
-  const token = `${expiresAt}.${sign(expiresAt)}`
+  const token = `v2.${accountId}.${expiresAt}.${sign(accountId, expiresAt)}`
   const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : ''
 
   return `${COOKIE_NAME}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_SECONDS}; Priority=High${secure}`

@@ -9982,3 +9982,54 @@
     grid-column: auto;
   }
 }
+
+/* ALIMAR ADMIN ACCOUNT 1.1.19 */
+.admin-login-account-card {
+  max-width: 520px;
+}
+
+.admin-login-copy {
+  margin: -0.2rem 0 1.1rem;
+  color: var(--admin-muted, #667085);
+  line-height: 1.55;
+}
+
+.admin-login-card label small {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--admin-muted, #667085);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.admin-account-chip {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.admin-account-chip strong,
+.admin-account-chip small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-account-chip strong {
+  font-size: 0.82rem;
+}
+
+.admin-account-chip small {
+  color: var(--admin-muted, #667085);
+  font-size: 0.7rem;
+}
+
+@media (max-width: 760px) {
+  .admin-account-chip {
+    display: none;
+  }
+}

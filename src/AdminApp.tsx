@@ -52,6 +52,13 @@ type AdminCatalog = {
 type SessionResponse = {
   configured: boolean
   authenticated: boolean
+  bootstrapRequired: boolean
+  bootstrapAvailable: boolean
+  account: {
+    id: string
+    email: string
+    name: string
+  } | null
 }
 
 type ImageState = {
@@ -102,7 +109,6 @@ export default function AdminApp() {
   const [customRequestRefreshToken, setCustomRequestRefreshToken] = useState(0)
   const [session, setSession] = useState<SessionResponse | null>(null)
   const [catalog, setCatalog] = useState<AdminCatalog>(emptyCatalog)
-  const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -129,6 +135,9 @@ export default function AdminApp() {
       setSession((current) => ({
         configured: current?.configured ?? true,
         authenticated: false,
+        bootstrapRequired: current?.bootstrapRequired ?? false,
+        bootstrapAvailable: current?.bootstrapAvailable ?? false,
+        account: null,
       }))
       throw new Error('Tu sesión venció. Volvé a iniciar sesión.')
     }
@@ -152,7 +161,7 @@ export default function AdminApp() {
       } catch (error) {
         if (!active) return
         setMessage(error instanceof Error ? error.message : 'Error de sesión.')
-        setSession({ configured: false, authenticated: false })
+        setSession({ configured: false, authenticated: false, bootstrapRequired: false, bootstrapAvailable: false, account: null })
         return
       }
 
@@ -235,17 +244,50 @@ export default function AdminApp() {
     setBusy(true)
     setMessage('')
 
+    const form = new FormData(event.currentTarget)
+    const bootstrap = session?.bootstrapRequired === true
+    const password = String(form.get('password') ?? '')
+
+    if (bootstrap && password !== String(form.get('confirmPassword') ?? '')) {
+      setMessage('Las contraseñas nuevas no coinciden.')
+      setBusy(false)
+      return
+    }
+
+    const payload = bootstrap
+      ? {
+          mode: 'bootstrap',
+          name: String(form.get('name') ?? '').trim(),
+          email: String(form.get('email') ?? '').trim(),
+          legacyPassword: String(form.get('legacyPassword') ?? ''),
+          password,
+        }
+      : {
+          mode: 'login',
+          email: String(form.get('email') ?? '').trim(),
+          password,
+        }
+
     try {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) throw new Error(await responseMessage(response))
 
-      setPassword('')
-      setSession({ configured: true, authenticated: true })
+      const data = (await response.json()) as {
+        account?: SessionResponse['account']
+      }
+
+      setSession({
+        configured: true,
+        authenticated: true,
+        bootstrapRequired: false,
+        bootstrapAvailable: false,
+        account: data.account ?? null,
+      })
 
       try {
         await loadCatalog()
@@ -275,6 +317,9 @@ export default function AdminApp() {
       setSession((current) => ({
         configured: current?.configured ?? true,
         authenticated: false,
+        bootstrapRequired: current?.bootstrapRequired ?? false,
+        bootstrapAvailable: current?.bootstrapAvailable ?? false,
+        account: null,
       }))
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo cerrar la sesión.')
@@ -481,51 +526,82 @@ export default function AdminApp() {
   }
 
   if (!session.authenticated) {
+    const bootstrap = session.bootstrapRequired
+
     return (
       <main className="admin-login-shell">
-        <section className="admin-login-card">
+        <section className="admin-login-card admin-login-account-card">
           <img className="admin-login-logo" src={alimarLogoDataUrl} alt="Alimar" />
-          <p className="admin-kicker">Administración</p>
-          <h1>Catálogo de Alimar</h1>
+          <p className="admin-kicker">Administración privada</p>
+          <h1>{bootstrap ? 'Crear cuenta administrativa' : 'Ingresar a Alimar'}</h1>
+          <p className="admin-login-copy">
+            {bootstrap
+              ? 'Este paso reemplaza el acceso por contraseña global. La contraseña administrativa actual se usa una sola vez para validar la creación.'
+              : 'Usá el email y la contraseña de tu cuenta administrativa.'}
+          </p>
 
-          {!session.configured && (
+          {bootstrap && !session.bootstrapAvailable && (
             <div className="admin-warning">
-              Falta configurar <code>ADMIN_PASSWORD</code> y <code>ADMIN_SESSION_SECRET</code>.
+              No está disponible la validación del acceso anterior. Verificá que la configuración administrativa existente siga presente.
+            </div>
+          )}
+
+          {!bootstrap && !session.configured && (
+            <div className="admin-warning">
+              La sesión administrativa no está configurada correctamente.
             </div>
           )}
 
           <form onSubmit={handleLogin}>
-            <label className="admin-username-autofill">
-              Usuario
-              <input
-                type="text"
-                name="username"
-                value="admin"
-                autoComplete="username"
-                tabIndex={-1}
-                readOnly
-                aria-hidden="true"
-              />
-            </label>
+            {bootstrap && (
+              <label>
+                Nombre del administrador
+                <input type="text" name="name" autoComplete="name" maxLength={100} required />
+              </label>
+            )}
 
             <label>
-              Contraseña
+              Email
+              <input type="email" name="email" autoComplete="username" maxLength={160} required />
+            </label>
+
+            {bootstrap && (
+              <label>
+                Contraseña administrativa actual
+                <input type="password" name="legacyPassword" autoComplete="current-password" maxLength={128} required />
+                <small>Se usa sólo para autorizar la creación inicial de la cuenta.</small>
+              </label>
+            )}
+
+            <label>
+              {bootstrap ? 'Nueva contraseña' : 'Contraseña'}
               <input
                 type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
+                name="password"
+                autoComplete={bootstrap ? 'new-password' : 'current-password'}
+                minLength={bootstrap ? 8 : undefined}
+                maxLength={128}
                 required
               />
             </label>
 
-            <button className="admin-primary" type="submit" disabled={busy || !session.configured}>
-              Entrar
+            {bootstrap && (
+              <label>
+                Repetir nueva contraseña
+                <input type="password" name="confirmPassword" autoComplete="new-password" minLength={8} maxLength={128} required />
+              </label>
+            )}
+
+            <button
+              className="admin-primary"
+              type="submit"
+              disabled={busy || (bootstrap ? !session.bootstrapAvailable : !session.configured)}
+            >
+              {busy ? 'Procesando…' : bootstrap ? 'Crear cuenta administrativa' : 'Entrar'}
             </button>
           </form>
 
           {message && <p className="admin-message">{message}</p>}
-
           <a href="/">← Volver a la tienda</a>
         </section>
       </main>
@@ -544,6 +620,12 @@ export default function AdminApp() {
         </a>
 
         <div className="admin-header-actions">
+          {session.account && (
+            <span className="admin-account-chip">
+              <strong>{session.account.name}</strong>
+              <small>{session.account.email}</small>
+            </span>
+          )}
           <a href="/" target="_blank" rel="noreferrer">
             Ver tienda ↗
           </a>
