@@ -178,6 +178,12 @@ function daysUntilQuote(value: string | null, today: string) {
   return dayDifference(value, today)
 }
 
+function openAdminPanel(panel: 'quotes' | 'requests') {
+  window.dispatchEvent(
+    new CustomEvent('alimar:open-admin-panel', { detail: { panel } }),
+  )
+}
+
 function openTaskTarget(task: WorkTask) {
   if (task.orderId) {
     window.dispatchEvent(
@@ -185,6 +191,16 @@ function openTaskTarget(task: WorkTask) {
         detail: { orderId: task.orderId },
       }),
     )
+    return
+  }
+
+  if (task.target === '.admin-custom-requests') {
+    openAdminPanel('requests')
+    return
+  }
+
+  if (task.target === '.admin-cost-calculator') {
+    openAdminPanel('quotes')
     return
   }
 
@@ -748,11 +764,7 @@ export default function AdminWorkCenter() {
       <div className="admin-work-center-summary">
         <button
           type="button"
-          onClick={() =>
-            document
-              .querySelector('.admin-custom-requests')
-              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }
+          onClick={() => openAdminPanel('requests')}
         >
           <span>Solicitudes</span>
           <strong>{summary.requestsAttention}</strong>
@@ -761,11 +773,7 @@ export default function AdminWorkCenter() {
 
         <button
           type="button"
-          onClick={() =>
-            document
-              .querySelector('.admin-cost-calculator')
-              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }
+          onClick={() => openAdminPanel('quotes')}
         >
           <span>Presupuestos</span>
           <strong>{summary.draftQuotes}</strong>

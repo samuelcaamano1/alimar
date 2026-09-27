@@ -125,6 +125,17 @@ async function responseMessage(response: Response) {
 }
 
 function scrollToSection(selector: string) {
+  if (selector === '.admin-custom-requests' || selector === '.admin-cost-calculator') {
+    window.dispatchEvent(
+      new CustomEvent('alimar:open-admin-panel', {
+        detail: {
+          panel: selector === '.admin-custom-requests' ? 'requests' : 'quotes',
+        },
+      }),
+    )
+    return
+  }
+
   document.querySelector(selector)?.scrollIntoView({
     behavior: 'smooth',
     block: 'start',

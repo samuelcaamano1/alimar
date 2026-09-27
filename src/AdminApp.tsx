@@ -113,6 +113,7 @@ export default function AdminApp() {
   const [busy, setBusy] = useState(false)
   const [adminSettingsOpen, setAdminSettingsOpen] = useState(false)
   const [adminSettingsMessage, setAdminSettingsMessage] = useState('')
+  const [workspaceDialog, setWorkspaceDialog] = useState<'quotes' | 'requests' | null>(null)
 
   const [createPricingMode, setCreatePricingMode] =
     useState<'fixed' | 'from' | 'quote'>('fixed')
@@ -210,6 +211,38 @@ export default function AdminApp() {
       document.body.style.overflow = previousOverflow
     }
   }, [adminSettingsOpen, busy])
+
+  useEffect(() => {
+    function handleOpenAdminPanel(event: Event) {
+      const detail = (event as CustomEvent<{ panel?: string }>).detail
+      if (detail?.panel === 'quotes' || detail?.panel === 'requests') {
+        setAdminSettingsOpen(false)
+        setWorkspaceDialog(detail.panel)
+      }
+    }
+
+    window.addEventListener('alimar:open-admin-panel', handleOpenAdminPanel)
+    return () => {
+      window.removeEventListener('alimar:open-admin-panel', handleOpenAdminPanel)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!workspaceDialog) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setWorkspaceDialog(null)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [workspaceDialog])
 
   async function refreshCatalogAfterMutation(successMessage: string) {
     try {
@@ -351,8 +384,15 @@ export default function AdminApp() {
   }
 
   function openAdminSettings() {
+    setWorkspaceDialog(null)
     setAdminSettingsMessage('')
     setAdminSettingsOpen(true)
+  }
+
+  function openWorkspace(panel: 'quotes' | 'requests') {
+    setAdminSettingsOpen(false)
+    setAdminSettingsMessage('')
+    setWorkspaceDialog(panel)
   }
 
   function closeAdminSettings() {
@@ -790,13 +830,13 @@ export default function AdminApp() {
           </button>
           <button
             type="button"
-            onClick={() => scrollAdminSection('.admin-cost-calculator')}
+            onClick={() => openWorkspace('quotes')}
           >
             Presupuestos
           </button>
           <button
             type="button"
-            onClick={() => scrollAdminSection('.admin-custom-requests')}
+            onClick={() => openWorkspace('requests')}
           >
             Solicitudes
           </button>
@@ -821,26 +861,29 @@ export default function AdminApp() {
 
         <AdminCustomExamples />
 
-        <AdminCostCalculator
-          quoteSource={quoteSource}
-          onQuoteSourceConsumed={() => {
-            setQuoteSource(null)
-            setCustomRequestRefreshToken((current) => current + 1)
-          }}
-        />
+        <section className="admin-workspace-launchers" aria-label="Herramientas comerciales">
+          <article className="admin-panel admin-workspace-launcher is-quotes">
+            <div>
+              <span className="admin-kicker">Presupuestos</span>
+              <h2>Calculadora y PRE</h2>
+              <p>Calculá costos, guardá presupuestos y convertí PRE aceptados en pedidos sin ocupar toda la pantalla principal.</p>
+            </div>
+            <button className="admin-primary" type="button" onClick={() => openWorkspace('quotes')}>
+              Abrir presupuestos
+            </button>
+          </article>
 
-        <AdminCustomRequests
-          refreshToken={customRequestRefreshToken}
-          onCreateQuote={(request) => {
-            setQuoteSource(request)
-
-            requestAnimationFrame(() => {
-              document
-                .querySelector('.admin-cost-calculator')
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            })
-          }}
-        />
+          <article className="admin-panel admin-workspace-launcher is-requests">
+            <div>
+              <span className="admin-kicker">Solicitudes</span>
+              <h2>Pedidos personalizados</h2>
+              <p>Revisá SOL nuevas, referencias y datos del cliente dentro de un popup con scroll propio.</p>
+            </div>
+            <button className="admin-primary" type="button" onClick={() => openWorkspace('requests')}>
+              Abrir solicitudes
+            </button>
+          </article>
+        </section>
 
         <AdminOrdersPanel />
 
@@ -1121,6 +1164,61 @@ export default function AdminApp() {
           )}
         </section>
       </main>
+
+
+      {workspaceDialog && (
+        <div
+          className="admin-workspace-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setWorkspaceDialog(null)
+          }}
+        >
+          <section
+            className="admin-workspace-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-workspace-title"
+          >
+            <header className="admin-workspace-dialog-header">
+              <div>
+                <span className="admin-kicker">Herramienta comercial</span>
+                <h2 id="admin-workspace-title">
+                  {workspaceDialog === 'quotes' ? 'Presupuestos' : 'Solicitudes personalizadas'}
+                </h2>
+              </div>
+              <button
+                className="admin-workspace-close"
+                type="button"
+                onClick={() => setWorkspaceDialog(null)}
+                aria-label="Cerrar herramienta"
+              >
+                Cerrar ×
+              </button>
+            </header>
+
+            <div className="admin-workspace-dialog-body">
+              {workspaceDialog === 'quotes' ? (
+                <AdminCostCalculator
+                  quoteSource={quoteSource}
+                  onQuoteSourceConsumed={() => {
+                    setQuoteSource(null)
+                    setCustomRequestRefreshToken((current) => current + 1)
+                  }}
+                />
+              ) : (
+                <AdminCustomRequests
+                  refreshToken={customRequestRefreshToken}
+                  onCreateQuote={(request) => {
+                    setQuoteSource(request)
+                    setWorkspaceDialog('quotes')
+                  }}
+                />
+              )}
+            </div>
+          </section>
+        </div>
+      )}
 
       {adminSettingsOpen && session.account && (
         <div
