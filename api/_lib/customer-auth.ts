@@ -335,6 +335,157 @@ export async function logoutCustomer(databaseUrl: string, request: Request) {
   )
 }
 
+
+export async function updateCustomerProfile(
+  databaseUrl: string,
+  request: Request,
+  body: Record<string, unknown>,
+) {
+  const account = await getCustomerAccount(databaseUrl, request)
+  if (!account) return customerUnauthorized()
+
+  const name = text(body.name, 100)
+  const phone = text(body.phone, 40)
+
+  if (name.length < 2) {
+    return Response.json({ error: 'Ingresá tu nombre.' }, { status: 400 })
+  }
+  if (phone.replace(/\D/g, '').length < 6) {
+    return Response.json({ error: 'Ingresá un WhatsApp válido.' }, { status: 400 })
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+    await sql`
+      UPDATE customer_accounts
+      SET
+        name = ${name},
+        phone = ${phone},
+        updated_at = now()
+      WHERE id = ${account.id}::uuid
+        AND active = true
+    `
+
+    return Response.json(
+      {
+        ok: true,
+        account: {
+          ...account,
+          name,
+          phone,
+        },
+      },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No pudimos actualizar tus datos.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+export async function changeCustomerPassword(
+  databaseUrl: string,
+  request: Request,
+  body: Record<string, unknown>,
+) {
+  const account = await getCustomerAccount(databaseUrl, request)
+  if (!account) return customerUnauthorized()
+
+  const currentPassword =
+    typeof body.currentPassword === 'string' ? body.currentPassword : ''
+  const newPassword =
+    typeof body.newPassword === 'string' ? body.newPassword : ''
+
+  if (currentPassword.length < 1 || currentPassword.length > 128) {
+    return Response.json(
+      { error: 'Ingresá tu contraseña actual.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  if (newPassword.length < 8 || newPassword.length > 128) {
+    return Response.json(
+      { error: 'La nueva contraseña debe tener entre 8 y 128 caracteres.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+    const rows = await sql`
+      SELECT password_hash
+      FROM customer_accounts
+      WHERE id = ${account.id}::uuid
+        AND active = true
+      LIMIT 1
+    `
+
+    if (rows.length === 0) return customerUnauthorized()
+
+    const valid = await verifyPassword(
+      currentPassword,
+      String(rows[0].password_hash ?? ''),
+    )
+
+    if (!valid) {
+      return Response.json(
+        { error: 'La contraseña actual no es correcta.' },
+        { status: 401, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const passwordHash = await hashPassword(newPassword)
+    const token = randomBytes(32).toString('base64url')
+    const hash = tokenHash(token)
+    const sessionId = randomUUID()
+
+    await sql.transaction([
+      sql`
+        UPDATE customer_accounts
+        SET
+          password_hash = ${passwordHash},
+          updated_at = now()
+        WHERE id = ${account.id}::uuid
+      `,
+      sql`
+        DELETE FROM customer_sessions
+        WHERE account_id = ${account.id}::uuid
+      `,
+      sql`
+        INSERT INTO customer_sessions (
+          id,
+          account_id,
+          token_hash,
+          expires_at
+        )
+        VALUES (
+          ${sessionId}::uuid,
+          ${account.id}::uuid,
+          ${hash},
+          now() + (${SESSION_SECONDS} * INTERVAL '1 second')
+        )
+      `,
+    ])
+
+    return Response.json(
+      { ok: true },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+          'Set-Cookie': sessionCookie(request, token),
+        },
+      },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No pudimos cambiar la contraseña.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
 export async function customerOverviewResponse(
   databaseUrl: string,
   request: Request,

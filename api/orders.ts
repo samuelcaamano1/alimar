@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { neon } from '@neondatabase/serverless'
 import { createPublicCustomRequest } from './_lib/custom-requests.js'
 import {
+  changeCustomerPassword,
   customerOverviewResponse,
   customerSessionResponse,
   customerUnauthorized,
@@ -9,6 +10,7 @@ import {
   loginCustomer,
   logoutCustomer,
   registerCustomer,
+  updateCustomerProfile,
 } from './_lib/customer-auth.js'
 import { acceptPublicQuote } from './_lib/public-quotes.js'
 import {
@@ -232,7 +234,19 @@ export async function POST(request: Request) {
               limit: 30,
               windowSeconds: 10 * 60,
             }
-          : action === 'file-approval'
+          : action === 'account-profile'
+            ? {
+                scope: 'customer-profile',
+                limit: 20,
+                windowSeconds: 30 * 60,
+              }
+            : action === 'account-password'
+              ? {
+                  scope: 'customer-password',
+                  limit: 8,
+                  windowSeconds: 60 * 60,
+                }
+              : action === 'file-approval'
             ? {
                 scope: 'public-order-file-approval',
                 limit: 20,
@@ -273,7 +287,9 @@ export async function POST(request: Request) {
   if (
     action === 'account-register' ||
     action === 'account-login' ||
-    action === 'account-logout'
+    action === 'account-logout' ||
+    action === 'account-profile' ||
+    action === 'account-password'
   ) {
     let body: Record<string, unknown> = {}
 
@@ -294,6 +310,14 @@ export async function POST(request: Request) {
 
     if (action === 'account-login') {
       return loginCustomer(rateDatabaseUrl, request, body)
+    }
+
+    if (action === 'account-profile') {
+      return updateCustomerProfile(rateDatabaseUrl, request, body)
+    }
+
+    if (action === 'account-password') {
+      return changeCustomerPassword(rateDatabaseUrl, request, body)
     }
 
     return logoutCustomer(rateDatabaseUrl, request)

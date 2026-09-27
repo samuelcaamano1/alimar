@@ -106,6 +106,7 @@ export default function CustomerAccount() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [accountPanel, setAccountPanel] = useState<'profile' | 'password' | null>(null)
 
   async function loadOverview() {
     setLoading(true)
@@ -129,6 +130,23 @@ export default function CustomerAccount() {
   useEffect(() => {
     void loadOverview()
   }, [])
+
+  useEffect(() => {
+    if (!accountPanel) return
+
+    const previousOverflow = document.body.style.overflow
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !busy) setAccountPanel(null)
+    }
+
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', closeOnEscape)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [accountPanel, busy])
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -176,6 +194,78 @@ export default function CustomerAccount() {
     }
   }
 
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (busy || !overview) return
+
+    const form = new FormData(event.currentTarget)
+    const payload = {
+      name: String(form.get('name') ?? '').trim(),
+      phone: String(form.get('phone') ?? '').trim(),
+    }
+
+    setBusy(true)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/orders?action=account-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!response.ok) throw new Error(await responseError(response))
+
+      const data = (await response.json()) as { account?: CustomerSession }
+      if (!data.account) throw new Error('La respuesta de la cuenta fue incompleta.')
+
+      setOverview((current) =>
+        current ? { ...current, account: data.account as CustomerSession } : current,
+      )
+      setAccountPanel(null)
+      setMessage('Tus datos quedaron actualizados.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No pudimos actualizar tus datos.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function changePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (busy) return
+
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+    const currentPassword = String(form.get('currentPassword') ?? '')
+    const newPassword = String(form.get('newPassword') ?? '')
+    const confirmPassword = String(form.get('confirmPassword') ?? '')
+
+    if (newPassword !== confirmPassword) {
+      setMessage('La confirmación de la nueva contraseña no coincide.')
+      return
+    }
+
+    setBusy(true)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/orders?action=account-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+      if (!response.ok) throw new Error(await responseError(response))
+
+      formElement.reset()
+      setAccountPanel(null)
+      setMessage('Contraseña actualizada. Cerramos las otras sesiones de tu cuenta.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No pudimos cambiar la contraseña.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function logout() {
     if (busy) return
     setBusy(true)
@@ -190,6 +280,7 @@ export default function CustomerAccount() {
       if (!response.ok) throw new Error(await responseError(response))
       setOverview(null)
       setMode('login')
+      setAccountPanel(null)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No pudimos cerrar la sesión.')
     } finally {
@@ -227,11 +318,112 @@ export default function CustomerAccount() {
               <div className="customer-account-profile">
                 <span>{overview.account.email}</span>
                 <strong>{overview.account.phone}</strong>
-                <button className="button button-secondary" type="button" onClick={() => void logout()} disabled={busy}>
-                  {busy ? 'Cerrando…' : 'Cerrar sesión'}
-                </button>
+                <div className="customer-account-profile-actions">
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    onClick={() => { setAccountPanel('profile'); setMessage('') }}
+                    disabled={busy}
+                  >
+                    Editar datos
+                  </button>
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    onClick={() => { setAccountPanel('password'); setMessage('') }}
+                    disabled={busy}
+                  >
+                    Cambiar contraseña
+                  </button>
+                  <button className="button button-secondary" type="button" onClick={() => void logout()} disabled={busy}>
+                    {busy ? 'Cerrando…' : 'Cerrar sesión'}
+                  </button>
+                </div>
               </div>
             </section>
+
+            {accountPanel && (
+              <div
+                className="customer-account-modal-backdrop"
+                onMouseDown={(event) => {
+                  if (event.target === event.currentTarget && !busy) setAccountPanel(null)
+                }}
+              >
+                <section
+                  className="customer-account-modal"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="customer-account-modal-title"
+                >
+                  <div className="customer-account-modal-heading">
+                    <div>
+                      <span>Mi cuenta</span>
+                      <h2 id="customer-account-modal-title">
+                        {accountPanel === 'profile' ? 'Editar mis datos' : 'Cambiar contraseña'}
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      className="customer-account-modal-close"
+                      onClick={() => setAccountPanel(null)}
+                      disabled={busy}
+                      aria-label="Cerrar"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {accountPanel === 'profile' ? (
+                    <form className="customer-account-settings-form" onSubmit={saveProfile}>
+                      <label>
+                        Nombre
+                        <input name="name" autoComplete="name" maxLength={100} defaultValue={overview.account.name} required />
+                      </label>
+                      <label>
+                        WhatsApp
+                        <input name="phone" type="tel" autoComplete="tel" maxLength={40} defaultValue={overview.account.phone} required />
+                      </label>
+                      <label>
+                        Email
+                        <input type="email" value={overview.account.email} readOnly aria-readonly="true" />
+                        <small>El email identifica tu cuenta y no se cambia desde esta pantalla.</small>
+                      </label>
+                      <div className="customer-account-modal-actions">
+                        <button className="button button-secondary" type="button" onClick={() => setAccountPanel(null)} disabled={busy}>Cancelar</button>
+                        <button className="button button-primary" type="submit" disabled={busy}>
+                          {busy ? 'Guardando…' : 'Guardar datos'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <form className="customer-account-settings-form" onSubmit={changePassword}>
+                      <label>
+                        Contraseña actual
+                        <input name="currentPassword" type="password" autoComplete="current-password" maxLength={128} required />
+                      </label>
+                      <label>
+                        Nueva contraseña
+                        <input name="newPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required />
+                        <small>Mínimo 8 caracteres.</small>
+                      </label>
+                      <label>
+                        Repetir nueva contraseña
+                        <input name="confirmPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required />
+                      </label>
+                      <p className="customer-account-security-note">
+                        Al cambiarla, las otras sesiones abiertas de esta cuenta se cierran automáticamente.
+                      </p>
+                      <div className="customer-account-modal-actions">
+                        <button className="button button-secondary" type="button" onClick={() => setAccountPanel(null)} disabled={busy}>Cancelar</button>
+                        <button className="button button-primary" type="submit" disabled={busy}>
+                          {busy ? 'Actualizando…' : 'Cambiar contraseña'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </section>
+              </div>
+            )}
 
             {message && <p className="customer-account-message">{message}</p>}
 

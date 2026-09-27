@@ -4491,3 +4491,158 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ALIMAR GESTION CUENTA 1.1.17 */
+.customer-account-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.customer-account-profile-actions .button {
+  width: auto;
+}
+
+.customer-account-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(20, 18, 15, 0.56);
+  backdrop-filter: blur(5px);
+}
+
+.customer-account-modal {
+  width: min(560px, 100%);
+  max-height: min(760px, calc(100vh - 40px));
+  overflow: auto;
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid rgba(65, 56, 45, 0.14);
+  border-radius: 24px;
+  background: #fffaf0;
+  box-shadow: 0 24px 80px rgba(28, 23, 18, 0.24);
+}
+
+.customer-account-modal-heading {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.customer-account-modal-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.customer-account-modal-heading span {
+  color: var(--muted, #71675e);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.customer-account-modal-heading h2 {
+  margin: 0;
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  line-height: 1.05;
+}
+
+.customer-account-modal-close {
+  display: grid;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(65, 56, 45, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  font: inherit;
+  font-size: 1.45rem;
+  cursor: pointer;
+}
+
+.customer-account-modal-close:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.customer-account-settings-form {
+  display: grid;
+  gap: 14px;
+}
+
+.customer-account-settings-form label {
+  display: grid;
+  gap: 7px;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.customer-account-settings-form input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid rgba(65, 56, 45, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.84);
+  color: inherit;
+  font: inherit;
+}
+
+.customer-account-settings-form input[readonly] {
+  background: rgba(65, 56, 45, 0.055);
+  color: var(--muted, #71675e);
+}
+
+.customer-account-settings-form small,
+.customer-account-security-note {
+  margin: 0;
+  color: var(--muted, #71675e);
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.customer-account-security-note {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(79, 126, 108, 0.08);
+}
+
+.customer-account-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .customer-account-profile-actions,
+  .customer-account-modal-actions {
+    width: 100%;
+  }
+
+  .customer-account-profile-actions .button,
+  .customer-account-modal-actions .button {
+    flex: 1 1 150px;
+  }
+
+  .customer-account-modal-backdrop {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .customer-account-modal {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+    border-radius: 20px 20px 14px 14px;
+  }
+}
