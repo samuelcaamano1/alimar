@@ -25,6 +25,9 @@ export type AdminOrderFile = {
   approval_comment: string | null
   approval_requested_at: string | null
   approval_responded_at: string | null
+  design_series_id: string | null
+  revision_number: number | null
+  supersedes_file_id: string | null
   created_at: string
 }
 
@@ -39,6 +42,12 @@ type ProductionStage =
 
 type FileDraft = {
   kind: AdminOrderFileKind
+  label: string
+  url: string
+  note: string
+}
+
+type RevisionDraft = {
   label: string
   url: string
   note: string
@@ -62,6 +71,12 @@ const kindLabels: Record<AdminOrderFileKind, string> = {
 
 const emptyDraft: FileDraft = {
   kind: 'reference',
+  label: '',
+  url: '',
+  note: '',
+}
+
+const emptyRevisionDraft: RevisionDraft = {
   label: '',
   url: '',
   note: '',
@@ -115,11 +130,40 @@ export default function AdminOrderFiles({
   const [sharingId, setSharingId] = useState<string | null>(null)
   const [approvalId, setApprovalId] = useState<string | null>(null)
   const [continuingId, setContinuingId] = useState<string | null>(null)
+  const [revisionSourceId, setRevisionSourceId] = useState<string | null>(null)
+  const [revisionDraft, setRevisionDraft] =
+    useState<RevisionDraft>(emptyRevisionDraft)
+  const [revisionSaving, setRevisionSaving] = useState(false)
   const [message, setMessage] = useState('')
 
   const customerTrackingUrl = `${window.location.origin}/?pedido=${encodeURIComponent(trackingToken)}`
   const latestSharedDesignId =
     files.find((file) => file.kind === 'design' && file.customer_visible)?.id ?? null
+
+  function hasNewerRevision(file: AdminOrderFile) {
+    if (file.kind !== 'design' || !file.design_series_id || !file.revision_number) {
+      return false
+    }
+
+    return files.some(
+      (candidate) =>
+        candidate.kind === 'design' &&
+        candidate.design_series_id === file.design_series_id &&
+        Boolean(candidate.revision_number) &&
+        Number(candidate.revision_number) > Number(file.revision_number),
+    )
+  }
+
+  function startRevision(file: AdminOrderFile) {
+    const nextRevision = (file.revision_number ?? 1) + 1
+    setRevisionSourceId(file.id)
+    setRevisionDraft({
+      label: `${file.label} · revisión ${nextRevision}`,
+      url: '',
+      note: '',
+    })
+    setMessage('')
+  }
 
   function designApprovalWhatsappUrl(file: AdminOrderFile) {
     return customerWhatsappUrl(
@@ -250,6 +294,61 @@ export default function AdminOrderFiles({
     }
   }
 
+  async function createRevision(file: AdminOrderFile) {
+    if (revisionSaving || disabled) return
+
+    const label = revisionDraft.label.trim()
+    const url = revisionDraft.url.trim()
+
+    if (!label) {
+      setMessage('Poné un nombre para la nueva revisión.')
+      return
+    }
+
+    if (!/^https:\/\//i.test(url)) {
+      setMessage('Pegá un enlace HTTPS válido para la nueva revisión.')
+      return
+    }
+
+    setRevisionSaving(true)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/admin/orders?action=file-revision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          sourceFileId: file.id,
+          label,
+          url,
+          note: revisionDraft.note.trim(),
+        }),
+      })
+
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      const data = (await response.json()) as { revisionNumber?: number }
+      setRevisionSourceId(null)
+      setRevisionDraft(emptyRevisionDraft)
+      setMessage(
+        data.revisionNumber
+          ? `Revisión ${data.revisionNumber} creada. Compartila cuando esté lista para el cliente.`
+          : 'Nueva revisión creada. Compartila cuando esté lista para el cliente.',
+      )
+      await onChanged()
+      window.dispatchEvent(new Event('alimar:order-files-changed'))
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo crear la nueva revisión.',
+      )
+    } finally {
+      setRevisionSaving(false)
+    }
+  }
+
   async function continueAfterApproval(file: AdminOrderFile) {
     if (continuingId || disabled) return
 
@@ -335,6 +434,12 @@ export default function AdminOrderFiles({
               <div className="admin-order-file-main">
                 <span>{kindLabels[file.kind]}</span>
                 <strong>{file.label}</strong>
+                {file.kind === 'design' && file.revision_number && (
+                  <small className="admin-order-file-revision-badge">
+                    Revisión {file.revision_number}
+                    {hasNewerRevision(file) ? ' · superada' : ' · vigente'}
+                  </small>
+                )}
                 {file.note && <p>{file.note}</p>}
                 <small
                   className={`admin-order-file-visibility ${
@@ -416,6 +521,24 @@ export default function AdminOrderFiles({
                     </a>
                   )}
                 {file.kind === 'design' &&
+                  file.approval_status === 'changes_requested' &&
+                  !hasNewerRevision(file) && (
+                    <button
+                      type="button"
+                      className="admin-order-file-revision-action"
+                      onClick={() =>
+                        revisionSourceId === file.id
+                          ? setRevisionSourceId(null)
+                          : startRevision(file)
+                      }
+                      disabled={disabled || revisionSaving}
+                    >
+                      {revisionSourceId === file.id
+                        ? 'Cancelar nueva revisión'
+                        : `Crear revisión ${(file.revision_number ?? 1) + 1}`}
+                    </button>
+                  )}
+                {file.kind === 'design' &&
                   file.customer_visible &&
                   file.approval_status === 'changes_requested' &&
                   designChangesWhatsappUrl(file) && (
@@ -451,6 +574,79 @@ export default function AdminOrderFiles({
                   {archivingId === file.id ? 'Archivando…' : 'Archivar'}
                 </button>
               </div>
+
+              {revisionSourceId === file.id && (
+                <div className="admin-order-file-revision-form">
+                  <div>
+                    <strong>Nueva revisión del diseño</strong>
+                    <small>
+                      La revisión anterior conserva su respuesta y se oculta del
+                      cliente. La nueva empieza interna hasta que la compartas.
+                    </small>
+                  </div>
+
+                  <label>
+                    Nombre
+                    <input
+                      value={revisionDraft.label}
+                      maxLength={120}
+                      onChange={(event) =>
+                        setRevisionDraft((current) => ({
+                          ...current,
+                          label: event.target.value,
+                        }))
+                      }
+                      disabled={revisionSaving}
+                    />
+                  </label>
+
+                  <label className="admin-order-file-revision-url">
+                    Enlace HTTPS
+                    <input
+                      value={revisionDraft.url}
+                      maxLength={4000}
+                      inputMode="url"
+                      placeholder="https://drive.google.com/..."
+                      onChange={(event) =>
+                        setRevisionDraft((current) => ({
+                          ...current,
+                          url: event.target.value,
+                        }))
+                      }
+                      disabled={revisionSaving}
+                    />
+                  </label>
+
+                  <label>
+                    Nota opcional
+                    <input
+                      value={revisionDraft.note}
+                      maxLength={500}
+                      placeholder="Ej. ajustes pedidos por el cliente"
+                      onChange={(event) =>
+                        setRevisionDraft((current) => ({
+                          ...current,
+                          note: event.target.value,
+                        }))
+                      }
+                      disabled={revisionSaving}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    className="admin-primary"
+                    onClick={() => void createRevision(file)}
+                    disabled={
+                      revisionSaving ||
+                      !revisionDraft.label.trim() ||
+                      !revisionDraft.url.trim()
+                    }
+                  >
+                    {revisionSaving ? 'Creando…' : 'Crear nueva revisión'}
+                  </button>
+                </div>
+              )}
             </article>
           ))}
         </div>

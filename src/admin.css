@@ -9391,3 +9391,73 @@
   color: #855323;
   font-weight: 850;
 }
+
+/* ALIMAR REVISIONES DE DISENO 1.1.11 */
+.admin-order-file-revision-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(52, 104, 88, 0.08);
+  color: #2f6757;
+  font-weight: 800;
+}
+
+.admin-order-file-revision-action {
+  border-color: rgba(52, 104, 88, 0.28) !important;
+  background: rgba(52, 104, 88, 0.07) !important;
+}
+
+.admin-order-file-revision-form {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) minmax(180px, 1fr) minmax(220px, 1.5fr) minmax(180px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  border-top: 1px solid rgba(52, 104, 88, 0.16);
+  background: rgba(52, 104, 88, 0.04);
+}
+
+.admin-order-file-revision-form > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-order-file-revision-form > div:first-child small {
+  color: var(--admin-muted);
+  line-height: 1.4;
+}
+
+.admin-order-file-revision-form label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.admin-order-file-revision-form input {
+  min-width: 0;
+}
+
+@media (max-width: 980px) {
+  .admin-order-file-revision-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-order-file-revision-form > div:first-child,
+  .admin-order-file-revision-url {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .admin-order-file-revision-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-file-revision-form > div:first-child,
+  .admin-order-file-revision-url {
+    grid-column: auto;
+  }
+}

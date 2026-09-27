@@ -25,6 +25,7 @@ type TrackingFile = {
   approvalComment: string | null
   approvalRequestedAt: string | null
   approvalRespondedAt: string | null
+  revisionNumber: number | null
 }
 
 const TRACKING_APPROVAL_STATUSES = new Set([
@@ -116,6 +117,11 @@ function formatTrackingRow(row: Record<string, unknown>) {
               approvalRespondedAt:
                 typeof file.approvalRespondedAt === 'string'
                   ? file.approvalRespondedAt
+                  : null,
+              revisionNumber:
+                Number.isInteger(Number(file.revisionNumber)) &&
+                Number(file.revisionNumber) >= 1
+                  ? Number(file.revisionNumber)
                   : null,
             },
           ]
@@ -221,7 +227,8 @@ async function selectPublicOrderTracking(
             'approvalStatus', f.approval_status,
             'approvalComment', f.approval_comment,
             'approvalRequestedAt', f.approval_requested_at::text,
-            'approvalRespondedAt', f.approval_responded_at::text
+            'approvalRespondedAt', f.approval_responded_at::text,
+            'revisionNumber', f.revision_number
           )
           ORDER BY f.created_at DESC
         )

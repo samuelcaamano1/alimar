@@ -37,6 +37,9 @@ type WorkApprovalFile = {
   approval_status: 'not_required' | 'pending' | 'approved' | 'changes_requested'
   approval_comment: string | null
   approval_requested_at: string | null
+  design_series_id: string | null
+  revision_number: number | null
+  supersedes_file_id: string | null
 }
 
 type WorkOrder = {
@@ -105,6 +108,10 @@ function currentSharedDesign(order: WorkOrder) {
       (file) => file.kind === 'design' && file.customer_visible,
     ) ?? null
   )
+}
+
+function currentDesignRevision(order: WorkOrder) {
+  return (order.files ?? []).find((file) => file.kind === 'design') ?? null
 }
 
 function todayKey() {
@@ -325,6 +332,22 @@ export default function AdminWorkCenter() {
         order.actual_cost === null,
     ).length
 
+    const revisionNeedsShare = data.orders.flatMap((order) => {
+      if (order.status === 'cancelled') return []
+      const file = currentDesignRevision(order)
+      if (
+        !file ||
+        file.customer_visible ||
+        file.approval_status !== 'not_required' ||
+        !file.revision_number ||
+        file.revision_number <= 1
+      ) {
+        return []
+      }
+
+      return [{ order, file }]
+    })
+
     const approvalItems = data.orders.flatMap((order) => {
       if (order.status === 'cancelled') return []
       const file = currentSharedDesign(order)
@@ -354,9 +377,10 @@ export default function AdminWorkCenter() {
       activeOrders: activeOrders.length,
       todayOrders: todayOrders.length,
       overdueOrders: overdueOrders.length,
-      approvalAttention: approvalItems.length,
+      approvalAttention: approvalItems.length + revisionNeedsShare.length,
       approvalChanges,
       approvalReady,
+      approvalRevisionReady: revisionNeedsShare.length,
       readyForDelivery,
       readyToClose,
       deliveryAttention: readyForDelivery + readyToClose,
@@ -457,6 +481,27 @@ export default function AdminWorkCenter() {
 
     for (const order of data.orders) {
       if (order.status === 'cancelled') continue
+
+      const revision = currentDesignRevision(order)
+      if (
+        revision &&
+        !revision.customer_visible &&
+        revision.approval_status === 'not_required' &&
+        revision.revision_number &&
+        revision.revision_number > 1
+      ) {
+        next.push({
+          key: `approval-revision-share-${order.id}-${revision.id}`,
+          score: 3,
+          kind: 'APROB',
+          title: `${order.public_code}: revisión ${revision.revision_number} lista para compartir`,
+          detail: `${order.customer_name} · ${revision.label}`,
+          meta: 'Compartila con el cliente y pedí una nueva aprobación',
+          tone: 'approval',
+          target: '.admin-orders-panel',
+          orderId: order.id,
+        })
+      }
 
       const file = currentSharedDesign(order)
       if (!file) continue
@@ -719,7 +764,9 @@ export default function AdminWorkCenter() {
               ? `${summary.approvalChanges} con cambios`
               : summary.approvalReady > 0
                 ? `${summary.approvalReady} listas para continuar`
-                : 'esperando cliente'}
+                : summary.approvalRevisionReady > 0
+                  ? `${summary.approvalRevisionReady} revisión(es) para compartir`
+                  : 'esperando cliente'}
           </small>
         </button>
 

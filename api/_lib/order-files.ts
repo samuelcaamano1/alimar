@@ -24,6 +24,9 @@ export type AdminOrderFile = {
   approval_comment: string | null
   approval_requested_at: string | null
   approval_responded_at: string | null
+  design_series_id: string | null
+  revision_number: number | null
+  supersedes_file_id: string | null
   created_at: string
 }
 
@@ -60,6 +63,9 @@ export async function listRecentOrderFiles(databaseUrl: string) {
       f.approval_comment,
       f.approval_requested_at::text,
       f.approval_responded_at::text,
+      f.design_series_id::text,
+      f.revision_number,
+      f.supersedes_file_id::text,
       f.created_at::text
     FROM order_files f
     WHERE f.archived_at IS NULL
@@ -131,20 +137,29 @@ export async function createOrderFile(
 
     const rows = await sql.transaction([
       sql`
+        WITH seed AS (
+          SELECT gen_random_uuid() AS file_id
+        )
         INSERT INTO order_files (
+          id,
           order_id,
           kind,
           label,
           url,
-          note
+          note,
+          design_series_id,
+          revision_number
         )
-        VALUES (
+        SELECT
+          seed.file_id,
           ${orderId}::uuid,
           ${kind},
           ${label},
           ${url},
-          ${note || null}
-        )
+          ${note || null},
+          CASE WHEN ${kind} = 'design' THEN seed.file_id ELSE NULL END,
+          CASE WHEN ${kind} = 'design' THEN 1 ELSE NULL END
+        FROM seed
         RETURNING
           id::text,
           order_id::text,
@@ -157,6 +172,9 @@ export async function createOrderFile(
           approval_comment,
           approval_requested_at::text,
           approval_responded_at::text,
+          design_series_id::text,
+          revision_number,
+          supersedes_file_id::text,
           created_at::text
       `,
       sql`
@@ -290,7 +308,10 @@ export async function setOrderFileVisibility(
     const rows = await sql`
       SELECT
         f.label,
+        f.kind,
         f.customer_visible,
+        f.design_series_id::text,
+        f.revision_number,
         o.status
       FROM order_files f
       JOIN orders o ON o.id = f.order_id
@@ -318,7 +339,28 @@ export async function setOrderFileVisibility(
       ? `Archivo compartido con cliente: ${label}`
       : `Archivo ocultado del cliente: ${label}`
 
-    await sql.transaction([
+    const seriesId = rows[0].design_series_id
+      ? String(rows[0].design_series_id)
+      : null
+    const isDesign = String(rows[0].kind) === 'design'
+
+    const visibilityQueries = []
+
+    if (visible && isDesign && seriesId) {
+      visibilityQueries.push(sql`
+        UPDATE order_files
+        SET
+          customer_visible = false,
+          updated_at = now()
+        WHERE order_id = ${orderId}::uuid
+          AND design_series_id = ${seriesId}::uuid
+          AND id <> ${fileId}::uuid
+          AND archived_at IS NULL
+          AND customer_visible IS TRUE
+      `)
+    }
+
+    visibilityQueries.push(
       sql`
         UPDATE order_files
         SET
@@ -344,7 +386,9 @@ export async function setOrderFileVisibility(
           ${eventNote}
         )
       `,
-    ])
+    )
+
+    await sql.transaction(visibilityQueries)
 
     return Response.json(
       { ok: true, customerVisible: visible },
@@ -378,6 +422,16 @@ export async function requestOrderFileApproval(
         f.kind,
         f.label,
         f.customer_visible,
+        f.design_series_id::text,
+        f.revision_number,
+        EXISTS (
+          SELECT 1
+          FROM order_files newer
+          WHERE newer.order_id = f.order_id
+            AND newer.design_series_id = f.design_series_id
+            AND newer.archived_at IS NULL
+            AND newer.revision_number > f.revision_number
+        ) AS has_newer_revision,
         o.status
       FROM order_files f
       JOIN orders o ON o.id = f.order_id
@@ -401,6 +455,13 @@ export async function requestOrderFileApproval(
     if (!Boolean(rows[0].customer_visible)) {
       return Response.json(
         { error: 'Compartí el diseño con el cliente antes de pedir aprobación.' },
+        { status: 409 },
+      )
+    }
+
+    if (Boolean(rows[0].has_newer_revision)) {
+      return Response.json(
+        { error: 'Ya existe una revisión más nueva de este diseño.' },
         { status: 409 },
       )
     }
@@ -446,6 +507,183 @@ export async function requestOrderFileApproval(
   } catch {
     return Response.json(
       { error: 'No se pudo solicitar la aprobación del diseño.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+export async function createOrderFileRevision(
+  databaseUrl: string,
+  body: Record<string, unknown>,
+) {
+  const orderId = text(body.orderId, 40)
+  const sourceFileId = text(body.sourceFileId, 40)
+  const label = text(body.label, 120)
+  const url = httpsUrl(body.url)
+  const note = text(body.note, 500)
+
+  if (!UUID_RE.test(orderId) || !UUID_RE.test(sourceFileId)) {
+    return Response.json({ error: 'Diseño inválido.' }, { status: 400 })
+  }
+
+  if (!label) {
+    return Response.json(
+      { error: 'Ingresá un nombre para la nueva revisión.' },
+      { status: 400 },
+    )
+  }
+
+  if (!url) {
+    return Response.json(
+      { error: 'Ingresá un enlace HTTPS válido para la nueva revisión.' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const sql = neon(databaseUrl)
+
+    const rows = await sql`
+      SELECT
+        f.kind,
+        f.label,
+        f.design_series_id::text,
+        f.revision_number,
+        f.approval_status,
+        o.status,
+        EXISTS (
+          SELECT 1
+          FROM order_files newer
+          WHERE newer.order_id = f.order_id
+            AND newer.design_series_id = f.design_series_id
+            AND newer.archived_at IS NULL
+            AND newer.revision_number > f.revision_number
+        ) AS has_newer_revision
+      FROM order_files f
+      JOIN orders o ON o.id = f.order_id
+      WHERE f.id = ${sourceFileId}::uuid
+        AND f.order_id = ${orderId}::uuid
+        AND f.archived_at IS NULL
+      LIMIT 1
+    `
+
+    if (rows.length === 0) {
+      return Response.json({ error: 'Diseño no encontrado.' }, { status: 404 })
+    }
+
+    if (String(rows[0].kind) !== 'design') {
+      return Response.json(
+        { error: 'Sólo los diseños pueden crear revisiones.' },
+        { status: 409 },
+      )
+    }
+
+    if (String(rows[0].approval_status) !== 'changes_requested') {
+      return Response.json(
+        { error: 'La nueva revisión se habilita cuando el cliente pidió cambios.' },
+        { status: 409 },
+      )
+    }
+
+    if (Boolean(rows[0].has_newer_revision)) {
+      return Response.json(
+        { error: 'Ya existe una revisión más nueva de este diseño.' },
+        { status: 409 },
+      )
+    }
+
+    const seriesId = String(rows[0].design_series_id ?? '')
+    const currentRevision = Number(rows[0].revision_number)
+
+    if (!UUID_RE.test(seriesId) || !Number.isInteger(currentRevision) || currentRevision < 1) {
+      return Response.json(
+        { error: 'El diseño todavía no tiene metadatos de revisión válidos.' },
+        { status: 409 },
+      )
+    }
+
+    const nextRevision = currentRevision + 1
+    const status = String(rows[0].status)
+    const sourceLabel = String(rows[0].label)
+    const eventNote = `Nueva revisión ${nextRevision}: ${label} · reemplaza revisión ${currentRevision}: ${sourceLabel}`.slice(0, 300)
+
+    const transactionRows = await sql.transaction([
+      sql`
+        UPDATE order_files
+        SET
+          customer_visible = false,
+          updated_at = now()
+        WHERE id = ${sourceFileId}::uuid
+          AND order_id = ${orderId}::uuid
+          AND archived_at IS NULL
+      `,
+      sql`
+        INSERT INTO order_files (
+          order_id,
+          kind,
+          label,
+          url,
+          note,
+          customer_visible,
+          design_series_id,
+          revision_number,
+          supersedes_file_id
+        )
+        VALUES (
+          ${orderId}::uuid,
+          'design',
+          ${label},
+          ${url},
+          ${note || null},
+          false,
+          ${seriesId}::uuid,
+          ${nextRevision},
+          ${sourceFileId}::uuid
+        )
+        RETURNING
+          id::text,
+          order_id::text,
+          kind,
+          label,
+          url,
+          note,
+          customer_visible,
+          approval_status,
+          approval_comment,
+          approval_requested_at::text,
+          approval_responded_at::text,
+          design_series_id::text,
+          revision_number,
+          supersedes_file_id::text,
+          created_at::text
+      `,
+      sql`
+        INSERT INTO order_events (
+          order_id,
+          event_type,
+          from_status,
+          to_status,
+          note
+        )
+        VALUES (
+          ${orderId}::uuid,
+          'file_revision_created',
+          ${status},
+          ${status},
+          ${eventNote}
+        )
+      `,
+    ])
+
+    const fileRows = transactionRows[1] as AdminOrderFile[]
+
+    return Response.json(
+      { file: fileRows[0], revisionNumber: nextRevision },
+      { status: 201, headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudo crear la nueva revisión del diseño.' },
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }

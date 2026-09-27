@@ -50,6 +50,7 @@ type TrackingFile = {
   approvalComment: string | null
   approvalRequestedAt: string | null
   approvalRespondedAt: string | null
+  revisionNumber: number | null
 }
 
 type PublicTrackingOrder = {
@@ -560,7 +561,12 @@ export default function PublicOrderTracking({ token }: { token: string }) {
                   {order.files.map((file) => (
                     <article key={file.id}>
                       <div className="tracking-file-main">
-                        <span>{fileKindLabels[file.kind]}</span>
+                        <span>
+                          {fileKindLabels[file.kind]}
+                          {file.kind === 'design' && file.revisionNumber
+                            ? ` · Revisión ${file.revisionNumber}`
+                            : ''}
+                        </span>
                         <strong>{file.label}</strong>
 
                         {file.kind === 'design' &&

@@ -15,6 +15,7 @@ import {
 import {
   archiveOrderFile,
   createOrderFile,
+  createOrderFileRevision,
   listRecentOrderFiles,
   requestOrderFileApproval,
   setOrderFileVisibility,
@@ -701,6 +702,10 @@ export async function POST(request: Request) {
 
   if (action === 'file') {
     return createOrderFile(databaseUrl, body)
+  }
+
+  if (action === 'file-revision') {
+    return createOrderFileRevision(databaseUrl, body)
   }
 
   if (action === 'payment') {
