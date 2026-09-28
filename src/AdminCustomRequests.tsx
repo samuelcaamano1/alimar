@@ -349,7 +349,7 @@ export default function AdminCustomRequests({
           new Date(left.created_at).getTime()
         )
       })
-  }, [inboxFilter, requests, search, typeFilter])
+  }, [inboxFilter, requests, search, today, typeFilter])
 
   useEffect(() => {
     if (filtered.length === 0) {

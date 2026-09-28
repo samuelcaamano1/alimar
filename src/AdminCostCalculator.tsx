@@ -9,395 +9,51 @@ import {
   type QuoteSnapshot,
   type QuoteStatus,
 } from './adminQuotePrint'
-
-type CostCategory =
-  | 'paper'
-  | 'ink'
-  | 'filament'
-  | 'paint'
-  | 'energy'
-  | 'machine'
-  | 'labor'
-  | 'consumable'
-  | 'other'
-
-type CostUnit =
-  | 'unit'
-  | 'sheet'
-  | 'print'
-  | 'g'
-  | 'kg'
-  | 'ml'
-  | 'l'
-  | 'm'
-  | 'kwh'
-  | 'minute'
-  | 'hour'
-
-type CostResource = {
-  id: string
-  name: string
-  category: CostCategory
-  detail: string | null
-  unit: CostUnit
-  purchase_price: string
-  package_quantity: string
-  waste_percent: string
-  notes: string | null
-  effective_unit_cost: string
-  updated_at: string
-}
-
-type Draft = {
-  name: string
-  category: CostCategory
-  detail: string
-  unit: CostUnit
-  purchasePrice: string
-  packageQuantity: string
-  wastePercent: string
-  notes: string
-}
-
-type GuidedJobType = 'paper-print' | '3d-print' | 'manual'
-type WizardStep = 1 | 2 | 3
-type PrintSides = 'single' | 'double'
-type QuoteFocusFilter = 'all' | 'waiting' | 'expiring' | 'accepted' | 'expired'
-type QuoteMetricPeriod = 'month' | 'all'
-
-type QuoteCommercialMetrics = {
-  total_count: number
-  sent_count: number
-  accepted_count: number
-  rejected_count: number
-  converted_count: number
-  converted_actual_cost_count: number
-  quoted_value: string
-  accepted_value: string
-  accepted_real_cost: string
-  accepted_profit: string
-  converted_value: string
-  converted_real_cost: string
-  converted_profit: string
-  actual_revenue: string
-  actual_estimated_cost: string
-  actual_cost_total: string
-  actual_profit: string
-  actual_overrun_count: number
-  actual_saving_count: number
-  actual_on_target_count: number
-  average_accepted_ticket: string
-  reject_price_count: number
-  reject_timing_count: number
-  reject_cancelled_count: number
-  reject_other_count: number
-}
-
-type QuoteCommercialMetricSet = {
-  month: QuoteCommercialMetrics
-  all: QuoteCommercialMetrics
-}
-
-type QuoteJobProfitability = {
-  job_type: string
-  closed_count: number
-  revenue: string
-  estimated_cost: string
-  actual_cost: string
-  profit: string
-  overrun_count: number
-  saving_count: number
-}
-
-type QuoteJobProfitabilitySet = {
-  month: QuoteJobProfitability[]
-  all: QuoteJobProfitability[]
-}
-
-type GuidedCost = {
-  key: string
-  label: string
-  detail: string
-  total: number
-}
-
-const LIGHT_PERCENT = 10
-const WEAR_PERCENT = 20
-
-const quoteStatusLabels: Record<QuoteStatus, string> = {
-  draft: 'Borrador',
-  sent: 'Enviado',
-  accepted: 'Aceptado',
-  rejected: 'Rechazado',
-  expired: 'Vencido',
-}
-
-const quoteStatusOptions = Object.entries(quoteStatusLabels) as Array<[QuoteStatus, string]>
-
-const categoryLabels: Record<CostCategory, string> = {
-  paper: 'Papel',
-  ink: 'Tinta',
-  filament: 'Filamento 3D',
-  paint: 'Pintura / acrílico',
-  energy: 'Energía',
-  machine: 'Máquina',
-  labor: 'Mano de obra',
-  consumable: 'Consumible',
-  other: 'Otro',
-}
-
-const unitLabels: Record<CostUnit, string> = {
-  unit: 'unidad',
-  sheet: 'hoja',
-  print: 'impresión',
-  g: 'g',
-  kg: 'kg',
-  ml: 'ml',
-  l: 'litro',
-  m: 'metro',
-  kwh: 'kWh',
-  minute: 'minuto',
-  hour: 'hora',
-}
-
-const emptyDraft: Draft = {
-  name: '',
-  category: 'paper',
-  detail: '',
-  unit: 'sheet',
-  purchasePrice: '',
-  packageQuantity: '',
-  wastePercent: '0',
-  notes: '',
-}
-
-function defaultUnitForCategory(category: CostCategory): CostUnit {
-  switch (category) {
-    case 'paper':
-      return 'sheet'
-    case 'ink':
-      return 'print'
-    case 'filament':
-      return 'g'
-    case 'paint':
-      return 'ml'
-    case 'labor':
-      return 'hour'
-    case 'energy':
-      return 'kwh'
-    case 'machine':
-      return 'hour'
-    default:
-      return 'unit'
-  }
-}
-
-function money(value: number) {
-  if (!Number.isFinite(value)) return '$0'
-
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 2,
-  }).format(value)
-}
-
-function dateLabel(value: string | null) {
-  if (!value) return 'Sin vencimiento'
-
-  const date = new Date(`${value}T12:00:00`)
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date)
-}
-
-function quoteResponseReasonLabel(value: string | null) {
-  switch (value) {
-    case 'price':
-      return 'Precio'
-    case 'timing':
-      return 'Tiempos'
-    case 'cancelled':
-      return 'Ya no lo necesita'
-    case 'other':
-      return 'Otro'
-    default:
-      return 'Sin motivo'
-  }
-}
-
-function quoteJobTypeLabel(value: string) {
-  switch (value) {
-    case 'paper-print':
-      return 'Papelería / impresión'
-    case '3d-print':
-      return 'Impresión 3D'
-    case 'manual':
-      return 'Manualidades'
-    default:
-      return 'Otro trabajo'
-  }
-}
-
-function costVariancePercent(estimatedValue: string, actualValue: string) {
-  const estimated = Number(estimatedValue)
-  const actual = Number(actualValue)
-
-  if (!Number.isFinite(estimated) || estimated <= 0 || !Number.isFinite(actual)) {
-    return null
-  }
-
-  return ((actual - estimated) / estimated) * 100
-}
-
-function grossMargin(revenueValue: string, costValue: string) {
-  const revenue = Number(revenueValue)
-  const cost = Number(costValue)
-
-  if (!Number.isFinite(revenue) || revenue <= 0 || !Number.isFinite(cost)) {
-    return null
-  }
-
-  return ((revenue - cost) / revenue) * 100
-}
-
-function acceptanceRate(metrics: QuoteCommercialMetrics) {
-  const decided = metrics.accepted_count + metrics.rejected_count
-  if (decided <= 0) return null
-
-  return (metrics.accepted_count / decided) * 100
-}
-
-function daysUntil(value: string | null) {
-  if (!value) return null
-
-  const target = new Date(`${value}T12:00:00`)
-  if (Number.isNaN(target.getTime())) return null
-
-  const today = new Date()
-  today.setHours(12, 0, 0, 0)
-
-  return Math.ceil((target.getTime() - today.getTime()) / 86_400_000)
-}
-
-function dateTimeLabel(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date)
-}
-
-function number(value: string) {
-  const raw = value.trim().replace(/\s+/g, '')
-  if (!raw) return 0
-
-  let normalized = raw
-
-  if (raw.includes(',') && raw.includes('.')) {
-    normalized =
-      raw.lastIndexOf(',') > raw.lastIndexOf('.')
-        ? raw.replace(/\./g, '').replace(',', '.')
-        : raw.replace(/,/g, '')
-  } else if (raw.includes(',')) {
-    normalized = raw.replace(',', '.')
-  } else if (/^\d{1,3}(?:\.\d{3})+$/.test(raw)) {
-    normalized = raw.replace(/\./g, '')
-  }
-
-  const parsed = Number(normalized)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-function roundUp(value: number, step: number) {
-  if (!Number.isFinite(value) || value <= 0) return 0
-  if (!Number.isFinite(step) || step <= 1) return Math.ceil(value)
-  return Math.ceil(value / step) * step
-}
-
-function convertUsage(amount: number, from: CostUnit, to: CostUnit) {
-  if (from === to) return amount
-  if (from === 'g' && to === 'kg') return amount / 1000
-  if (from === 'kg' && to === 'g') return amount * 1000
-  if (from === 'ml' && to === 'l') return amount / 1000
-  if (from === 'l' && to === 'ml') return amount * 1000
-  if (from === 'minute' && to === 'hour') return amount / 60
-  if (from === 'hour' && to === 'minute') return amount * 60
-  return amount
-}
-
-function customRequestNotes(request: CustomRequest) {
-  const lines = [
-    `Solicitud ${request.public_code}`,
-    `Tipo solicitado: ${request.request_type}`,
-    `Idea: ${request.description}`,
-  ]
-
-  if (request.quantity !== null) lines.push(`Cantidad aproximada: ${request.quantity}`)
-  if (request.needed_date) lines.push(`Fecha solicitada: ${request.needed_date}`)
-  if (request.dimensions) lines.push(`Medidas: ${request.dimensions}`)
-  if (request.theme) lines.push(`Tema / colores: ${request.theme}`)
-  if (request.reference_url) lines.push(`Referencia: ${request.reference_url}`)
-
-  return lines.join('\n')
-}
-
-async function responseMessage(response: Response) {
-  try {
-    const data = (await response.json()) as { error?: string }
-    return data.error || `Error ${response.status}`
-  } catch {
-    return `Error ${response.status}`
-  }
-}
-
-function draftFromResource(resource: CostResource): Draft {
-  const needsInkYield = resource.category === 'ink' && resource.unit !== 'print'
-
-  if (resource.category === 'labor') {
-    return {
-      name: resource.name,
-      category: 'labor',
-      detail: resource.detail ?? '',
-      unit: 'hour',
-      purchasePrice: resource.effective_unit_cost || resource.purchase_price,
-      packageQuantity: '1',
-      wastePercent: '0',
-      notes: resource.notes ?? '',
-    }
-  }
-
-  return {
-    name: resource.name,
-    category: resource.category,
-    detail: resource.detail ?? '',
-    unit: resource.category === 'ink' ? 'print' : resource.unit,
-    purchasePrice: resource.purchase_price,
-    packageQuantity: needsInkYield ? '' : resource.package_quantity,
-    wastePercent: resource.waste_percent,
-    notes: resource.notes ?? '',
-  }
-}
-
-function payloadFromDraft(draft: Draft) {
-  return {
-    name: draft.name,
-    category: draft.category,
-    detail: draft.detail,
-    unit: draft.category === 'labor' ? 'hour' : draft.unit,
-    purchasePrice: draft.purchasePrice,
-    packageQuantity: draft.category === 'labor' ? '1' : draft.packageQuantity,
-    wastePercent: draft.category === 'labor' ? '0' : draft.wastePercent,
-    notes: draft.notes,
-  }
-}
+import {
+  LIGHT_PERCENT,
+  WEAR_PERCENT,
+  categoryLabels,
+  emptyDraft,
+  quoteStatusLabels,
+  quoteStatusOptions,
+  unitLabels,
+} from './admin/costs/config'
+import type {
+  CostCategory,
+  CostResource,
+  CostUnit,
+  Draft,
+  GuidedJobType,
+  PrintSides,
+  QuoteCommercialMetricSet,
+  QuoteFocusFilter,
+  QuoteJobProfitabilitySet,
+  QuoteMetricPeriod,
+  WizardStep,
+} from './admin/costs/types'
+import {
+  acceptanceRate,
+  costVariancePercent,
+  customRequestNotes,
+  dateLabel,
+  dateTimeLabel,
+  defaultUnitForCategory,
+  draftFromResource,
+  grossMargin,
+  money,
+  number,
+  payloadFromDraft,
+  quoteJobTypeLabel,
+  quoteResponseReasonLabel,
+} from './admin/costs/utils'
+import { adminRequest, responseMessage } from './admin/shared/http'
+import { useModalLifecycle } from './admin/shared/useModalLifecycle'
+import {
+  filterCostResources,
+  filterQuotes,
+  getQuoteFollowUpCounts,
+} from './admin/costs/selectors'
+import { calculateGuidedCost } from './admin/costs/calculation'
 
 type AdminCostCalculatorProps = {
   quoteSource?: CustomRequest | null
@@ -467,7 +123,7 @@ export default function AdminCostCalculator({
     setState('loading')
 
     try {
-      const response = await fetch('/api/admin/catalog?action=cost-resources', {
+      const response = await adminRequest('/api/admin/catalog?action=cost-resources', {
         cache: 'no-store',
       })
 
@@ -488,7 +144,7 @@ export default function AdminCostCalculator({
     setQuoteState('loading')
 
     try {
-      const response = await fetch('/api/admin/catalog?action=quotes', {
+      const response = await adminRequest('/api/admin/catalog?action=quotes', {
         cache: 'no-store',
       })
 
@@ -550,43 +206,12 @@ export default function AdminCostCalculator({
     setMessage(`Solicitud ${quoteSource.public_code} lista para presupuestar.`)
   }, [quoteSource])
 
-  useEffect(() => {
-    if (!quoteOpen) return
+  useModalLifecycle(quoteOpen, () => setQuoteOpen(false))
 
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setQuoteOpen(false)
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [quoteOpen])
-
-  const filteredResources = useMemo(() => {
-    const query = resourceSearch.trim().toLocaleLowerCase('es-AR')
-
-    return resources.filter((resource) => {
-      if (categoryFilter !== 'all' && resource.category !== categoryFilter) return false
-      if (!query) return true
-
-      return [
-        resource.name,
-        resource.detail ?? '',
-        resource.notes ?? '',
-        categoryLabels[resource.category],
-      ]
-        .join(' ')
-        .toLocaleLowerCase('es-AR')
-        .includes(query)
-    })
-  }, [categoryFilter, resourceSearch, resources])
-
+  const filteredResources = useMemo(
+    () => filterCostResources(resources, resourceSearch, categoryFilter),
+    [categoryFilter, resourceSearch, resources],
+  )
 
   const activeQuoteMetrics = quoteMetrics?.[quoteMetricPeriod] ?? null
   const activeJobProfitability =
@@ -619,74 +244,20 @@ export default function AdminCostCalculator({
       )
     : null
 
-  const quoteFollowUpCounts = useMemo(() => {
-    const waiting = quotes.filter((quote) => quote.status === 'sent').length
-    const expiring = quotes.filter((quote) => {
-      const days = daysUntil(quote.valid_until)
-      return (
-        (quote.status === 'draft' || quote.status === 'sent') &&
-        days !== null &&
-        days >= 0 &&
-        days <= 3
-      )
-    }).length
-    const accepted = quotes.filter(
-      (quote) => quote.status === 'accepted' && !quote.order_code,
-    ).length
-    const expired = quotes.filter((quote) => quote.status === 'expired').length
+  const quoteFollowUpCounts = useMemo(
+    () => getQuoteFollowUpCounts(quotes),
+    [quotes],
+  )
 
-    return {
-      all: quotes.length,
-      waiting,
-      expiring,
-      accepted,
-      expired,
-      attention: expiring + accepted,
-    }
-  }, [quotes])
-
-  const filteredQuotes = useMemo(() => {
-    const query = quoteSearch.trim().toLocaleLowerCase('es-AR')
-
-    return quotes.filter((quote) => {
-      if (quoteStatusFilter !== 'all' && quote.status !== quoteStatusFilter) return false
-
-      if (quoteFocusFilter === 'waiting' && quote.status !== 'sent') return false
-
-      if (quoteFocusFilter === 'accepted') {
-        if (quote.status !== 'accepted' || quote.order_code) return false
-      }
-
-      if (quoteFocusFilter === 'expired' && quote.status !== 'expired') return false
-
-      if (quoteFocusFilter === 'expiring') {
-        const days = daysUntil(quote.valid_until)
-        if (
-          !(
-            (quote.status === 'draft' || quote.status === 'sent') &&
-            days !== null &&
-            days >= 0 &&
-            days <= 3
-          )
-        ) {
-          return false
-        }
-      }
-
-      if (!query) return true
-
-      return [
-        quote.public_code,
-        quote.title,
-        quote.customer_name ?? '',
-        quote.customer_phone ?? '',
-        quote.snapshot.jobLabel,
-      ]
-        .join(' ')
-        .toLocaleLowerCase('es-AR')
-        .includes(query)
-    })
-  }, [quoteFocusFilter, quoteSearch, quoteStatusFilter, quotes])
+  const filteredQuotes = useMemo(
+    () =>
+      filterQuotes(quotes, {
+        search: quoteSearch,
+        statusFilter: quoteStatusFilter,
+        focusFilter: quoteFocusFilter,
+      }),
+    [quoteFocusFilter, quoteSearch, quoteStatusFilter, quotes],
+  )
 
   const paperResources = resources.filter((resource) => resource.category === 'paper')
   const inkResources = resources.filter((resource) => resource.category === 'ink')
@@ -702,186 +273,53 @@ export default function AdminCostCalculator({
   const selectedManualExtraResource =
     resources.find((resource) => resource.id === manualExtraResourceId) ?? null
 
-  const guidedCalculation = useMemo(() => {
-    const finalQuantity = Math.max(1, Math.floor(number(quantity) || 1))
-    const profit = Math.max(0, number(profitPercent))
-    const rounding = Math.max(1, number(roundingStep) || 1)
-    const costs: GuidedCost[] = []
-
-    function resource(resourceId: string) {
-      return resources.find((item) => item.id === resourceId) ?? null
-    }
-
-    function addCost(args: {
-      key: string
-      label: string
-      resourceId: string
-      amount: number
-      inputUnit: CostUnit
-      multiplier?: number
-      detail: string
-    }) {
-      const selected = resource(args.resourceId)
-      if (!selected || !Number.isFinite(args.amount) || args.amount <= 0) return
-
-      const usage = convertUsage(args.amount, args.inputUnit, selected.unit)
-      const total =
-        number(selected.effective_unit_cost) *
-        usage *
-        Math.max(1, args.multiplier ?? 1)
-
-      if (!Number.isFinite(total) || total <= 0) return
-
-      costs.push({
-        key: args.key,
-        label: `${args.label} · ${selected.name}`,
-        detail: args.detail,
-        total,
-      })
-    }
-
-    if (jobType === 'paper-print') {
-      const impressionsPerSheet = printSides === 'double' ? 2 : 1
-
-      addCost({
-        key: 'paper',
-        label: 'Papel',
-        resourceId: paperResourceId,
-        amount: finalQuantity,
-        inputUnit: 'sheet',
-        detail: `${finalQuantity} hoja(s)`,
-      })
-
-      addCost({
-        key: 'ink',
-        label: 'Tinta',
-        resourceId: inkResourceId,
-        amount: finalQuantity * impressionsPerSheet,
-        inputUnit: 'print',
-        detail:
-          printSides === 'double'
-            ? `${finalQuantity} hoja(s) × 2 caras = ${finalQuantity * 2} impresiones`
-            : `${finalQuantity} hoja(s) = ${finalQuantity} impresiones`,
-      })
-    }
-
-    if (jobType === '3d-print') {
-      const grams = Math.max(0, number(gramsPerPiece))
-
-      addCost({
-        key: 'filament',
-        label: 'Filamento',
-        resourceId: filamentResourceId,
-        amount: grams,
-        inputUnit: 'g',
-        multiplier: finalQuantity,
-        detail: `${grams || 0} g × ${finalQuantity} pieza(s)`,
-      })
-
-      if (paintEnabled) {
-        const paintMl = Math.max(0, number(paintMlPerPiece))
-
-        addCost({
-          key: 'paint',
-          label: 'Pintura / acrílico',
-          resourceId: paintResourceId,
-          amount: paintMl,
-          inputUnit: 'ml',
-          multiplier: finalQuantity,
-          detail: `${paintMl || 0} ml × ${finalQuantity} pieza(s)`,
-        })
-      }
-    }
-
-    if (jobType === 'manual') {
-      const mainResource = resource(manualResourceId)
-      const mainUsage = Math.max(0, number(manualUsagePerUnit))
-
-      if (mainResource) {
-        addCost({
-          key: 'manual-main',
-          label: 'Material principal',
-          resourceId: mainResource.id,
-          amount: mainUsage,
-          inputUnit: mainResource.unit,
-          multiplier: finalQuantity,
-          detail: `${mainUsage || 0} ${unitLabels[mainResource.unit]} × ${finalQuantity} unidad(es)`,
-        })
-      }
-
-      if (manualExtraEnabled) {
-        const extraResource = resource(manualExtraResourceId)
-        const extraUsage = Math.max(0, number(manualExtraUsagePerUnit))
-
-        if (extraResource) {
-          addCost({
-            key: 'manual-extra',
-            label: 'Material extra',
-            resourceId: extraResource.id,
-            amount: extraUsage,
-            inputUnit: extraResource.unit,
-            multiplier: finalQuantity,
-            detail: `${extraUsage || 0} ${unitLabels[extraResource.unit]} × ${finalQuantity} unidad(es)`,
-          })
-        }
-      }
-    }
-
-    const hours = Math.max(0, number(projectHours))
-    if (workerResourceId && hours > 0) {
-      addCost({
-        key: 'labor',
-        label: 'Trabajo',
-        resourceId: workerResourceId,
-        amount: hours,
-        inputUnit: 'hour',
-        detail: `${hours} hora(s) del proyecto completo`,
-      })
-    }
-
-    const directCost = costs.reduce((sum, item) => sum + item.total, 0)
-    const lightCost = directCost * (LIGHT_PERCENT / 100)
-    const wearCost = directCost * (WEAR_PERCENT / 100)
-    const realCost = directCost + lightCost + wearCost
-    const rawSaleTotal = realCost * (1 + profit / 100)
-    const rawSalePerUnit = rawSaleTotal / finalQuantity
-    const suggestedPerUnit = roundUp(rawSalePerUnit, rounding)
-    const suggestedTotal = suggestedPerUnit * finalQuantity
-
-    return {
-      quantity: finalQuantity,
-      profit,
-      costs,
-      directCost,
-      lightCost,
-      wearCost,
-      realCost,
-      costPerUnit: realCost / finalQuantity,
-      suggestedPerUnit,
-      suggestedTotal,
-    }
-  }, [
-    filamentResourceId,
-    gramsPerPiece,
-    inkResourceId,
-    jobType,
-    manualExtraEnabled,
-    manualExtraResourceId,
-    manualExtraUsagePerUnit,
-    manualResourceId,
-    manualUsagePerUnit,
-    paintEnabled,
-    paintMlPerPiece,
-    paintResourceId,
-    paperResourceId,
-    printSides,
-    profitPercent,
-    projectHours,
-    quantity,
-    resources,
-    roundingStep,
-    workerResourceId,
-  ])
+  const guidedCalculation = useMemo(
+    () =>
+      calculateGuidedCost({
+        resources,
+        jobType,
+        quantity,
+        profitPercent,
+        roundingStep,
+        paperResourceId,
+        inkResourceId,
+        printSides,
+        filamentResourceId,
+        gramsPerPiece,
+        paintEnabled,
+        paintResourceId,
+        paintMlPerPiece,
+        manualResourceId,
+        manualUsagePerUnit,
+        manualExtraEnabled,
+        manualExtraResourceId,
+        manualExtraUsagePerUnit,
+        workerResourceId,
+        projectHours,
+      }),
+    [
+      filamentResourceId,
+      gramsPerPiece,
+      inkResourceId,
+      jobType,
+      manualExtraEnabled,
+      manualExtraResourceId,
+      manualExtraUsagePerUnit,
+      manualResourceId,
+      manualUsagePerUnit,
+      paintEnabled,
+      paintMlPerPiece,
+      paintResourceId,
+      paperResourceId,
+      printSides,
+      profitPercent,
+      projectHours,
+      quantity,
+      resources,
+      roundingStep,
+      workerResourceId,
+    ],
+  )
 
   function updateDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }))
@@ -903,7 +341,7 @@ export default function AdminCostCalculator({
     setMessage('')
 
     try {
-      const response = await fetch(
+      const response = await adminRequest(
         editingId
           ? `/api/admin/catalog?action=cost-resources&id=${encodeURIComponent(editingId)}`
           : '/api/admin/catalog?action=cost-resources',
@@ -935,7 +373,7 @@ export default function AdminCostCalculator({
     setMessage('')
 
     try {
-      const response = await fetch(
+      const response = await adminRequest(
         `/api/admin/catalog?action=cost-resources&id=${encodeURIComponent(resource.id)}`,
         { method: 'DELETE' },
       )
@@ -1097,7 +535,7 @@ export default function AdminCostCalculator({
     try {
       const snapshot = buildQuoteSnapshot()
 
-      const response = await fetch('/api/admin/catalog?action=quotes', {
+      const response = await adminRequest('/api/admin/catalog?action=quotes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1188,7 +626,7 @@ export default function AdminCostCalculator({
     window.open(url, '_blank', 'noopener,noreferrer')
 
     try {
-      const response = await fetch(
+      const response = await adminRequest(
         `/api/admin/catalog?action=quotes&id=${encodeURIComponent(quote.id)}`,
         {
           method: 'PATCH',
@@ -1243,7 +681,7 @@ export default function AdminCostCalculator({
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders?action=from-quote', {
+      const response = await adminRequest('/api/admin/orders?action=from-quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quoteId: quote.id }),
@@ -1289,7 +727,7 @@ export default function AdminCostCalculator({
     setMessage('')
 
     try {
-      const response = await fetch(
+      const response = await adminRequest(
         `/api/admin/catalog?action=quotes&id=${encodeURIComponent(quote.id)}`,
         {
           method: 'PATCH',

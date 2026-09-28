@@ -20,88 +20,25 @@ import AdminProductVariants from './AdminProductVariants'
 import AdminProductGallery from './AdminProductGallery'
 import AdminProductCustomizations from './AdminProductCustomizations'
 import AdminNotifications from './AdminNotifications'
-import './admin.css'
+import './styles/admin/admin.css'
 
-type AdminCategory = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  sort_order: number
-}
-
-type AdminProduct = {
-  id: string
-  category_id: string | null
-  sort_order: number
-  name: string
-  slug: string
-  short_description: string | null
-  kind: 'service' | 'product'
-  pricing_mode: 'fixed' | 'from' | 'quote'
-  base_price: string | null
-  customization_allowed: boolean
-  featured: boolean
-  image_url: string | null
-}
-
-type AdminCatalog = {
-  categories: AdminCategory[]
-  products: AdminProduct[]
-}
-
-type SessionResponse = {
-  configured: boolean
-  authenticated: boolean
-  account: {
-    id: string
-    email: string
-    name: string
-  } | null
-}
-
-type ImageState = {
-  dataUrl: string
-  label: string
-}
-
-const emptyCatalog: AdminCatalog = {
-  categories: [],
-  products: [],
-}
-
-async function responseMessage(response: Response) {
-  try {
-    const data = (await response.json()) as { error?: string }
-    return data.error || `Error ${response.status}`
-  } catch {
-    return `Error ${response.status}`
-  }
-}
-
-function money(value: string | null) {
-  if (!value) return 'Consultar'
-
-  const amount = Number(value)
-  if (!Number.isFinite(amount)) return 'Consultar'
-
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-function formatBytes(value: number) {
-  if (value < 1024) return `${value} B`
-  return `${Math.round(value / 1024)} KB`
-}
-
-function scrollAdminSection(selector: string) {
-  document
-    .querySelector(selector)
-    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
+import type {
+  AdminCatalog,
+  AdminProduct,
+  ImageState,
+  SessionResponse,
+} from './admin/app/types'
+import {
+  emptyCatalog,
+  formatBytes,
+  money,
+  scrollAdminSection,
+} from './admin/app/utils'
+import {
+  adminRequest,
+  responseMessage,
+} from './admin/shared/http'
+import { useModalLifecycle } from './admin/shared/useModalLifecycle'
 
 export default function AdminApp() {
   const [quoteSource, setQuoteSource] = useState<CustomRequest | null>(null)
@@ -130,7 +67,7 @@ export default function AdminApp() {
   const [productOrderBusyId, setProductOrderBusyId] = useState<string | null>(null)
 
   const loadCatalog = useCallback(async () => {
-    const response = await fetch('/api/admin/catalog', {
+    const response = await adminRequest('/api/admin/catalog', {
       cache: 'no-store',
     })
 
@@ -155,7 +92,7 @@ export default function AdminApp() {
       let data: SessionResponse
 
       try {
-        const response = await fetch('/api/admin/session', { cache: 'no-store' })
+        const response = await adminRequest('/api/admin/session', { cache: 'no-store' })
         if (!response.ok) throw new Error('No se pudo comprobar la sesión.')
 
         data = (await response.json()) as SessionResponse
@@ -190,26 +127,11 @@ export default function AdminApp() {
     }
   }, [loadCatalog])
 
-  useEffect(() => {
-    if (!adminSettingsOpen) return
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !busy) {
-        setAdminSettingsOpen(false)
-        setAdminSettingsMessage('')
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [adminSettingsOpen, busy])
-
+  useModalLifecycle(adminSettingsOpen, () => {
+    if (busy) return
+    setAdminSettingsOpen(false)
+    setAdminSettingsMessage('')
+  })
   useEffect(() => {
     function handleOpenAdminPanel(event: Event) {
       const detail = (event as CustomEvent<{ panel?: string }>).detail
@@ -226,22 +148,7 @@ export default function AdminApp() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!workspaceDialog) return
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setWorkspaceDialog(null)
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [workspaceDialog])
+  useModalLifecycle(Boolean(workspaceDialog), () => setWorkspaceDialog(null))
 
   async function refreshCatalogAfterMutation(successMessage: string) {
     try {
@@ -306,7 +213,7 @@ export default function AdminApp() {
     }
 
     try {
-      const response = await fetch('/api/admin/login', {
+      const response = await adminRequest('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -345,7 +252,7 @@ export default function AdminApp() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/logout', { method: 'POST' })
+      const response = await adminRequest('/api/admin/logout', { method: 'POST' })
       if (!response.ok) throw new Error(await responseMessage(response))
 
       setCatalog(emptyCatalog)
@@ -406,7 +313,7 @@ export default function AdminApp() {
     const form = new FormData(event.currentTarget)
 
     try {
-      const response = await fetch('/api/admin/session?action=profile', {
+      const response = await adminRequest('/api/admin/session?action=profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -453,7 +360,7 @@ export default function AdminApp() {
     setAdminSettingsMessage('')
 
     try {
-      const response = await fetch('/api/admin/session?action=password', {
+      const response = await adminRequest('/api/admin/session?action=password', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword }),
@@ -481,7 +388,7 @@ export default function AdminApp() {
     const form = new FormData(formElement)
 
     try {
-      const response = await fetch('/api/admin/categories', {
+      const response = await adminRequest('/api/admin/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -512,7 +419,7 @@ export default function AdminApp() {
     const imageUrl = createImage?.dataUrl || pastedImage || null
 
     try {
-      const response = await fetch('/api/admin/products', {
+      const response = await adminRequest('/api/admin/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -566,7 +473,7 @@ export default function AdminApp() {
     const form = new FormData(event.currentTarget)
 
     try {
-      const response = await fetch(
+      const response = await adminRequest(
         `/api/admin/products?id=${encodeURIComponent(editingProduct.id)}`,
         {
           method: 'PATCH',
@@ -619,7 +526,7 @@ export default function AdminApp() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/products?action=order', {
+      const response = await adminRequest('/api/admin/products?action=order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -646,7 +553,7 @@ export default function AdminApp() {
     setMessage('')
 
     try {
-      const response = await fetch(`/api/admin/products?id=${encodeURIComponent(product.id)}`, {
+      const response = await adminRequest(`/api/admin/products?id=${encodeURIComponent(product.id)}`, {
         method: 'DELETE',
       })
 
@@ -730,7 +637,7 @@ export default function AdminApp() {
           </span>
         </a>
 
-        <div className="admin-header-actions">
+        <nav className="admin-header-actions" aria-label="MenÃº de administraciÃ³n">
           <AdminNotifications
             onOpenOrder={openNotificationOrder}
             onOpenRequest={openNotificationRequest}
@@ -750,7 +657,7 @@ export default function AdminApp() {
           <button type="button" onClick={handleLogout} disabled={busy}>
             Salir
           </button>
-        </div>
+        </nav>
       </header>
 
       <main className="admin-main">

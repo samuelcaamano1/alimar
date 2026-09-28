@@ -1,416 +1,50 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import AdminOrderFiles, { type AdminOrderFile } from './AdminOrderFiles'
+import AdminOrderFiles from './AdminOrderFiles'
 import {
-  customerWhatsappUrl,
-  orderBalanceWhatsappMessage,
-  orderConfirmedWhatsappMessage,
-  orderGeneralWhatsappMessage,
-  orderProductionWhatsappMessage,
-  orderReadyWhatsappMessage,
-} from './adminWhatsapp'
-
-type OrderStatus =
-  | 'new'
-  | 'contacted'
-  | 'confirmed'
-  | 'in_progress'
-  | 'ready'
-  | 'completed'
-  | 'cancelled'
-
-type AdminOrderCustomization = {
-  fieldId: string
-  label: string
-  fieldType: 'text' | 'textarea' | 'number' | 'date' | 'select'
-  value: string
-}
-
-type AdminOrderItem = {
-  id: string
-  product_name: string
-  variant_name: string | null
-  kind: 'service' | 'product'
-  pricing_mode: 'fixed' | 'from' | 'quote'
-  unit_price: string | null
-  quantity: number
-  line_total: string | null
-  customization_note: string | null
-  customization_values: AdminOrderCustomization[]
-}
-
-type AdminOrderEvent = {
-  id: string
-  event_type: string
-  from_status: OrderStatus | null
-  to_status: OrderStatus | null
-  note: string | null
-  created_at: string
-}
-
-type AdminOrder = {
-  id: string
-  public_code: string
-  tracking_token: string
-  status: OrderStatus
-  customer_name: string
-  customer_phone: string
-  customer_email: string | null
-  customer_notes: string | null
-  known_total: string
-  agreed_total: string | null
-  paid_total: string
-  balance_due: string | null
-  payment_status: PaymentStatus
-  payments: AdminOrderPayment[]
-  files: AdminOrderFile[]
-  promised_for: string | null
-  production_priority: ProductionPriority
-  delivery_note: string | null
-  schedule_updated_at: string | null
-  production_stage: ProductionStage
-  production_stage_note: string | null
-  production_stage_updated_at: string | null
-  delivery_checked_at: string | null
-  delivery_check_note: string | null
-  has_quote: boolean
-  quote_code: string | null
-  estimated_cost: string | null
-  actual_cost: string | null
-  actual_cost_note: string | null
-  actual_cost_updated_at: string | null
-  created_at: string
-  items: AdminOrderItem[]
-  events: AdminOrderEvent[]
-}
-
-type OrdersResponse = { orders: AdminOrder[] }
-
-type DateFilter = 'all' | 'today' | '7d' | '30d'
-type PaymentMethod = 'cash' | 'transfer' | 'mercadopago' | 'card' | 'other'
-type PaymentStatus = 'total_pending' | 'unpaid' | 'partial' | 'paid'
-type PaymentFilter = 'all' | 'pending' | 'paid' | 'total_pending'
-type ProductionPriority = 'low' | 'normal' | 'high' | 'urgent'
-type ProductionStage =
-  | 'not_started'
-  | 'design'
-  | 'awaiting_approval'
-  | 'materials'
-  | 'production'
-  | 'finishing'
-  | 'ready_for_delivery'
-
-type AdminOrderPayment = {
-  id: string
-  order_id: string
-  amount: string
-  payment_method: PaymentMethod
-  paid_on: string
-  reference: string | null
-  note: string | null
-  voided_at: string | null
-  void_reason: string | null
-  created_at: string
-}
-
-type PaymentDraft = {
-  amount: string
-  method: PaymentMethod
-  paidOn: string
-  reference: string
-  note: string
-}
-
-const statusLabels: Record<OrderStatus, string> = {
-  new: 'Nuevo',
-  contacted: 'Contactado',
-  confirmed: 'Confirmado',
-  in_progress: 'En proceso',
-  ready: 'Listo',
-  completed: 'Completado',
-  cancelled: 'Cancelado',
-}
-
-const statusOptions = Object.entries(statusLabels) as Array<[OrderStatus, string]>
-
-const paymentMethodLabels: Record<PaymentMethod, string> = {
-  cash: 'Efectivo',
-  transfer: 'Transferencia',
-  mercadopago: 'Mercado Pago',
-  card: 'Tarjeta',
-  other: 'Otro',
-}
-
-const paymentStatusLabels: Record<PaymentStatus, string> = {
-  total_pending: 'Falta total acordado',
-  unpaid: 'Sin cobrar',
-  partial: 'Cobro parcial',
-  paid: 'Pagado',
-}
-
-const productionPriorityLabels: Record<ProductionPriority, string> = {
-  low: 'Baja',
-  normal: 'Normal',
-  high: 'Alta',
-  urgent: 'Urgente',
-}
-
-const productionPriorityWeight: Record<ProductionPriority, number> = {
-  low: 0,
-  normal: 1,
-  high: 2,
-  urgent: 3,
-}
-
-const productionStageLabels: Record<ProductionStage, string> = {
-  not_started: 'Sin iniciar',
-  design: 'Diseño / armado',
-  awaiting_approval: 'Esperando aprobación',
-  materials: 'Preparando materiales',
-  production: 'En producción',
-  finishing: 'Terminaciones',
-  ready_for_delivery: 'Listo para entregar',
-}
-
-type GuidedProductionStep = {
-  stage: ProductionStage
-  label: string
-  note: string
-}
-
-const guidedProductionSteps: Partial<Record<ProductionStage, GuidedProductionStep>> = {
-  not_started: {
-    stage: 'design',
-    label: 'Iniciar diseño / armado',
-    note: 'Flujo guiado: inicio de diseño / armado.',
-  },
-  design: {
-    stage: 'materials',
-    label: 'Continuar a preparar materiales',
-    note: 'Flujo guiado: diseño resuelto; preparar materiales.',
-  },
-  materials: {
-    stage: 'production',
-    label: 'Comenzar producción',
-    note: 'Flujo guiado: materiales listos; producción iniciada.',
-  },
-  production: {
-    stage: 'finishing',
-    label: 'Pasar a terminaciones',
-    note: 'Flujo guiado: producción principal terminada; iniciar terminaciones.',
-  },
-  finishing: {
-    stage: 'ready_for_delivery',
-    label: 'Marcar listo para entregar',
-    note: 'Flujo guiado: terminaciones completadas; listo para entregar.',
-  },
-}
-
-function money(value: string | null) {
-  if (!value) return 'A consultar'
-  const amount = Number(value)
-  if (!Number.isFinite(amount)) return 'A consultar'
-
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-function numericAmount(value: string | null) {
-  if (value === null) return null
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-function dateTime(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat('es-AR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(date)
-}
-
-function todayInputValue() {
-  const now = new Date()
-  const offset = now.getTimezoneOffset()
-  return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10)
-}
-
-function dateOnly(value: string) {
-  const date = new Date(`${value}T12:00:00`)
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat('es-AR', {
-    dateStyle: 'short',
-  }).format(date)
-}
-
-function promisedDaysFromToday(value: string | null) {
-  if (!value) return null
-
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-  if (!match) return null
-
-  const dueDay = Math.floor(
-    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) /
-      86_400_000,
-  )
-  const now = new Date()
-  const today = Math.floor(
-    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86_400_000,
-  )
-
-  return dueDay - today
-}
-
-function promisedTimingLabel(value: string | null) {
-  const days = promisedDaysFromToday(value)
-
-  if (days === null) return 'Sin fecha'
-  if (days < 0) return `Atrasado ${Math.abs(days)} día(s)`
-  if (days === 0) return 'Entrega hoy'
-  if (days === 1) return 'Entrega mañana'
-  if (days <= 7) return `Entrega en ${days} días`
-  return dateOnly(value || '')
-}
-
-function productionBucket(order: AdminOrder) {
-  if (!['confirmed', 'in_progress', 'ready'].includes(order.status)) return 9
-
-  const days = promisedDaysFromToday(order.promised_for)
-  if (days === null) return 4
-  if (days < 0) return 0
-  if (days === 0) return 1
-  if (days <= 7) return 2
-  return 3
-}
-
-function dateFilterStart(filter: DateFilter) {
-  if (filter === 'all') return null
-
-  const now = new Date()
-
-  if (filter === 'today') {
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  }
-
-  const days = filter === '7d' ? 7 : 30
-  return now.getTime() - days * 24 * 60 * 60 * 1000
-}
-
-function trackingUrl(order: AdminOrder) {
-  return `${window.location.origin}/?pedido=${encodeURIComponent(
-    order.tracking_token,
-  )}`
-}
-
-function orderWhatsappContext(order: AdminOrder) {
-  return {
-    customerName: order.customer_name,
-    orderCode: order.public_code,
-    trackingUrl: trackingUrl(order),
-    productionStageLabel: productionStageLabels[order.production_stage],
-    promisedForLabel: order.promised_for
-      ? promisedTimingLabel(order.promised_for)
-      : null,
-    balanceLabel:
-      order.balance_due !== null ? money(order.balance_due) : null,
-  }
-}
-
-function whatsappContactUrl(order: AdminOrder) {
-  return (
-    customerWhatsappUrl(
-      order.customer_phone,
-      orderGeneralWhatsappMessage(orderWhatsappContext(order)),
-    ) ?? '#'
-  )
-}
-
-function confirmedWhatsappUrl(order: AdminOrder) {
-  return (
-    customerWhatsappUrl(
-      order.customer_phone,
-      orderConfirmedWhatsappMessage(orderWhatsappContext(order)),
-    ) ?? '#'
-  )
-}
-
-function productionWhatsappUrl(order: AdminOrder) {
-  return (
-    customerWhatsappUrl(
-      order.customer_phone,
-      orderProductionWhatsappMessage(orderWhatsappContext(order)),
-    ) ?? '#'
-  )
-}
-
-function readyWhatsappUrl(order: AdminOrder) {
-  return (
-    customerWhatsappUrl(
-      order.customer_phone,
-      orderReadyWhatsappMessage(orderWhatsappContext(order)),
-    ) ?? '#'
-  )
-}
-
-function balanceWhatsappUrl(order: AdminOrder) {
-  return (
-    customerWhatsappUrl(
-      order.customer_phone,
-      orderBalanceWhatsappMessage(orderWhatsappContext(order)),
-    ) ?? '#'
-  )
-}
-
-function orderSummary(order: AdminOrder) {
-  const lines = [
-    `Pedido ${order.public_code}`,
-    `Cliente: ${order.customer_name}`,
-    `Teléfono: ${order.customer_phone}`,
-    `Estado: ${statusLabels[order.status]}`,
-    '',
-    'Productos:',
-  ]
-
-  for (const item of order.items) {
-    const variant = item.variant_name ? ` · ${item.variant_name}` : ''
-    const total = item.line_total ? money(item.line_total) : 'A consultar'
-    lines.push(`- ${item.quantity}× ${item.product_name}${variant} — ${total}`)
-
-    for (const customization of item.customization_values) {
-      lines.push(`  ${customization.label}: ${customization.value}`)
-    }
-
-    if (item.customization_note) {
-      lines.push(`  Nota: ${item.customization_note}`)
-    }
-  }
-
-  lines.push('', `Subtotal conocido: ${money(order.known_total)}`)
-
-  if (order.has_quote) {
-    lines.push('Incluye ítems que requieren cotización.')
-  }
-
-  if (order.customer_notes) {
-    lines.push(`Nota general: ${order.customer_notes}`)
-  }
-
-  return lines.join('\n')
-}
-
-async function responseMessage(response: Response) {
-  try {
-    const data = (await response.json()) as { error?: string }
-    return data.error || `Error ${response.status}`
-  } catch {
-    return `Error ${response.status}`
-  }
-}
+  guidedProductionSteps,
+  paymentMethodLabels,
+  paymentStatusLabels,
+  productionPriorityLabels,
+  productionStageLabels,
+  statusLabels,
+  statusOptions,
+} from './admin/orders/config'
+import type {
+  AdminOrder,
+  AdminOrderPayment,
+  DateFilter,
+  GuidedProductionStep,
+  OrderStatus,
+  OrdersResponse,
+  PaymentDraft,
+  PaymentFilter,
+  PaymentMethod,
+  ProductionPriority,
+  ProductionStage,
+} from './admin/orders/types'
+import {
+  balanceWhatsappUrl,
+  confirmedWhatsappUrl,
+  dateOnly,
+  dateTime,
+  money,
+  numericAmount,
+  orderSummary,
+  productionWhatsappUrl,
+  promisedTimingLabel,
+  readyWhatsappUrl,
+  todayInputValue,
+  trackingUrl,
+  whatsappContactUrl,
+} from './admin/orders/utils'
+import { adminRequest, responseMessage } from './admin/shared/http'
+import { useModalLifecycle } from './admin/shared/useModalLifecycle'
+import {
+  getOrderCounts,
+  getProductionCounts,
+  getProductionQueue,
+  getVisibleOrders,
+} from './admin/orders/selectors'
 
 export default function AdminOrdersPanel() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
@@ -527,7 +161,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders', { cache: 'no-store' })
+      const response = await adminRequest('/api/admin/orders', { cache: 'no-store' })
       if (!response.ok) throw new Error(await responseMessage(response))
 
       const data = (await response.json()) as OrdersResponse
@@ -541,7 +175,7 @@ export default function AdminOrdersPanel() {
   useEffect(() => {
     const controller = new AbortController()
 
-    fetch('/api/admin/orders', {
+    adminRequest('/api/admin/orders', {
       cache: 'no-store',
       signal: controller.signal,
     })
@@ -592,139 +226,30 @@ export default function AdminOrdersPanel() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!openOrderId) return
+  useModalLifecycle(Boolean(openOrderId), () => setOpenOrderId(null))
 
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+  const orderCounts = useMemo(() => getOrderCounts(orders), [orders])
 
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpenOrderId(null)
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [openOrderId])
-
-  const orderCounts = useMemo(
-    () => ({
-      all: orders.length,
-      new: orders.filter((order) => order.status === 'new').length,
-      open: orders.filter((order) =>
-        ['contacted', 'confirmed', 'in_progress'].includes(order.status),
-      ).length,
-      ready: orders.filter((order) => order.status === 'ready').length,
-      paymentPending: orders.filter(
-        (order) => order.payment_status === 'unpaid' || order.payment_status === 'partial',
-      ).length,
-      paid: orders.filter((order) => order.payment_status === 'paid').length,
-      totalPending: orders.filter(
-        (order) => order.payment_status === 'total_pending',
-      ).length,
-    }),
+  const productionCounts = useMemo(
+    () => getProductionCounts(orders),
     [orders],
   )
-
-  const productionCounts = useMemo(() => {
-    const active = orders.filter((order) =>
-      ['confirmed', 'in_progress', 'ready'].includes(order.status),
-    )
-
-    return {
-      active: active.length,
-      overdue: active.filter(
-        (order) => (promisedDaysFromToday(order.promised_for) ?? 1) < 0,
-      ).length,
-      today: active.filter(
-        (order) => promisedDaysFromToday(order.promised_for) === 0,
-      ).length,
-      week: active.filter((order) => {
-        const days = promisedDaysFromToday(order.promised_for)
-        return days !== null && days > 0 && days <= 7
-      }).length,
-      unscheduled: active.filter((order) => !order.promised_for).length,
-    }
-  }, [orders])
 
   const productionQueue = useMemo(
-    () =>
-      orders
-        .filter((order) =>
-          ['confirmed', 'in_progress', 'ready'].includes(order.status),
-        )
-        .slice()
-        .sort((left, right) => {
-          const bucketDifference = productionBucket(left) - productionBucket(right)
-          if (bucketDifference !== 0) return bucketDifference
-
-          const priorityDifference =
-            productionPriorityWeight[right.production_priority] -
-            productionPriorityWeight[left.production_priority]
-          if (priorityDifference !== 0) return priorityDifference
-
-          if (left.promised_for && right.promised_for) {
-            const dateDifference = left.promised_for.localeCompare(right.promised_for)
-            if (dateDifference !== 0) return dateDifference
-          }
-
-          return left.created_at.localeCompare(right.created_at)
-        })
-        .slice(0, 8),
+    () => getProductionQueue(orders),
     [orders],
   )
 
-  const visibleOrders = useMemo(() => {
-    const query = searchQuery.trim().toLocaleLowerCase('es-AR')
-    const dateStart = dateFilterStart(dateFilter)
-
-    return orders.filter((order) => {
-      const matchesStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'open'
-          ? ['contacted', 'confirmed', 'in_progress'].includes(order.status)
-          : order.status === statusFilter)
-
-      const matchesPayment =
-        paymentFilter === 'all' ||
-        (paymentFilter === 'pending'
-          ? order.payment_status === 'unpaid' || order.payment_status === 'partial'
-          : order.payment_status === paymentFilter)
-
-      if (!matchesStatus || !matchesPayment) return false
-
-      if (dateStart !== null) {
-        const createdAt = new Date(order.created_at).getTime()
-        if (!Number.isFinite(createdAt) || createdAt < dateStart) return false
-      }
-
-      if (!query) return true
-
-      const haystack = [
-        order.public_code,
-        order.customer_name,
-        order.customer_phone,
-        order.customer_email ?? '',
-        order.customer_notes ?? '',
-        ...order.items.flatMap((item) => [
-          item.product_name,
-          item.variant_name ?? '',
-          item.customization_note ?? '',
-          ...item.customization_values.flatMap((customization) => [
-            customization.label,
-            customization.value,
-          ]),
-        ]),
-      ]
-        .join(' ')
-        .toLocaleLowerCase('es-AR')
-
-      return haystack.includes(query)
-    })
-  }, [dateFilter, orders, paymentFilter, searchQuery, statusFilter])
+  const visibleOrders = useMemo(
+    () =>
+      getVisibleOrders(orders, {
+        statusFilter,
+        searchQuery,
+        dateFilter,
+        paymentFilter,
+      }),
+    [dateFilter, orders, paymentFilter, searchQuery, statusFilter],
+  )
 
   async function copyText(value: string, successMessage: string) {
     setMessage('')
@@ -751,7 +276,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders', {
+      const response = await adminRequest('/api/admin/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -783,7 +308,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders', {
+      const response = await adminRequest('/api/admin/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -823,7 +348,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders?action=schedule', {
+      const response = await adminRequest('/api/admin/orders?action=schedule', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -859,7 +384,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders?action=production-stage', {
+      const response = await adminRequest('/api/admin/orders?action=production-stage', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -895,7 +420,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders?action=production-stage', {
+      const response = await adminRequest('/api/admin/orders?action=production-stage', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -932,7 +457,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders?action=delivery-check', {
+      const response = await adminRequest('/api/admin/orders?action=delivery-check', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -976,7 +501,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders?action=agreed-total', {
+      const response = await adminRequest('/api/admin/orders?action=agreed-total', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1016,7 +541,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders?action=payment', {
+      const response = await adminRequest('/api/admin/orders?action=payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1055,7 +580,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders?action=payment-void', {
+      const response = await adminRequest('/api/admin/orders?action=payment-void', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1096,7 +621,7 @@ export default function AdminOrdersPanel() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/admin/orders?action=actual-cost', {
+      const response = await adminRequest('/api/admin/orders?action=actual-cost', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

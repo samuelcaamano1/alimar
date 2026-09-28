@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { alimarLogoDataUrl } from './brand'
 import type { CustomerSession } from './customerAccount'
-import './App.css'
+import './styles/public/storefront.css'
 
 type AccountOrder = {
   code: string

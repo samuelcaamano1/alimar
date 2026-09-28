@@ -1,4 +1,4 @@
-﻿.site-shell {
+.site-shell {
   min-height: 100dvh;
   overflow: hidden;
 }
@@ -4715,5 +4715,82 @@
 @media (max-width: 820px) {
   .customer-password-reset-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ALIMAR UI POLISH 1UI.11 - PRODUCT DIALOG */
+.product-dialog-backdrop {
+  overflow-x: hidden;
+}
+
+.product-dialog {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.product-dialog-gallery,
+.product-dialog-image,
+.product-dialog-content,
+.product-dialog-actions {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.product-dialog-content {
+  overflow-x: hidden;
+}
+
+.product-dialog-content h3,
+.product-dialog-content p,
+.product-dialog-price {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.product-dialog-actions .button {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 700px) {
+  .product-dialog {
+    overflow-x: hidden;
+  }
+}
+
+/* ALIMAR UI POLISH 1UI.12 - PRODUCT TITLE WRAP */
+.product-dialog {
+  width: min(880px, calc(100vw - 48px));
+  max-width: calc(100vw - 48px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  overflow-x: hidden;
+}
+
+.product-dialog-gallery,
+.product-dialog-content {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.product-dialog-content h3 {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+@media (max-width: 700px) {
+  .product-dialog {
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

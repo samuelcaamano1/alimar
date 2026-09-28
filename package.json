@@ -1,30 +1,32 @@
 {
-  "name": "alimar-web",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview",
-    "db:check": "node --env-file=.env.local scripts/check-db.mjs",
-    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
-    "db:migrate:status": "node --env-file=.env.local scripts/migrate.mjs status"
-  },
-  "dependencies": {
-    "@neondatabase/serverless": "^1.1.0",
-    "@vercel/blob": "2.8.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
-  },
-  "devDependencies": {
-    "@types/node": "^24.13.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.1",
-    "oxlint": "^1.81.0",
-    "typescript": "~6.0.2",
-    "vite": "^8.3.0"
-  }
+    "name":  "alimar-web",
+    "private":  true,
+    "version":  "1.0.0",
+    "type":  "module",
+    "scripts":  {
+                    "dev":  "vite",
+                    "build":  "tsc -b \u0026\u0026 vite build",
+                    "lint":  "oxlint",
+                    "preview":  "vite preview",
+                    "db:check":  "node --env-file=.env.local scripts/check-db.mjs",
+                    "db:migrate":  "node --env-file=.env.local scripts/migrate.mjs",
+                    "db:migrate:status":  "node --env-file=.env.local scripts/migrate.mjs status",
+                    "test":  "node scripts/test-structural.mjs",
+                    "check":  "npm run lint \u0026\u0026 npm run build \u0026\u0026 npm test"
+                },
+    "dependencies":  {
+                         "@neondatabase/serverless":  "^1.1.0",
+                         "@vercel/blob":  "2.8.0",
+                         "react":  "^19.2.8",
+                         "react-dom":  "^19.2.8"
+                     },
+    "devDependencies":  {
+                            "@types/node":  "^24.13.3",
+                            "@types/react":  "^19.2.18",
+                            "@types/react-dom":  "^19.2.7",
+                            "@vitejs/plugin-react":  "^6.1.1",
+                            "oxlint":  "^1.81.0",
+                            "typescript":  "~6.0.2",
+                            "vite":  "^8.3.0"
+                        }
 }

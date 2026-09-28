@@ -560,7 +560,7 @@ export async function createAdminCustomerPasswordReset(
       )
     }
 
-    if (!Boolean(accounts[0].active)) {
+    if (!accounts[0].active) {
       return Response.json(
         { error: 'Reactivá la cuenta antes de generar un enlace de recuperación.' },
         { status: 409, headers: { 'Cache-Control': 'no-store' } },

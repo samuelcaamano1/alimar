@@ -1,32 +1,93 @@
-# React + TypeScript + Vite
+# Alimar
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicación web de Alimar para catálogo, pedidos, pedidos personalizados, presupuestos, seguimiento de producción y administración operativa.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19 + TypeScript
+- Vite 8
+- Vercel Functions
+- Neon PostgreSQL
+- Vercel Blob
+- Oxlint
+- GitHub Actions
 
-## React Compiler
+## Comandos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm run dev
+npm run build
+npm run lint
+npm test
+npm run check
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`npm run check` es el gate local y de CI: ejecuta lint estricto, build de producción y tests estructurales.
+
+## Rutas
+
+- `/` — storefront público
+- `/cuenta` — cuenta del cliente
+- `/admin` — panel administrativo
+- `/?pedido=...` — seguimiento público
+- `/?presupuesto=...` — presupuesto público
+
+Las rutas principales y las vistas públicas pesadas usan carga diferida para mantener separado el bundle inicial.
+
+## Estructura relevante
+
+```text
+src/
+  admin/
+    app/
+    costs/
+    orders/
+    shared/
+  storefront/
+  styles/
+    admin/
+    public/
+  App.tsx
+  AdminApp.tsx
+  CustomerAccount.tsx
+  RootRouter.tsx
+```
+
+La lógica derivada se mantiene fuera de los componentes grandes siempre que sea posible: selectores, cálculos, tipos, configuración y utilidades viven en módulos dedicados.
+
+## Calidad
+
+El repositorio incluye:
+
+- TypeScript build
+- Oxlint con warnings bloqueantes
+- tests estructurales sin dependencias de test adicionales
+- workflow de GitHub Actions
+- code splitting por rutas
+- validaciones de utilidades de carrito, catálogo, costos y pedidos
+
+Ver `docs/QUALITY.md`.
+
+## Base de datos
+
+Las migraciones están numeradas en `db/migrations`. La estructura actual del proyecto llega a la migración `032_admin_notifications.sql`.
+
+Antes de aplicar migraciones en un entorno, revisar:
+
+```bash
+npm run db:migrate:status
+```
+
+## Variables de entorno
+
+Usar `.env.example` como referencia. No versionar secretos ni archivos `.env.local`.
+
+## Deploy
+
+El proyecto está preparado para Vercel. Los cambios deben pasar `npm run check` antes de integrarse o desplegarse.
+
+## Documentación
+
+- `docs/MVP-1.0.md`
+- `docs/ARCHITECTURE.md`
+- `docs/QUALITY.md`

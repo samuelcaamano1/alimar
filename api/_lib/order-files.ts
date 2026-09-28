@@ -455,14 +455,14 @@ export async function requestOrderFileApproval(
       )
     }
 
-    if (!Boolean(rows[0].customer_visible)) {
+    if (!rows[0].customer_visible) {
       return Response.json(
         { error: 'Compartí el diseño con el cliente antes de pedir aprobación.' },
         { status: 409 },
       )
     }
 
-    if (Boolean(rows[0].has_newer_revision)) {
+    if (rows[0].has_newer_revision) {
       return Response.json(
         { error: 'Ya existe una revisión más nueva de este diseño.' },
         { status: 409 },
@@ -588,7 +588,7 @@ export async function createOrderFileRevision(
       )
     }
 
-    if (Boolean(rows[0].has_newer_revision)) {
+    if (rows[0].has_newer_revision) {
       return Response.json(
         { error: 'Ya existe una revisión más nueva de este diseño.' },
         { status: 409 },

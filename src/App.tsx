@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import {
+  lazy,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from 'react'
 import { alimarLogoDataUrl } from './brand'
 import { site } from './site'
 import CheckoutForm from './CheckoutForm'
-import { loadCustomerSession, type CustomerSession } from './customerAccount'
-import PublicQuoteView from './PublicQuoteView'
-import PublicOrderTracking from './PublicOrderTracking'
+import {
+  loadCustomerSession,
+  type CustomerSession,
+} from './customerAccount'
 import {
   clearRecoveredOrder,
   loadRecoveredOrder,
@@ -12,378 +20,40 @@ import {
   type RecoveredOrder,
 } from './orderRecovery'
 import { compressImageFile } from './imageDataUrl'
-import './App.css'
+import {
+  CART_STORAGE_KEY,
+  cartItemKey,
+  formatAmount,
+  formatCartItemPrice,
+  formatCartLinePrice,
+  loadStoredCart,
+} from './storefront/cart'
+import {
+  catalogPriceLabel,
+  formatSelectionPrice,
+  priceForSelection,
+  productWhatsappUrl,
+} from './storefront/catalog'
+import {
+  DIRECT_CUSTOM_REQUEST_KEY,
+  directCustomRequestExample,
+  fallbackCustomRequestExamples,
+} from './storefront/customRequests'
+import { serviceLines } from './storefront/content'
+import type {
+  CartItem,
+  CatalogCategory,
+  CatalogImage,
+  CatalogProduct,
+  CatalogResponse,
+  CustomRequestExample,
+  CustomRequestExampleKey,
+  CustomRequestSuccess,
+} from './storefront/types'
+import './styles/public/storefront.css'
 
-type CatalogVariant = {
-  id: string
-  name: string
-  priceOverride: string | null
-}
-
-type CatalogImage = {
-  id: string
-  url: string
-  alt_text: string | null
-  is_primary: boolean
-}
-
-type CatalogCustomizationField = {
-  id: string
-  label: string
-  fieldType: 'text' | 'textarea' | 'number' | 'date' | 'select'
-  placeholder: string | null
-  options: string[]
-  required: boolean
-  maxLength: number
-}
-
-type CartCustomizationValue = {
-  fieldId: string
-  label: string
-  value: string
-}
-
-type CatalogProduct = {
-  id: string
-  name: string
-  slug: string
-  shortDescription: string | null
-  kind: 'service' | 'product'
-  pricingMode: 'fixed' | 'from' | 'quote'
-  basePrice: string | null
-  imageUrl: string | null
-  customizationAllowed: boolean
-  customizationFields: CatalogCustomizationField[]
-  variants: CatalogVariant[]
-}
-
-type CartItem = CatalogProduct & {
-  variantId: string | null
-  variantName: string | null
-  unitPrice: string | null
-  quantity: number
-  note: string
-  customizations: CartCustomizationValue[]
-}
-
-type CatalogCategory = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  products: CatalogProduct[]
-}
-
-type CatalogResponse = {
-  categories: CatalogCategory[]
-}
-
-type CustomRequestSuccess = {
-  requestCode: string
-  whatsappMessage: string
-}
-
-type CustomRequestType = 'paper' | '3d' | 'event' | 'design' | 'other'
-type CustomRequestExampleKey = string
-
-type CustomRequestExample = {
-  id?: string
-  key: CustomRequestExampleKey
-  title: string
-  hint: string
-  requestType: CustomRequestType
-  art: string
-  imageUrl?: string | null
-  imageAlt?: string | null
-  sizePlaceholder: string
-  themePlaceholder: string
-  descriptionPlaceholder: string
-}
-
-const fallbackCustomRequestExamples: CustomRequestExample[] = [
-  {
-    key: 'tattoo-paper',
-    title: 'Papel para tatuajes',
-    hint: 'Hojas, diseños o referencias impresas parecidas a lo que viste.',
-    requestType: 'paper',
-    art: 'sheet',
-    sizePlaceholder: 'Ej. chico, mediano o del tamaño de una hoja común',
-    themePlaceholder: 'Ej. líneas negras, flores, nombres, dibujos...',
-    descriptionPlaceholder: 'Contanos qué querés que aparezca en la hoja y cómo te imaginás el resultado.',
-  },
-  {
-    key: 'birthday',
-    title: 'Cumpleaños y mesa dulce',
-    hint: 'Cartelitos, toppers, etiquetas y detalles con una misma temática.',
-    requestType: 'event',
-    art: 'party',
-    sizePlaceholder: 'Ej. para una mesa chica, mediana o grande',
-    themePlaceholder: 'Ej. dinosaurios, fútbol, princesas, tonos pastel...',
-    descriptionPlaceholder: 'Contanos de quién es el cumple, la edad y qué cosas te gustaría tener.',
-  },
-  {
-    key: 'invitations',
-    title: 'Tarjetitas e invitaciones',
-    hint: 'Para cumpleaños, bautismos, eventos o una ocasión especial.',
-    requestType: 'paper',
-    art: 'card',
-    sizePlaceholder: 'Ej. como una tarjeta, postal o foto',
-    themePlaceholder: 'Ej. elegante, infantil, flores, colores claros...',
-    descriptionPlaceholder: 'Decinos para qué evento es y qué texto o datos tendría que llevar.',
-  },
-  {
-    key: 'stickers',
-    title: 'Stickers y etiquetas',
-    hint: 'Para emprendimientos, regalos, frascos, bolsas o recuerdos.',
-    requestType: 'paper',
-    art: 'stickers',
-    sizePlaceholder: 'Ej. chiquitos para bolsitas o medianos para frascos',
-    themePlaceholder: 'Ej. logo, nombre, colores de tu marca...',
-    descriptionPlaceholder: 'Contanos dónde los vas a usar y qué tendría que decir o mostrar cada sticker.',
-  },
-  {
-    key: 'boxes',
-    title: 'Cajitas y souvenirs',
-    hint: 'Packaging, recuerdos y pequeños detalles armados para regalar.',
-    requestType: 'event',
-    art: 'box',
-    sizePlaceholder: 'Ej. para golosinas, souvenir chico o regalo mediano',
-    themePlaceholder: 'Ej. nombre, personaje, colores del evento...',
-    descriptionPlaceholder: 'Contanos qué querés guardar o entregar adentro y cómo te gustaría que se vea.',
-  },
-  {
-    key: 'signs',
-    title: 'Carteles y folletos',
-    hint: 'Para promocionar, informar, decorar o mostrar algo importante.',
-    requestType: 'design',
-    art: 'poster',
-    sizePlaceholder: 'Ej. para mano, mostrador, pared o vidriera',
-    themePlaceholder: 'Ej. llamativo, simple, elegante, con fotos...',
-    descriptionPlaceholder: 'Contanos qué necesitás comunicar y qué información sí o sí tiene que aparecer.',
-  },
-  {
-    key: '3d',
-    title: 'Figuras y piezas 3D',
-    hint: 'Nombres, adornos, figuras, soportes o una pieza que imaginaste.',
-    requestType: '3d',
-    art: 'cube',
-    sizePlaceholder: 'Ej. cabe en la mano, 10 cm, tamaño adorno...',
-    themePlaceholder: 'Ej. rojo y negro, personaje, nombre, estilo simple...',
-    descriptionPlaceholder: 'Contanos qué pieza querés, para qué la usarías y cómo debería verse.',
-  },
-  {
-    key: 'other',
-    title: 'Tengo otra idea',
-    hint: 'Si no encaja en ninguna opción, contanos con tus palabras.',
-    requestType: 'other',
-    art: 'idea',
-    sizePlaceholder: 'Si sabés el tamaño, contanos más o menos cuál',
-    themePlaceholder: 'Colores, estilo o referencias que te gusten',
-    descriptionPlaceholder: 'Contanos la idea como se la contarías a alguien por WhatsApp. No hace falta usar palabras técnicas.',
-  },
-]
-
-const DIRECT_CUSTOM_REQUEST_KEY = '__direct__'
-
-const directCustomRequestExample: CustomRequestExample = {
-  key: DIRECT_CUSTOM_REQUEST_KEY,
-  title: 'Tu propia idea',
-  hint:
-    'No hace falta elegir un producto ni un ejemplo. Contanos qué necesitás y lo cotizamos.',
-  requestType: 'other',
-  art: 'idea',
-  sizePlaceholder: 'Si sabés el tamaño, contanos más o menos cuál',
-  themePlaceholder: 'Colores, estilo o referencias que te gusten',
-  descriptionPlaceholder:
-    'Contanos qué querés hacer como se lo explicarías a alguien por WhatsApp.',
-}
-
-
-const CART_STORAGE_KEY = 'alimar-cart-v1'
-
-function loadStoredCart(): CartItem[] {
-  try {
-    const raw = window.localStorage.getItem(CART_STORAGE_KEY)
-    if (!raw) return []
-
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-
-    return parsed.flatMap((item) => {
-      if (
-        !item ||
-        typeof item.id !== 'string' ||
-        typeof item.name !== 'string' ||
-        typeof item.slug !== 'string' ||
-        typeof item.quantity !== 'number' ||
-        item.quantity <= 0
-      ) {
-        return []
-      }
-
-      return [
-        {
-          ...item,
-          variants: Array.isArray(item.variants) ? item.variants : [],
-          customizationAllowed: item.customizationAllowed === true,
-          customizationFields: Array.isArray(item.customizationFields)
-            ? item.customizationFields
-            : [],
-          customizations: Array.isArray(item.customizations)
-            ? item.customizations.flatMap((value: unknown) => {
-                if (!value || typeof value !== 'object') return []
-                const entry = value as Record<string, unknown>
-                if (
-                  typeof entry.fieldId !== 'string' ||
-                  typeof entry.label !== 'string' ||
-                  typeof entry.value !== 'string'
-                ) {
-                  return []
-                }
-
-                return [
-                  {
-                    fieldId: entry.fieldId,
-                    label: entry.label,
-                    value: entry.value,
-                  },
-                ]
-              })
-            : [],
-          variantId: typeof item.variantId === 'string' ? item.variantId : null,
-          variantName: typeof item.variantName === 'string' ? item.variantName : null,
-          unitPrice:
-            typeof item.unitPrice === 'string' || item.unitPrice === null
-              ? item.unitPrice
-              : typeof item.basePrice === 'string'
-                ? item.basePrice
-                : null,
-        } as CartItem,
-      ]
-    })
-  } catch {
-    return []
-  }
-}
-
-function formatAmount(amount: number) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-function priceForSelection(product: CatalogProduct, variant: CatalogVariant | null) {
-  if (product.pricingMode === 'quote') return null
-  return variant?.priceOverride ?? product.basePrice
-}
-
-function formatSelectionPrice(product: CatalogProduct, variant: CatalogVariant | null) {
-  const price = priceForSelection(product, variant)
-  if (!price) return 'Consultar'
-
-  const amount = Number(price)
-  if (!Number.isFinite(amount)) return 'Consultar'
-
-  const value = formatAmount(amount)
-
-  return product.pricingMode === 'from' && !variant?.priceOverride
-    ? `Desde ${value}`
-    : value
-}
-
-function formatCartItemPrice(item: CartItem) {
-  if (!item.unitPrice) return 'Consultar'
-
-  const amount = Number(item.unitPrice)
-  if (!Number.isFinite(amount)) return 'Consultar'
-
-  const value = formatAmount(amount)
-  return item.pricingMode === 'from' ? `Desde ${value}` : value
-}
-
-function formatCartLinePrice(item: CartItem) {
-  if (!item.unitPrice) return 'Consultar'
-
-  const unitPrice = Number(item.unitPrice)
-  if (!Number.isFinite(unitPrice)) return 'Consultar'
-
-  return formatAmount(unitPrice * item.quantity)
-}
-
-function customizationSignature(customizations: CartCustomizationValue[]) {
-  return [...customizations]
-    .sort((left, right) => left.fieldId.localeCompare(right.fieldId))
-    .map((item) => `${item.fieldId}=${encodeURIComponent(item.value)}`)
-    .join('&')
-}
-
-function cartItemKey(
-  item: Pick<CartItem, 'id' | 'variantId' | 'customizations'>,
-) {
-  return `${item.id}:${item.variantId ?? 'base'}:${customizationSignature(item.customizations)}`
-}
-
-const serviceLines = [
-  {
-    number: '01',
-    title: 'Diseño gráfico',
-    text: 'Piezas visuales pensadas para comunicar, celebrar y destacar.',
-  },
-  {
-    number: '02',
-    title: 'Papelería',
-    text: 'Invitaciones, detalles y piezas personalizadas para cada ocasión.',
-  },
-  {
-    number: '03',
-    title: 'Eventos',
-    text: 'Diseño y producción creativa para cumpleaños y momentos especiales.',
-  },
-  {
-    number: '04',
-    title: 'Impresión 3D',
-    text: 'Objetos y detalles físicos que llevan una idea a otra dimensión.',
-  },
-]
-
-function formatPrice(product: CatalogProduct) {
-  if (product.pricingMode === 'quote') return 'Consultar'
-
-  const priceSources =
-    product.variants.length > 0
-      ? product.variants.map((variant) => variant.priceOverride ?? product.basePrice)
-      : [product.basePrice]
-
-  const amounts = priceSources
-    .map((value) => (value === null ? Number.NaN : Number(value)))
-    .filter((value) => Number.isFinite(value) && value >= 0)
-
-  if (amounts.length === 0) return 'Consultar'
-
-  const minimum = Math.min(...amounts)
-  const formatted = formatAmount(minimum)
-  const hasOptions = product.variants.length > 0
-
-  return product.pricingMode === 'from' || hasOptions ? `Desde ${formatted}` : formatted
-}
-
-function catalogPriceLabel(product: CatalogProduct) {
-  if (product.variants.length === 0) return formatPrice(product)
-
-  const label = product.variants.length === 1 ? '1 opción' : `${product.variants.length} opciones`
-  return `${formatPrice(product)} · ${label}`
-}
-
-function productWhatsappUrl(product: CatalogProduct, variant: CatalogVariant | null = null) {
-  const price = formatSelectionPrice(product, variant)
-  const variantLabel = variant ? ` · ${variant.name}` : ''
-
-  return site.whatsappUrlFor(
-    `Hola, quiero consultar por "${product.name}${variantLabel}" (${price}).`,
-  )
-}
+const PublicQuoteView = lazy(() => import('./PublicQuoteView'))
+const PublicOrderTracking = lazy(() => import('./PublicOrderTracking'))
 
 function StorefrontApp() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>([])
