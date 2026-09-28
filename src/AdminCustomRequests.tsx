@@ -191,11 +191,13 @@ async function responseMessage(response: Response) {
 type AdminCustomRequestsProps = {
   onCreateQuote: (request: CustomRequest) => void
   refreshToken?: number
+  focusRequestId?: string | null
 }
 
 export default function AdminCustomRequests({
   onCreateQuote,
   refreshToken = 0,
+  focusRequestId = null,
 }: AdminCustomRequestsProps) {
   const [requests, setRequests] = useState<CustomRequest[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -233,6 +235,16 @@ export default function AdminCustomRequests({
   useEffect(() => {
     void loadRequests()
   }, [loadRequests, refreshToken])
+
+  useEffect(() => {
+    if (!focusRequestId || requests.length === 0) return
+    if (!requests.some((request) => request.id === focusRequestId)) return
+
+    setInboxFilter('all')
+    setTypeFilter('all')
+    setSearch('')
+    setSelectedRequestId(focusRequestId)
+  }, [focusRequestId, requests])
 
   useEffect(() => {
     function refreshFromQuoteChange() {

@@ -19,6 +19,7 @@ import AdminCategoriesPanel from './AdminCategoriesPanel'
 import AdminProductVariants from './AdminProductVariants'
 import AdminProductGallery from './AdminProductGallery'
 import AdminProductCustomizations from './AdminProductCustomizations'
+import AdminNotifications from './AdminNotifications'
 import './admin.css'
 
 type AdminCategory = {
@@ -112,6 +113,7 @@ export default function AdminApp() {
   const [adminSettingsOpen, setAdminSettingsOpen] = useState(false)
   const [adminSettingsMessage, setAdminSettingsMessage] = useState('')
   const [workspaceDialog, setWorkspaceDialog] = useState<'quotes' | 'requests' | null>(null)
+  const [notificationRequestId, setNotificationRequestId] = useState<string | null>(null)
 
   const [createPricingMode, setCreatePricingMode] =
     useState<'fixed' | 'from' | 'quote'>('fixed')
@@ -213,6 +215,7 @@ export default function AdminApp() {
       const detail = (event as CustomEvent<{ panel?: string }>).detail
       if (detail?.panel === 'quotes' || detail?.panel === 'requests') {
         setAdminSettingsOpen(false)
+        setNotificationRequestId(null)
         setWorkspaceDialog(detail.panel)
       }
     }
@@ -367,7 +370,25 @@ export default function AdminApp() {
   function openWorkspace(panel: 'quotes' | 'requests') {
     setAdminSettingsOpen(false)
     setAdminSettingsMessage('')
+    setNotificationRequestId(null)
     setWorkspaceDialog(panel)
+  }
+
+  function openNotificationOrder(orderId: string) {
+    setAdminSettingsOpen(false)
+    setWorkspaceDialog(null)
+    window.setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent('alimar:open-order', { detail: { orderId } }),
+      )
+    }, 0)
+  }
+
+  function openNotificationRequest(requestId: string) {
+    setAdminSettingsOpen(false)
+    setNotificationRequestId(null)
+    setWorkspaceDialog('requests')
+    window.setTimeout(() => setNotificationRequestId(requestId), 0)
   }
 
   function closeAdminSettings() {
@@ -710,6 +731,10 @@ export default function AdminApp() {
         </a>
 
         <div className="admin-header-actions">
+          <AdminNotifications
+            onOpenOrder={openNotificationOrder}
+            onOpenRequest={openNotificationRequest}
+          />
           {session.account && (
             <span className="admin-account-chip">
               <strong>{session.account.name}</strong>
@@ -1151,6 +1176,7 @@ export default function AdminApp() {
               ) : (
                 <AdminCustomRequests
                   refreshToken={customRequestRefreshToken}
+                  focusRequestId={notificationRequestId}
                   onCreateQuote={(request) => {
                     setQuoteSource(request)
                     setWorkspaceDialog('quotes')

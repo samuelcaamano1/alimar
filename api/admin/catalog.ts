@@ -2,6 +2,10 @@ import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 import { getAdminBusinessDashboard } from '../_lib/admin-dashboard.js'
 import {
+  listAdminNotifications,
+  markAdminNotificationsRead,
+} from '../_lib/admin-notifications.js'
+import {
   createAdminCustomerPasswordReset,
   getAdminCustomers,
   listAdminCustomerAccounts,
@@ -77,6 +81,10 @@ export async function GET(request: Request) {
 
   if (action === 'customer-accounts') {
     return listAdminCustomerAccounts(databaseUrl)
+  }
+
+  if (action === 'notifications') {
+    return listAdminNotifications(databaseUrl)
   }
 
   if (action === 'custom-examples') {
@@ -161,7 +169,8 @@ async function adminMutationContext(request: Request) {
     action !== 'quotes' &&
     action !== 'custom-examples' &&
     action !== 'customer-account-status' &&
-    action !== 'customer-password-reset'
+    action !== 'customer-password-reset' &&
+    action !== 'notifications'
   ) {
     return {
       error: Response.json(
@@ -197,6 +206,13 @@ export async function POST(request: Request) {
     return createAdminCustomerPasswordReset(
       context.databaseUrl,
       context.requestUrl.searchParams.get('id') ?? '',
+    )
+  }
+
+  if (context.action === 'notifications') {
+    return Response.json(
+      { error: 'Invalid method' },
+      { status: 405, headers: { 'Cache-Control': 'no-store' } },
     )
   }
 
@@ -238,6 +254,10 @@ export async function PATCH(request: Request) {
     )
   }
 
+  if (context.action === 'notifications') {
+    return markAdminNotificationsRead(context.databaseUrl, body)
+  }
+
   if (context.action === 'quotes') {
     return updateAdminQuote(
       context.databaseUrl,
@@ -265,7 +285,11 @@ export async function DELETE(request: Request) {
   const context = await adminMutationContext(request)
   if ('error' in context) return context.error
 
-  if (context.action === 'customer-account-status' || context.action === 'customer-password-reset') {
+  if (
+    context.action === 'customer-account-status' ||
+    context.action === 'customer-password-reset' ||
+    context.action === 'notifications'
+  ) {
     return Response.json(
       { error: 'Invalid method' },
       { status: 405, headers: { 'Cache-Control': 'no-store' } },
