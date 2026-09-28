@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto'
 import { neon } from '@neondatabase/serverless'
 
 const PHONE_RE = /^\d{6,20}$/
@@ -525,6 +526,90 @@ export async function getAdminCustomers(
   } catch {
     return Response.json(
       { error: 'No se pudo cargar el historial de clientes.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+export async function createAdminCustomerPasswordReset(
+  databaseUrl: string,
+  accountId: string,
+) {
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  if (!UUID_RE.test(accountId)) {
+    return Response.json(
+      { error: 'Cuenta de cliente inválida.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const sql = neon(databaseUrl)
+
+  try {
+    const accounts = await sql`
+      SELECT id::text, email, name, phone, active
+      FROM customer_accounts
+      WHERE id = ${accountId}::uuid
+      LIMIT 1
+    `
+
+    if (accounts.length === 0) {
+      return Response.json(
+        { error: 'Cuenta de cliente no encontrada.' },
+        { status: 404, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    if (!Boolean(accounts[0].active)) {
+      return Response.json(
+        { error: 'Reactivá la cuenta antes de generar un enlace de recuperación.' },
+        { status: 409, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const token = randomBytes(32).toString('base64url')
+    const tokenHash = createHash('sha256').update(token).digest('hex')
+    const results = await sql.transaction([
+      sql`
+        DELETE FROM customer_password_resets
+        WHERE account_id = ${accountId}::uuid
+      `,
+      sql`
+        INSERT INTO customer_password_resets (
+          account_id,
+          token_hash,
+          expires_at
+        )
+        VALUES (
+          ${accountId}::uuid,
+          ${tokenHash},
+          now() + INTERVAL '30 minutes'
+        )
+        RETURNING expires_at::text
+      `,
+    ])
+
+    const created = results[1] as Record<string, unknown>[]
+    const account = accounts[0]
+
+    return Response.json(
+      {
+        ok: true,
+        token,
+        resetPath: `/cuenta?reset=${encodeURIComponent(token)}`,
+        expiresAt: String(created[0]?.expires_at ?? ''),
+        account: {
+          id: String(account.id),
+          email: String(account.email),
+          name: String(account.name),
+          phone: String(account.phone),
+        },
+      },
+      { status: 201, headers: { 'Cache-Control': 'no-store' } },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No se pudo generar el enlace de recuperación.' },
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }

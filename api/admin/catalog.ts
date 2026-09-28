@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless'
 import { requireAdmin, requireSameOrigin } from '../_lib/admin-auth.js'
 import { getAdminBusinessDashboard } from '../_lib/admin-dashboard.js'
 import {
+  createAdminCustomerPasswordReset,
   getAdminCustomers,
   listAdminCustomerAccounts,
   updateAdminCustomerAccountStatus,
@@ -159,7 +160,8 @@ async function adminMutationContext(request: Request) {
     action !== 'cost-resources' &&
     action !== 'quotes' &&
     action !== 'custom-examples' &&
-    action !== 'customer-account-status'
+    action !== 'customer-account-status' &&
+    action !== 'customer-password-reset'
   ) {
     return {
       error: Response.json(
@@ -188,6 +190,13 @@ export async function POST(request: Request) {
     return Response.json(
       { error: 'Invalid method' },
       { status: 405, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  if (context.action === 'customer-password-reset') {
+    return createAdminCustomerPasswordReset(
+      context.databaseUrl,
+      context.requestUrl.searchParams.get('id') ?? '',
     )
   }
 
@@ -222,6 +231,13 @@ export async function PATCH(request: Request) {
     )
   }
 
+  if (context.action === 'customer-password-reset') {
+    return Response.json(
+      { error: 'Invalid method' },
+      { status: 405, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
   if (context.action === 'quotes') {
     return updateAdminQuote(
       context.databaseUrl,
@@ -249,7 +265,7 @@ export async function DELETE(request: Request) {
   const context = await adminMutationContext(request)
   if ('error' in context) return context.error
 
-  if (context.action === 'customer-account-status') {
+  if (context.action === 'customer-account-status' || context.action === 'customer-password-reset') {
     return Response.json(
       { error: 'Invalid method' },
       { status: 405, headers: { 'Cache-Control': 'no-store' } },

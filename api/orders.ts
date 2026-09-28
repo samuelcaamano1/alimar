@@ -11,6 +11,7 @@ import {
   loginCustomer,
   logoutCustomer,
   registerCustomer,
+  resetCustomerPasswordWithToken,
   updateCustomerProfile,
 } from './_lib/customer-auth.js'
 import { acceptPublicQuote } from './_lib/public-quotes.js'
@@ -247,6 +248,12 @@ export async function POST(request: Request) {
                   limit: 8,
                   windowSeconds: 60 * 60,
                 }
+              : action === 'account-password-reset'
+                ? {
+                    scope: 'customer-password-reset',
+                    limit: 10,
+                    windowSeconds: 60 * 60,
+                  }
               : action === 'account-claim-order'
                 ? {
                     scope: 'customer-claim-order',
@@ -297,6 +304,7 @@ export async function POST(request: Request) {
     action === 'account-logout' ||
     action === 'account-profile' ||
     action === 'account-password' ||
+    action === 'account-password-reset' ||
     action === 'account-claim-order'
   ) {
     let body: Record<string, unknown> = {}
@@ -326,6 +334,10 @@ export async function POST(request: Request) {
 
     if (action === 'account-password') {
       return changeCustomerPassword(rateDatabaseUrl, request, body)
+    }
+
+    if (action === 'account-password-reset') {
+      return resetCustomerPasswordWithToken(rateDatabaseUrl, request, body)
     }
 
     if (action === 'account-claim-order') {

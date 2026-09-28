@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { customerWhatsappUrl } from './adminWhatsapp'
 
 type CustomerSummary = {
   id: string
@@ -46,6 +47,13 @@ type CustomerAccountSummary = {
   request_count: number
   active_session_count: number
   last_session_at: string | null
+}
+
+type CustomerPasswordResetLink = {
+  accountId: string
+  accountName: string
+  url: string
+  expiresAt: string
 }
 
 type CustomerFilter = 'all' | 'buyers' | 'repeat' | 'active'
@@ -137,6 +145,8 @@ export default function AdminCustomersPanel() {
   const [accountState, setAccountState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [accountMessage, setAccountMessage] = useState('')
   const [accountBusyId, setAccountBusyId] = useState<string | null>(null)
+  const [passwordResetLink, setPasswordResetLink] =
+    useState<CustomerPasswordResetLink | null>(null)
 
   const loadCustomers = useCallback(async () => {
     setState('loading')
@@ -191,6 +201,7 @@ export default function AdminCustomersPanel() {
   function openCustomerAccounts() {
     setAccountDialogOpen(true)
     setAccountQuery('')
+    setPasswordResetLink(null)
     void loadCustomerAccounts()
   }
 
@@ -222,6 +233,9 @@ export default function AdminCustomersPanel() {
       if (!response.ok) throw new Error(await responseMessage(response))
 
       await loadCustomerAccounts()
+      if (!active && passwordResetLink?.accountId === account.id) {
+        setPasswordResetLink(null)
+      }
       setAccountMessage(
         active
           ? `Cuenta de ${account.name} reactivada.`
@@ -236,6 +250,77 @@ export default function AdminCustomersPanel() {
     } finally {
       setAccountBusyId(null)
     }
+  }
+
+  async function generateCustomerPasswordReset(account: CustomerAccountSummary) {
+    if (accountBusyId || !account.active) return
+
+    setAccountBusyId(account.id)
+    setAccountMessage('')
+    setPasswordResetLink(null)
+
+    try {
+      const response = await fetch(
+        `/api/admin/catalog?action=customer-password-reset&id=${encodeURIComponent(account.id)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        },
+      )
+      if (!response.ok) throw new Error(await responseMessage(response))
+
+      const data = (await response.json()) as {
+        resetPath?: string
+        expiresAt?: string
+      }
+      if (!data.resetPath || !data.expiresAt) {
+        throw new Error('La respuesta del enlace de recuperación fue incompleta.')
+      }
+
+      const url = new URL(data.resetPath, window.location.origin).toString()
+      setPasswordResetLink({
+        accountId: account.id,
+        accountName: account.name,
+        url,
+        expiresAt: data.expiresAt,
+      })
+      setAccountMessage(
+        `Enlace generado para ${account.name}. Vence en 30 minutos y reemplaza cualquier enlace anterior.`,
+      )
+    } catch (error) {
+      setAccountMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo generar el enlace de recuperación.',
+      )
+    } finally {
+      setAccountBusyId(null)
+    }
+  }
+
+  async function copyPasswordResetLink(link: CustomerPasswordResetLink) {
+    try {
+      await navigator.clipboard.writeText(link.url)
+      setAccountMessage(`Enlace de ${link.accountName} copiado.`)
+    } catch {
+      setAccountMessage('No se pudo copiar automáticamente. Seleccioná y copiá el enlace.')
+    }
+  }
+
+  function passwordResetWhatsappUrl(
+    account: CustomerAccountSummary,
+    link: CustomerPasswordResetLink,
+  ) {
+    return customerWhatsappUrl(
+      account.phone,
+      [
+        `Hola ${account.name}, te paso el enlace de Alimar para crear una contraseña nueva.`,
+        '',
+        'Es de un solo uso y vence en 30 minutos:',
+        link.url,
+      ].join('\n'),
+    )
   }
 
   const loadCustomerDetail = useCallback(async (phone: string) => {
@@ -667,6 +752,7 @@ export default function AdminCustomersPanel() {
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !accountBusyId) {
               setAccountDialogOpen(false)
+              setPasswordResetLink(null)
             }
           }}
         >
@@ -687,7 +773,7 @@ export default function AdminCustomersPanel() {
               <button
                 className="admin-customer-accounts-close"
                 type="button"
-                onClick={() => setAccountDialogOpen(false)}
+                onClick={() => { setAccountDialogOpen(false); setPasswordResetLink(null) }}
                 disabled={Boolean(accountBusyId)}
                 aria-label="Cerrar cuentas de clientes"
               >
@@ -769,19 +855,69 @@ export default function AdminCustomersPanel() {
                         ? ` · Última sesión ${dateTime(account.last_session_at)}`
                         : ' · Sin sesión activa registrada'}
                     </small>
-                    <button
-                      className={account.active ? 'admin-danger-soft' : 'admin-primary'}
-                      type="button"
-                      onClick={() => void setCustomerAccountActive(account, !account.active)}
-                      disabled={Boolean(accountBusyId)}
-                    >
-                      {accountBusyId === account.id
-                        ? 'Guardando…'
-                        : account.active
-                          ? 'Desactivar'
-                          : 'Reactivar'}
-                    </button>
+                    <div className="admin-customer-account-actions">
+                      {account.active && (
+                        <button
+                          className="admin-secondary"
+                          type="button"
+                          onClick={() => void generateCustomerPasswordReset(account)}
+                          disabled={Boolean(accountBusyId)}
+                        >
+                          {accountBusyId === account.id
+                            ? 'Generando…'
+                            : 'Recuperar contraseña'}
+                        </button>
+                      )}
+                      <button
+                        className={account.active ? 'admin-danger-soft' : 'admin-primary'}
+                        type="button"
+                        onClick={() => void setCustomerAccountActive(account, !account.active)}
+                        disabled={Boolean(accountBusyId)}
+                      >
+                        {accountBusyId === account.id
+                          ? 'Guardando…'
+                          : account.active
+                            ? 'Desactivar'
+                            : 'Reactivar'}
+                      </button>
+                    </div>
                   </div>
+
+                  {passwordResetLink?.accountId === account.id && (
+                    <div className="admin-customer-password-reset">
+                      <div>
+                        <strong>Enlace de recuperación</strong>
+                        <small>
+                          Un solo uso · vence {dateTime(passwordResetLink.expiresAt)}
+                        </small>
+                      </div>
+                      <input
+                        type="text"
+                        value={passwordResetLink.url}
+                        readOnly
+                        aria-label={`Enlace de recuperación de ${account.name}`}
+                      />
+                      <div className="admin-customer-password-reset-actions">
+                        <button
+                          className="admin-secondary"
+                          type="button"
+                          onClick={() => void copyPasswordResetLink(passwordResetLink)}
+                        >
+                          Copiar link
+                        </button>
+                        {passwordResetWhatsappUrl(account, passwordResetLink) && (
+                          <a
+                            className="admin-primary"
+                            href={passwordResetWhatsappUrl(account, passwordResetLink) ?? undefined}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Enviar por WhatsApp
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

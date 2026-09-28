@@ -106,6 +106,9 @@ export default function CustomerAccount() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [resetToken, setResetToken] = useState(() =>
+    new URLSearchParams(window.location.search).get('reset')?.trim() ?? '',
+  )
   const [accountPanel, setAccountPanel] = useState<'profile' | 'password' | 'claim' | null>(null)
 
   async function loadOverview() {
@@ -266,6 +269,54 @@ export default function CustomerAccount() {
     }
   }
 
+  async function resetPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (busy || !resetToken) return
+
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
+    const newPassword = String(form.get('newPassword') ?? '')
+    const confirmPassword = String(form.get('confirmPassword') ?? '')
+
+    if (newPassword !== confirmPassword) {
+      setMessage('La confirmación de la nueva contraseña no coincide.')
+      return
+    }
+
+    setBusy(true)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/orders?action=account-password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: resetToken, newPassword }),
+      })
+      if (!response.ok) throw new Error(await responseError(response))
+
+      formElement.reset()
+      setResetToken('')
+      window.history.replaceState(null, '', '/cuenta')
+      setMessage('Contraseña actualizada. Ya ingresaste con tu nueva contraseña.')
+      await loadOverview()
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No pudimos restablecer la contraseña.',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function cancelPasswordReset() {
+    if (busy) return
+    setResetToken('')
+    setMessage('')
+    window.history.replaceState(null, '', '/cuenta')
+  }
+
   async function claimHistoricalOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (busy) return
@@ -345,7 +396,68 @@ export default function CustomerAccount() {
       </header>
 
       <main className="customer-account-main">
-        {loading ? (
+        {resetToken ? (
+          <section className="customer-password-reset-layout">
+            <div className="customer-auth-copy">
+              <span className="eyebrow">Recuperación segura</span>
+              <h1>Creá una contraseña nueva.</h1>
+              <p>
+                Este enlace es de un solo uso. Al confirmar, se cierran las sesiones anteriores de tu cuenta.
+              </p>
+            </div>
+
+            <div className="customer-auth-card customer-password-reset-card">
+              <div>
+                <span className="eyebrow">Mi cuenta</span>
+                <h2>Nueva contraseña</h2>
+              </div>
+
+              <form onSubmit={resetPassword}>
+                <label>
+                  Nueva contraseña
+                  <input
+                    name="newPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={128}
+                    required
+                  />
+                  <small>Mínimo 8 caracteres.</small>
+                </label>
+                <label>
+                  Repetir nueva contraseña
+                  <input
+                    name="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={128}
+                    required
+                  />
+                </label>
+
+                {message && <p className="customer-auth-error">{message}</p>}
+
+                <button className="button button-primary" type="submit" disabled={busy}>
+                  {busy ? 'Actualizando…' : 'Guardar nueva contraseña'}
+                </button>
+                <button
+                  className="button button-secondary"
+                  type="button"
+                  onClick={cancelPasswordReset}
+                  disabled={busy}
+                >
+                  Volver al ingreso
+                </button>
+              </form>
+
+              <small className="customer-password-reset-note">
+                Si este enlace venció o ya fue usado, pedile a Alimar uno nuevo.
+              </small>
+            </div>
+          </section>
+        ) : loading ? (
           <section className="customer-account-card customer-account-loading">
             <strong>Cargando tu cuenta…</strong>
           </section>
@@ -662,6 +774,12 @@ export default function CustomerAccount() {
                       ? 'Crear cuenta y continuar'
                       : 'Ingresar'}
                 </button>
+
+                {mode === 'login' && (
+                  <p className="customer-auth-help">
+                    ¿Olvidaste tu contraseña? Escribile a Alimar por WhatsApp. Te enviamos un enlace de recuperación de un solo uso.
+                  </p>
+                )}
               </form>
             </div>
           </section>

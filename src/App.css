@@ -4677,3 +4677,43 @@
     flex: 1;
   }
 }
+
+/* ALIMAR CUSTOMER PASSWORD RECOVERY 1.1.26 */
+.customer-password-reset-layout {
+  min-height: calc(100dvh - 230px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.7fr);
+  gap: 34px;
+  align-items: center;
+}
+
+.customer-password-reset-card {
+  display: grid;
+  gap: 18px;
+}
+
+.customer-password-reset-card h2 {
+  margin: 4px 0 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 2rem;
+  letter-spacing: -0.035em;
+}
+
+.customer-password-reset-note,
+.customer-auth-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.customer-auth-help {
+  padding-top: 2px;
+  text-align: center;
+}
+
+@media (max-width: 820px) {
+  .customer-password-reset-layout {
+    grid-template-columns: 1fr;
+  }
+}

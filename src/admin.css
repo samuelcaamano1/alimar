@@ -10336,7 +10336,7 @@
     max-height: 94vh;
     border-radius: 22px;
   }
-}\n\n
+}
 
 /* ALIMAR ADMIN WORKSPACE POPUPS 1.1.22 */
 .admin-workspace-launchers {
@@ -10566,5 +10566,78 @@
 @media (max-width: 650px) {
   .admin-order-file-device-picker {
     grid-column: auto;
+  }
+}
+
+/* ALIMAR CUSTOMER PASSWORD RECOVERY 1.1.26 */
+.admin-customer-account-actions,
+.admin-customer-password-reset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.admin-customer-password-reset {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+  align-items: end;
+  margin-top: 0.9rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(63, 120, 138, 0.28);
+  border-radius: 16px;
+  background: rgba(100, 175, 198, 0.08);
+}
+
+.admin-customer-password-reset > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+  grid-column: 1 / -1;
+}
+
+.admin-customer-password-reset small {
+  color: var(--admin-muted);
+}
+
+.admin-customer-password-reset input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 0.75rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 11px;
+  background: #fffdf8;
+  color: var(--admin-ink);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.admin-customer-password-reset-actions .admin-primary {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+@media (max-width: 760px) {
+  .admin-customer-account-actions,
+  .admin-customer-password-reset-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-customer-account-actions > *,
+  .admin-customer-password-reset-actions > * {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .admin-customer-password-reset {
+    grid-template-columns: 1fr;
   }
 }

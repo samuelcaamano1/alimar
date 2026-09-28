@@ -488,6 +488,122 @@ export async function changeCustomerPassword(
 }
 
 
+export async function resetCustomerPasswordWithToken(
+  databaseUrl: string,
+  request: Request,
+  body: Record<string, unknown>,
+) {
+  const resetToken =
+    typeof body.token === 'string' ? body.token.trim() : ''
+  const newPassword =
+    typeof body.newPassword === 'string' ? body.newPassword : ''
+
+  if (!/^[A-Za-z0-9_-]{40,100}$/.test(resetToken)) {
+    return Response.json(
+      { error: 'Este enlace de recuperación no es válido o ya venció.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  if (newPassword.length < 8 || newPassword.length > 128) {
+    return Response.json(
+      { error: 'La nueva contraseña debe tener entre 8 y 128 caracteres.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const passwordHash = await hashPassword(newPassword)
+  const resetHash = tokenHash(resetToken)
+  const sessionToken = randomBytes(32).toString('base64url')
+  const sessionHash = tokenHash(sessionToken)
+  const sessionId = randomUUID()
+
+  try {
+    const sql = neon(databaseUrl)
+    const rows = await sql`
+      WITH claimed AS (
+        UPDATE customer_password_resets reset
+        SET used_at = now()
+        FROM customer_accounts account
+        WHERE reset.token_hash = ${resetHash}
+          AND reset.account_id = account.id
+          AND reset.used_at IS NULL
+          AND reset.expires_at > now()
+          AND account.active = true
+        RETURNING reset.account_id
+      ),
+      updated AS (
+        UPDATE customer_accounts account
+        SET
+          password_hash = ${passwordHash},
+          updated_at = now()
+        FROM claimed
+        WHERE account.id = claimed.account_id
+        RETURNING account.id, account.email, account.name, account.phone
+      ),
+      deleted_sessions AS (
+        DELETE FROM customer_sessions session
+        USING updated
+        WHERE session.account_id = updated.id
+        RETURNING session.id
+      ),
+      inserted_session AS (
+        INSERT INTO customer_sessions (
+          id,
+          account_id,
+          token_hash,
+          expires_at
+        )
+        SELECT
+          ${sessionId}::uuid,
+          updated.id,
+          ${sessionHash},
+          now() + (${SESSION_SECONDS} * INTERVAL '1 second')
+        FROM updated
+        RETURNING account_id
+      )
+      SELECT
+        updated.id::text,
+        updated.email,
+        updated.name,
+        updated.phone
+      FROM updated
+      JOIN inserted_session ON inserted_session.account_id = updated.id
+      LIMIT 1
+    `
+
+    if (rows.length === 0) {
+      return Response.json(
+        { error: 'Este enlace de recuperación no es válido, ya fue usado o venció.' },
+        { status: 410, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
+    const account: CustomerAccount = {
+      id: String(rows[0].id),
+      email: String(rows[0].email),
+      name: String(rows[0].name),
+      phone: String(rows[0].phone),
+    }
+
+    return Response.json(
+      { ok: true, account },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+          'Set-Cookie': sessionCookie(request, sessionToken),
+        },
+      },
+    )
+  } catch {
+    return Response.json(
+      { error: 'No pudimos restablecer la contraseña. Pedí un enlace nuevo.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+}
+
+
 export async function claimHistoricalOrder(
   databaseUrl: string,
   request: Request,
