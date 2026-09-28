@@ -48,7 +48,7 @@ export function getAdminSessionAccountId(request: Request) {
   if (!token) return null
 
   const [version, accountId, expiresAt, signature] = token.split('.')
-  if (version !== 'v3' || !UUID_RE.test(accountId ?? '') || !expiresAt || !signature) {
+  if (version !== 'v4' || !UUID_RE.test(accountId ?? '') || !expiresAt || !signature) {
     return null
   }
 
@@ -96,7 +96,7 @@ export function requireSameOrigin(request: Request) {
 
 export function createAdminSessionCookie(request: Request, accountId: string) {
   const expiresAt = String(Date.now() + SESSION_SECONDS * 1000)
-  const token = `v3.${accountId}.${expiresAt}.${sign(accountId, expiresAt)}`
+  const token = `v4.${accountId}.${expiresAt}.${sign(accountId, expiresAt)}`
   const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : ''
 
   return `${COOKIE_NAME}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_SECONDS}; Priority=High${secure}`

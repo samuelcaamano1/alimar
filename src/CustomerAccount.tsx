@@ -475,6 +475,12 @@ export default function CustomerAccount() {
                 <span>{overview.account.email}</span>
                 <strong>{overview.account.phone}</strong>
                 <div className="customer-account-profile-actions">
+                  {overview.account.isAdmin && (
+                    <a className="button button-primary" href="/admin">
+                      Panel de administración
+                      <span aria-hidden="true">→</span>
+                    </a>
+                  )}
                   <button
                     className="button button-secondary"
                     type="button"

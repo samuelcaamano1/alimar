@@ -3,6 +3,7 @@ export type CustomerSession = {
   email: string
   name: string
   phone: string
+  isAdmin: boolean
 }
 
 export async function loadCustomerSession() {

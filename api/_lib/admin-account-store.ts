@@ -83,6 +83,25 @@ export async function getActiveAdminAccount(
   return rows.length > 0 ? accountFromRow(rows[0]) : null
 }
 
+export async function getActiveAdminAccountByEmail(
+  databaseUrl: string,
+  email: string,
+): Promise<AdminAccount | null> {
+  const normalizedEmail = email.trim().toLowerCase()
+  if (!normalizedEmail) return null
+
+  const sql = neon(databaseUrl)
+  const rows = await sql`
+    SELECT id::text, email, name
+    FROM admin_accounts
+    WHERE lower(email) = ${normalizedEmail}
+      AND active = true
+    LIMIT 1
+  `
+
+  return rows.length > 0 ? accountFromRow(rows[0]) : null
+}
+
 export async function bootstrapAdminAccount(
   databaseUrl: string,
   body: Record<string, unknown>,

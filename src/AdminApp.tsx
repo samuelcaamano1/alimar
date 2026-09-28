@@ -106,6 +106,11 @@ export default function AdminApp() {
       if (!active) return
       setSession(data)
 
+      if (!data.authenticated) {
+        window.location.replace('/cuenta?next=/admin')
+        return
+      }
+
       if (data.authenticated) {
         try {
           await loadCatalog()
@@ -252,26 +257,32 @@ export default function AdminApp() {
     setMessage('')
 
     try {
-      const response = await adminRequest('/api/admin/logout', { method: 'POST' })
-      if (!response.ok) throw new Error(await responseMessage(response))
+      const response = await adminRequest(
+        '/api/orders?action=account-logout',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        },
+      )
 
-      setCatalog(emptyCatalog)
-      setSession((current) => ({
-        configured: current?.configured ?? true,
-        authenticated: false,
-        account: null,
-      }))
+      if (!response.ok) {
+        throw new Error(await responseMessage(response))
+      }
+
+      window.location.assign('/cuenta')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo cerrar la sesión.')
-    } finally {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cerrar la sesión.',
+      )
       setBusy(false)
     }
   }
 
   function openAdminSettings() {
-    setWorkspaceDialog(null)
-    setAdminSettingsMessage('')
-    setAdminSettingsOpen(true)
+    window.location.assign('/cuenta')
   }
 
   function openWorkspace(panel: 'quotes' | 'requests') {

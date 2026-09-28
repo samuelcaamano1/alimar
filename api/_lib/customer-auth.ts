@@ -7,6 +7,7 @@ import {
 } from 'node:crypto'
 import { promisify } from 'node:util'
 import { neon } from '@neondatabase/serverless'
+import { clearAdminSessionCookie } from './admin-auth.js'
 
 const COOKIE_NAME = 'alimar_customer'
 const SESSION_SECONDS = 60 * 60 * 24 * 14
@@ -19,6 +20,7 @@ export type CustomerAccount = {
   email: string
   name: string
   phone: string
+  isAdmin: boolean
 }
 
 function text(value: unknown, max: number) {
@@ -119,7 +121,14 @@ export async function getCustomerAccount(
         account.id::text,
         account.email,
         account.name,
-        account.phone
+        account.phone,
+        EXISTS (
+          SELECT 1
+          FROM admin_accounts admin
+          WHERE lower(admin.email) = lower(account.email)
+            AND admin.active = true
+            AND admin.password_hash = account.password_hash
+        ) AS is_admin
       FROM customer_sessions session
       JOIN customer_accounts account ON account.id = session.account_id
       WHERE session.token_hash = ${hash}
@@ -135,6 +144,7 @@ export async function getCustomerAccount(
       email: String(rows[0].email),
       name: String(rows[0].name),
       phone: String(rows[0].phone),
+      isAdmin: Boolean(rows[0].is_admin),
     }
   } catch {
     return null
@@ -182,14 +192,33 @@ export async function registerCustomer(
     return Response.json({ error: 'Ingresá tu nombre.' }, { status: 400 })
   }
   if (phone.replace(/\D/g, '').length < 6) {
-    return Response.json({ error: 'Ingresá un WhatsApp válido.' }, { status: 400 })
+    return Response.json(
+      { error: 'Ingresá un WhatsApp válido.' },
+      { status: 400 },
+    )
   }
 
   const sql = neon(databaseUrl)
-  const accountId = randomUUID()
-  const passwordHash = await hashPassword(password)
 
   try {
+    const reservedAdmin = await sql`
+      SELECT 1
+      FROM admin_accounts
+      WHERE lower(email) = ${email}
+        AND active = true
+      LIMIT 1
+    `
+
+    if (reservedAdmin.length > 0) {
+      return Response.json(
+        {
+          error:
+            'Este email corresponde a la cuenta administrativa. Usá Iniciar sesión.',
+        },
+        { status: 409, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
     const existing = await sql`
       SELECT 1
       FROM customer_accounts
@@ -203,6 +232,9 @@ export async function registerCustomer(
         { status: 409, headers: { 'Cache-Control': 'no-store' } },
       )
     }
+
+    const accountId = randomUUID()
+    const passwordHash = await hashPassword(password)
 
     await sql`
       INSERT INTO customer_accounts (
@@ -222,7 +254,13 @@ export async function registerCustomer(
     `
 
     const token = await createSession(databaseUrl, accountId)
-    const account: CustomerAccount = { id: accountId, email, name, phone }
+    const account: CustomerAccount = {
+      id: accountId,
+      email,
+      name,
+      phone,
+      isAdmin: false,
+    }
 
     return Response.json(
       { ok: true, account },
@@ -260,6 +298,94 @@ export async function loginCustomer(
   const sql = neon(databaseUrl)
 
   try {
+    const adminRows = await sql`
+      SELECT id::text, email, password_hash, name
+      FROM admin_accounts
+      WHERE lower(email) = ${email}
+        AND active = true
+      LIMIT 1
+    `
+
+    if (adminRows.length > 0) {
+      const validAdmin = await verifyPassword(
+        password,
+        String(adminRows[0].password_hash ?? ''),
+      )
+
+      if (!validAdmin) {
+        return Response.json(
+          { error: 'Email o contraseña incorrectos.' },
+          { status: 401, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+
+      const adminHash = String(adminRows[0].password_hash)
+      const adminName = String(adminRows[0].name)
+
+      let customerRows = await sql`
+        SELECT id::text, email, name, phone
+        FROM customer_accounts
+        WHERE lower(email) = ${email}
+        LIMIT 1
+      `
+
+      if (customerRows.length === 0) {
+        customerRows = await sql`
+          INSERT INTO customer_accounts (
+            email,
+            password_hash,
+            name,
+            phone,
+            active
+          )
+          VALUES (
+            ${String(adminRows[0].email)},
+            ${adminHash},
+            ${adminName},
+            '',
+            true
+          )
+          RETURNING id::text, email, name, phone
+        `
+      } else {
+        await sql`
+          UPDATE customer_accounts
+          SET
+            password_hash = ${adminHash},
+            active = true,
+            updated_at = now()
+          WHERE id = ${String(customerRows[0].id)}::uuid
+        `
+      }
+
+      await sql`
+        UPDATE admin_accounts
+        SET last_login_at = now(), updated_at = now()
+        WHERE id = ${String(adminRows[0].id)}::uuid
+      `
+
+      const row = customerRows[0]
+      const account: CustomerAccount = {
+        id: String(row.id),
+        email: String(row.email),
+        name: String(row.name),
+        phone: String(row.phone),
+        isAdmin: true,
+      }
+
+      const token = await createSession(databaseUrl, account.id)
+
+      return Response.json(
+        { ok: true, account },
+        {
+          headers: {
+            'Cache-Control': 'no-store',
+            'Set-Cookie': sessionCookie(request, token),
+          },
+        },
+      )
+    }
+
     const rows = await sql`
       SELECT id::text, email, password_hash, name, phone
       FROM customer_accounts
@@ -276,7 +402,10 @@ export async function loginCustomer(
     }
 
     const row = rows[0]
-    const valid = await verifyPassword(password, String(row.password_hash ?? ''))
+    const valid = await verifyPassword(
+      password,
+      String(row.password_hash ?? ''),
+    )
 
     if (!valid) {
       return Response.json(
@@ -290,7 +419,9 @@ export async function loginCustomer(
       email: String(row.email),
       name: String(row.name),
       phone: String(row.phone),
+      isAdmin: false,
     }
+
     const token = await createSession(databaseUrl, account.id)
 
     return Response.json(
@@ -310,7 +441,10 @@ export async function loginCustomer(
   }
 }
 
-export async function logoutCustomer(databaseUrl: string, request: Request) {
+export async function logoutCustomer(
+  databaseUrl: string,
+  request: Request,
+) {
   const token = parseCookies(request).get(COOKIE_NAME)
 
   if (token) {
@@ -321,21 +455,16 @@ export async function logoutCustomer(databaseUrl: string, request: Request) {
         WHERE token_hash = ${tokenHash(token)}
       `
     } catch {
-      // The browser cookie is still cleared even if server cleanup fails.
+      // Las cookies igual se limpian si falla el cleanup del servidor.
     }
   }
 
-  return Response.json(
-    { ok: true },
-    {
-      headers: {
-        'Cache-Control': 'no-store',
-        'Set-Cookie': clearSessionCookie(request),
-      },
-    },
-  )
-}
+  const headers = new Headers({ 'Cache-Control': 'no-store' })
+  headers.append('Set-Cookie', clearSessionCookie(request))
+  headers.append('Set-Cookie', clearAdminSessionCookie(request))
 
+  return Response.json({ ok: true }, { headers })
+}
 
 export async function updateCustomerProfile(
   databaseUrl: string,
@@ -450,6 +579,18 @@ export async function changeCustomerPassword(
           updated_at = now()
         WHERE id = ${account.id}::uuid
       `,
+      ...(account.isAdmin
+        ? [
+            sql`
+              UPDATE admin_accounts
+              SET
+                password_hash = ${passwordHash},
+                updated_at = now()
+              WHERE lower(email) = lower(${account.email})
+                AND active = true
+            `,
+          ]
+        : []),
       sql`
         DELETE FROM customer_sessions
         WHERE account_id = ${account.id}::uuid
@@ -487,7 +628,6 @@ export async function changeCustomerPassword(
   }
 }
 
-
 export async function resetCustomerPasswordWithToken(
   databaseUrl: string,
   request: Request,
@@ -520,6 +660,7 @@ export async function resetCustomerPasswordWithToken(
 
   try {
     const sql = neon(databaseUrl)
+
     const rows = await sql`
       WITH claimed AS (
         UPDATE customer_password_resets reset
@@ -532,6 +673,17 @@ export async function resetCustomerPasswordWithToken(
           AND account.active = true
         RETURNING reset.account_id
       ),
+      linked_admin AS (
+        SELECT admin.id
+        FROM claimed
+        JOIN customer_accounts account
+          ON account.id = claimed.account_id
+        JOIN admin_accounts admin
+          ON lower(admin.email) = lower(account.email)
+        WHERE admin.active = true
+          AND admin.password_hash = account.password_hash
+        LIMIT 1
+      ),
       updated AS (
         UPDATE customer_accounts account
         SET
@@ -539,7 +691,20 @@ export async function resetCustomerPasswordWithToken(
           updated_at = now()
         FROM claimed
         WHERE account.id = claimed.account_id
-        RETURNING account.id, account.email, account.name, account.phone
+        RETURNING
+          account.id,
+          account.email,
+          account.name,
+          account.phone
+      ),
+      updated_admin AS (
+        UPDATE admin_accounts admin
+        SET
+          password_hash = ${passwordHash},
+          updated_at = now()
+        FROM linked_admin
+        WHERE admin.id = linked_admin.id
+        RETURNING admin.id
       ),
       deleted_sessions AS (
         DELETE FROM customer_sessions session
@@ -566,15 +731,20 @@ export async function resetCustomerPasswordWithToken(
         updated.id::text,
         updated.email,
         updated.name,
-        updated.phone
+        updated.phone,
+        EXISTS (SELECT 1 FROM updated_admin) AS is_admin
       FROM updated
-      JOIN inserted_session ON inserted_session.account_id = updated.id
+      JOIN inserted_session
+        ON inserted_session.account_id = updated.id
       LIMIT 1
     `
 
     if (rows.length === 0) {
       return Response.json(
-        { error: 'Este enlace de recuperación no es válido, ya fue usado o venció.' },
+        {
+          error:
+            'Este enlace de recuperación no es válido, ya fue usado o venció.',
+        },
         { status: 410, headers: { 'Cache-Control': 'no-store' } },
       )
     }
@@ -584,6 +754,7 @@ export async function resetCustomerPasswordWithToken(
       email: String(rows[0].email),
       name: String(rows[0].name),
       phone: String(rows[0].phone),
+      isAdmin: Boolean(rows[0].is_admin),
     }
 
     return Response.json(
@@ -597,12 +768,14 @@ export async function resetCustomerPasswordWithToken(
     )
   } catch {
     return Response.json(
-      { error: 'No pudimos restablecer la contraseña. Pedí un enlace nuevo.' },
+      {
+        error:
+          'No pudimos restablecer la contraseña. Pedí un enlace nuevo.',
+      },
       { status: 500, headers: { 'Cache-Control': 'no-store' } },
     )
   }
 }
-
 
 export async function claimHistoricalOrder(
   databaseUrl: string,
