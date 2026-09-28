@@ -54,7 +54,7 @@ export default function AdminApp() {
 
   const [createPricingMode, setCreatePricingMode] =
     useState<'fixed' | 'from' | 'quote'>('fixed')
-  const [createImage, setCreateImage] = useState<ImageState | null>(null)
+  const [createImages, setCreateImages] = useState<ImageState[]>([])
   const [createImageBusy, setCreateImageBusy] = useState(false)
 
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null)
@@ -177,28 +177,81 @@ export default function AdminApp() {
     event: ChangeEvent<HTMLInputElement>,
     target: 'create' | 'edit',
   ) {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const files = Array.from(event.target.files ?? [])
+    if (files.length === 0) return
 
-    const setImageBusy = target === 'create' ? setCreateImageBusy : setEditImageBusy
+    const setImageBusy =
+      target === 'create' ? setCreateImageBusy : setEditImageBusy
+
     setImageBusy(true)
     setMessage('')
 
     try {
-      const result = await compressAdminImage(file)
-      const nextImage = {
-        dataUrl: result.dataUrl,
-        label: `${result.width}×${result.height} · ${formatBytes(result.outputBytes)}`,
-      }
-
       if (target === 'create') {
-        setCreateImage(nextImage)
+        const remaining = Math.max(0, 6 - createImages.length)
+        const selected = files.slice(0, remaining)
+
+        if (remaining === 0) {
+          setMessage('La galería admite hasta 6 imágenes.')
+          return
+        }
+
+        const prepared: ImageState[] = []
+        let failed = 0
+
+        for (const file of selected) {
+          try {
+            const result = await compressAdminImage(file, {
+              maxOutputBytes: 280_000,
+              maxDimension: 1100,
+            })
+
+            prepared.push({
+              dataUrl: result.dataUrl,
+              label:
+                `${result.width}×${result.height} · ${formatBytes(
+                  result.outputBytes,
+                )}`,
+            })
+          } catch {
+            failed += 1
+          }
+        }
+
+        setCreateImages((current) => [...current, ...prepared].slice(0, 6))
+
+        const ignored = Math.max(0, files.length - selected.length)
+
+        if (failed > 0 || ignored > 0) {
+          const parts = []
+          if (failed > 0) parts.push(`${failed} no se pudieron procesar`)
+          if (ignored > 0) {
+            parts.push(
+              `${ignored} se omitieron porque el límite es de 6 imágenes`,
+            )
+          }
+          setMessage(`Imágenes preparadas. ${parts.join(' y ')}.`)
+        }
       } else {
+        const file = files[0]
+        const result = await compressAdminImage(file)
+        const nextImage = {
+          dataUrl: result.dataUrl,
+          label:
+            `${result.width}×${result.height} · ${formatBytes(
+              result.outputBytes,
+            )}`,
+        }
+
         setEditImage(nextImage)
         setEditImageAction('replace')
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo procesar la imagen.')
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo procesar la imagen.',
+      )
     } finally {
       setImageBusy(false)
       event.target.value = ''
@@ -419,15 +472,18 @@ export default function AdminApp() {
     }
   }
 
-  async function handleAddProduct(event: FormEvent<HTMLFormElement>) {
+  async function handleAddProduct(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault()
     setBusy(true)
     setMessage('')
 
     const formElement = event.currentTarget
     const form = new FormData(formElement)
+    const productName = String(form.get('name') ?? '').trim()
     const pastedImage = String(form.get('imageUrl') ?? '').trim()
-    const imageUrl = createImage?.dataUrl || pastedImage || null
+    const imageUrl = createImages[0]?.dataUrl || pastedImage || null
 
     try {
       const response = await adminRequest('/api/admin/products', {
@@ -435,25 +491,82 @@ export default function AdminApp() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryId: form.get('categoryId'),
-          name: form.get('name'),
+          name: productName,
           shortDescription: form.get('shortDescription'),
           kind: form.get('kind'),
           pricingMode: createPricingMode,
-          basePrice: createPricingMode === 'quote' ? null : form.get('basePrice'),
+          basePrice:
+            createPricingMode === 'quote' ? null : form.get('basePrice'),
           imageUrl,
-          customizationAllowed: form.get('customizationAllowed') === 'on',
+          customizationAllowed:
+            form.get('customizationAllowed') === 'on',
           featured: form.get('featured') === 'on',
         }),
       })
 
       if (!response.ok) throw new Error(await responseMessage(response))
 
+      const data = (await response.json()) as { id?: string }
+      const productId = data.id?.trim() ?? ''
+
+      if (!productId) {
+        throw new Error(
+          'El producto se creó, pero no pudimos recuperar su identificador.',
+        )
+      }
+
+      let extraUploaded = 0
+      let extraFailed = 0
+
+      for (const image of createImages.slice(1)) {
+        try {
+          const imageResponse = await adminRequest(
+            '/api/admin/product-images',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                productId,
+                imageUrl: image.dataUrl,
+                altText: productName,
+              }),
+            },
+          )
+
+          if (!imageResponse.ok) {
+            extraFailed += 1
+            continue
+          }
+
+          extraUploaded += 1
+        } catch {
+          extraFailed += 1
+        }
+      }
+
       formElement.reset()
       setCreatePricingMode('fixed')
-      setCreateImage(null)
-      await refreshCatalogAfterMutation('Producto agregado al catálogo.')
+      setCreateImages([])
+
+      await loadCatalog()
+
+      if (extraFailed > 0) {
+        setMessage(
+          `Producto creado. ${extraUploaded} imágenes de muestra cargadas y ${extraFailed} no se pudieron subir; podés agregarlas desde Editar → Galería.`,
+        )
+      } else if (createImages.length > 1) {
+        setMessage(
+          `Producto agregado al catálogo con ${createImages.length} imágenes.`,
+        )
+      } else {
+        setMessage('Producto agregado al catálogo.')
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo crear el producto.')
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo crear el producto.',
+      )
     } finally {
       setBusy(false)
     }
@@ -886,40 +999,95 @@ export default function AdminApp() {
                 </label>
 
                 <div className="admin-span-2 admin-image-field">
-                  <span className="admin-field-label">Imagen</span>
+                  <span className="admin-field-label">
+                    Imágenes del producto
+                  </span>
 
                   <label className="admin-file-picker">
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
-                      onChange={(event) => void compressSelectedImage(event, 'create')}
-                      disabled={createImageBusy}
+                      multiple
+                      onChange={(event) =>
+                        void compressSelectedImage(event, 'create')
+                      }
+                      disabled={
+                        createImageBusy || createImages.length >= 6
+                      }
                     />
-                    <span>{createImageBusy ? 'Procesando…' : 'Elegir foto del dispositivo'}</span>
+                    <span>
+                      {createImageBusy
+                        ? 'Procesando…'
+                        : createImages.length >= 6
+                          ? 'Límite de 6 imágenes alcanzado'
+                          : 'Elegir una o varias fotos'}
+                    </span>
                   </label>
 
-                  <span className="admin-image-or">o</span>
+                  <small>
+                    Podés cargar hasta 6 imágenes. La primera será la
+                    portada del catálogo y las demás aparecerán como galería.
+                  </small>
+
+                  <span className="admin-image-or">
+                    {createImages.length > 0 ? 'Galería preparada' : 'o'}
+                  </span>
 
                   <label>
-                    URL HTTPS opcional
-                    <input name="imageUrl" placeholder="https://..." disabled={Boolean(createImage)} />
+                    URL HTTPS opcional para la portada
+                    <input
+                      name="imageUrl"
+                      placeholder="https://..."
+                      disabled={createImages.length > 0}
+                    />
                   </label>
 
-                  {createImage && (
-                    <div className="admin-image-preview">
-                      <img src={createImage.dataUrl} alt="Vista previa" />
-                      <div>
-                        <strong>Foto optimizada</strong>
-                        <small>{createImage.label}</small>
-                        <button type="button" onClick={() => setCreateImage(null)}>
-                          Quitar foto
-                        </button>
-                      </div>
+                  {createImages.length > 0 && (
+                    <div className="admin-gallery-grid">
+                      {createImages.map((image, index) => (
+                        <article
+                          className="admin-gallery-card"
+                          key={`${image.dataUrl.slice(-32)}-${index}`}
+                        >
+                          <div className="admin-gallery-preview">
+                            <img
+                              src={image.dataUrl}
+                              alt={`Vista previa ${index + 1}`}
+                            />
+                            <span>
+                              {index === 0
+                                ? 'Portada'
+                                : `Muestra ${index + 1}`}
+                            </span>
+                          </div>
+
+                          <div className="admin-gallery-card-actions">
+                            <small>{image.label}</small>
+                            <button
+                              type="button"
+                              className="admin-danger"
+                              onClick={() =>
+                                setCreateImages((current) =>
+                                  current.filter(
+                                    (_, imageIndex) =>
+                                      imageIndex !== index,
+                                  ),
+                                )
+                              }
+                              disabled={createImageBusy || busy}
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        </article>
+                      ))}
                     </div>
                   )}
 
                   <small>
-                    La foto se reduce automáticamente a WebP antes de enviarse.
+                    Las fotos se optimizan automáticamente antes de enviarse.
+                    Después también podés cambiar portada y orden desde
+                    Editar → Galería.
                   </small>
                 </div>
 
