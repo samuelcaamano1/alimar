@@ -11082,3 +11082,134 @@
     box-sizing: border-box;
   }
 }
+
+/* ALIMAR UI POLISH 1UI.14 - QUICK BUDGET STEP 2 ALIGNMENT */
+
+/* Material cards: keep both columns on the same visual rhythm. */
+.admin-budget-step .admin-budget-card-grid {
+  align-items: stretch;
+}
+
+.admin-budget-step .admin-budget-cost-card {
+  grid-template-columns: 30px minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  align-content: start;
+  align-items: start;
+}
+
+.admin-budget-step .admin-budget-cost-card > .admin-budget-card-number {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+}
+
+.admin-budget-step
+  .admin-budget-cost-card
+  > div:not(.admin-budget-fields-2):not(.admin-budget-auto) {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 42px;
+  align-content: start;
+  align-self: start;
+}
+
+.admin-budget-step .admin-budget-cost-card > label,
+.admin-budget-step .admin-budget-cost-card > .admin-budget-fields-2,
+.admin-budget-step .admin-budget-cost-card > .admin-budget-auto,
+.admin-budget-step .admin-budget-cost-card > .admin-secondary {
+  grid-column: 1 / -1;
+  align-self: start;
+  margin: 0;
+}
+
+/* Labels and controls use an explicit rhythm instead of stretching in grid rows. */
+.admin-budget-step label {
+  align-content: start;
+  align-self: start;
+}
+
+.admin-budget-step label > input:not([type='checkbox']),
+.admin-budget-step label > select,
+.admin-budget-price-controls input,
+.admin-budget-price-controls select {
+  height: 46px;
+  min-height: 46px;
+  max-height: 46px;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: normal;
+}
+
+.admin-budget-step .admin-budget-cost-card > label {
+  margin-top: 2px;
+}
+
+/* Two-column areas such as Persona / Horas line up by label and control. */
+.admin-budget-step .admin-budget-fields-2 {
+  align-items: start;
+}
+
+.admin-budget-step .admin-budget-fields-2 > label {
+  min-width: 0;
+  grid-template-rows: max-content 46px max-content;
+  align-content: start;
+}
+
+.admin-budget-step .admin-budget-fields-2 > label > small {
+  margin-top: 0;
+}
+
+/* Worker card follows the same baseline as material cards. */
+.admin-budget-step .admin-budget-worker {
+  align-content: start;
+  align-items: start;
+}
+
+.admin-budget-step .admin-budget-worker-copy {
+  min-height: 42px;
+  align-items: start;
+}
+
+.admin-budget-step .admin-budget-worker-copy > div {
+  min-width: 0;
+  align-content: start;
+}
+
+/* Keep calculated values compact and vertically centered. */
+.admin-budget-step .admin-budget-auto {
+  min-height: 40px;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+/* Percent rule at the bottom gets a clean shared baseline. */
+.admin-budget-step .admin-budget-percent-rule {
+  align-items: center;
+}
+
+.admin-budget-step .admin-budget-percent-rule > div {
+  min-height: 54px;
+  box-sizing: border-box;
+  align-content: center;
+}
+
+/* Long resource names wrap inside controls/cards rather than pushing layout. */
+.admin-budget-step .admin-budget-cost-card strong,
+.admin-budget-step .admin-budget-worker strong,
+.admin-budget-step label,
+.admin-budget-step small {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 880px) {
+  .admin-budget-step .admin-budget-cost-card {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-budget-step .admin-budget-fields-2 > label {
+    grid-template-rows: max-content 46px max-content;
+  }
+}
