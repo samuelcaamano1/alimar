@@ -74,6 +74,8 @@ export function quoteJobTypeLabel(value: string) {
       return 'Impresión 3D'
     case 'manual':
       return 'Manualidades'
+    case 'combined':
+      return 'Proyecto combinado'
     default:
       return 'Otro trabajo'
   }

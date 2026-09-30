@@ -54,6 +54,7 @@ import {
   getQuoteFollowUpCounts,
 } from './admin/costs/selectors'
 import { calculateGuidedCost } from './admin/costs/calculation'
+import CombinedProjectCalculator from './CombinedProjectCalculator'
 
 type AdminCostCalculatorProps = {
   quoteSource?: CustomRequest | null
@@ -102,6 +103,7 @@ export default function AdminCostCalculator({
   const [quoteNotes, setQuoteNotes] = useState('')
 
   const [quoteOpen, setQuoteOpen] = useState(false)
+  const [combinedOpen, setCombinedOpen] = useState(false)
   const [wizardStep, setWizardStep] = useState<WizardStep>(1)
   const [jobType, setJobType] = useState<GuidedJobType>('paper-print')
   const [quantity, setQuantity] = useState('1')
@@ -995,7 +997,62 @@ export default function AdminCostCalculator({
                   <small>{manualMaterialResources.length} materiales disponibles</small>
                   <b>Calcular →</b>
                 </button>
+
+                <button
+                  className="admin-budget-job admin-budget-job-combined"
+                  type="button"
+                  onClick={() => setCombinedOpen(true)}
+                >
+                  <span>04</span>
+                  <strong>🧩 Proyecto combinado</strong>
+                  <p>Papel + 3D + pintura + otros insumos dentro del mismo presupuesto.</p>
+                  <small>Sumá todas las partes que necesites</small>
+                  <b>Combinar →</b>
+                </button>
               </div>
+
+              {combinedOpen && (
+                <CombinedProjectCalculator
+                  resources={resources}
+                  sourceRequestId={quoteSource?.id ?? null}
+                  initialTitle={
+                    quoteSource
+                      ? `${quoteSource.public_code} · ${quoteSource.customer_name}`
+                      : ''
+                  }
+                  initialQuantity={
+                    quoteSource?.quantity ? String(quoteSource.quantity) : ''
+                  }
+                  initialCustomerName={quoteSource?.customer_name ?? ''}
+                  initialCustomerPhone={quoteSource?.customer_phone ?? ''}
+                  initialNotes={
+                    quoteSource ? customRequestNotes(quoteSource) : ''
+                  }
+                  onClose={() => setCombinedOpen(false)}
+                  onSaved={(saved) => {
+                    setQuotes((current) => [
+                      saved,
+                      ...current.filter((quote) => quote.id !== saved.id),
+                    ])
+                    setQuoteState('ready')
+                    setSelectedQuote(saved)
+                    setCombinedOpen(false)
+                    setView('quotes')
+
+                    if (quoteSource) {
+                      const sourceCode = quoteSource.public_code
+                      onQuoteSourceConsumed?.()
+                      setMessage(
+                        `${saved.public_code} guardado y vinculado a ${sourceCode}.`,
+                      )
+                    } else {
+                      setMessage(
+                        `${saved.public_code} guardado correctamente.`,
+                      )
+                    }
+                  }}
+                />
+              )}
 
               <div className="admin-budget-rule">
                 <strong>🤖 Automático</strong>

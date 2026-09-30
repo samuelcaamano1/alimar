@@ -27,6 +27,12 @@ import {
   listCostResources,
   updateCostResource,
 } from '../_lib/cost-resources.js'
+import {
+  createQuoteTemplate,
+  deleteQuoteTemplate,
+  listQuoteTemplates,
+  updateQuoteTemplate,
+} from '../_lib/quote-templates.js'
 
 type CategoryRow = {
   id: string
@@ -69,6 +75,10 @@ export async function GET(request: Request) {
 
   if (action === 'quotes') {
     return listAdminQuotes(databaseUrl)
+  }
+
+  if (action === 'quote-templates') {
+    return listQuoteTemplates(databaseUrl)
   }
 
   if (action === 'dashboard') {
@@ -167,6 +177,7 @@ async function adminMutationContext(request: Request) {
   if (
     action !== 'cost-resources' &&
     action !== 'quotes' &&
+    action !== 'quote-templates' &&
     action !== 'custom-examples' &&
     action !== 'customer-account-status' &&
     action !== 'customer-password-reset' &&
@@ -220,6 +231,10 @@ export async function POST(request: Request) {
     return createAdminQuote(context.databaseUrl, body)
   }
 
+  if (context.action === 'quote-templates') {
+    return createQuoteTemplate(context.databaseUrl, body)
+  }
+
   if (context.action === 'custom-examples') {
     return createAdminCustomRequestExample(context.databaseUrl, body)
   }
@@ -266,6 +281,14 @@ export async function PATCH(request: Request) {
     )
   }
 
+  if (context.action === 'quote-templates') {
+    return updateQuoteTemplate(
+      context.databaseUrl,
+      context.requestUrl.searchParams.get('id') ?? '',
+      body,
+    )
+  }
+
   if (context.action === 'custom-examples') {
     return updateAdminCustomRequestExample(
       context.databaseUrl,
@@ -293,6 +316,13 @@ export async function DELETE(request: Request) {
     return Response.json(
       { error: 'Invalid method' },
       { status: 405, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  if (context.action === 'quote-templates') {
+    return deleteQuoteTemplate(
+      context.databaseUrl,
+      context.requestUrl.searchParams.get('id') ?? '',
     )
   }
 

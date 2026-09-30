@@ -31,6 +31,9 @@ try {
   const calculation = await server.ssrLoadModule(
     '/src/admin/costs/calculation.ts',
   )
+  const combined = await server.ssrLoadModule(
+    '/src/admin/costs/combined.ts',
+  )
   const orderSelectors = await server.ssrLoadModule(
     '/src/admin/orders/selectors.ts',
   )
@@ -127,6 +130,51 @@ try {
     assert.equal(result.realCost, 26)
     assert.equal(result.suggestedPerUnit, 20)
     assert.equal(result.suggestedTotal, 40)
+  })
+
+  test('proyecto combinado suma papel, 3D, insumo y trabajo una sola vez', () => {
+    const result = combined.calculateCombinedCost({
+      resources: [
+        { id: 'paper', name: 'Papel', unit: 'sheet', effective_unit_cost: '10' },
+        { id: 'ink', name: 'Tinta', unit: 'print', effective_unit_cost: '2' },
+        { id: 'pla', name: 'PLA', unit: 'g', effective_unit_cost: '3' },
+        { id: 'paint', name: 'Acrilico', unit: 'ml', effective_unit_cost: '4' },
+        { id: 'worker', name: 'Samu', unit: 'hour', effective_unit_cost: '100' },
+      ],
+      quantity: '2',
+      profitPercent: '0',
+      roundingStep: '1',
+      components: [
+        {
+          id: 'a',
+          kind: 'paper',
+          paperResourceId: 'paper',
+          inkResourceId: 'ink',
+          sheetsPerUnit: '1',
+          printSides: 'single',
+        },
+        {
+          id: 'b',
+          kind: '3d',
+          filamentResourceId: 'pla',
+          piecesPerUnit: '1',
+          gramsPerPiece: '5',
+        },
+        {
+          id: 'c',
+          kind: 'material',
+          resourceId: 'paint',
+          usagePerUnit: '2',
+        },
+      ],
+      workerResourceId: 'worker',
+      projectHours: '1',
+    })
+
+    assert.equal(result.directCost, 170)
+    assert.equal(result.lightCost, 17)
+    assert.equal(result.wearCost, 34)
+    assert.equal(result.realCost, 221)
   })
 
   test('resumen de pedidos separa abiertos, listos y pagos', () => {

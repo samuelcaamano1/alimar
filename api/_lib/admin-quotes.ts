@@ -3,7 +3,7 @@ import { neon } from '@neondatabase/serverless'
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const STATUSES = new Set(['draft', 'sent', 'accepted', 'rejected', 'expired'])
-const JOB_TYPES = new Set(['paper-print', '3d-print', 'manual'])
+const JOB_TYPES = new Set(['paper-print', '3d-print', 'manual', 'combined'])
 
 function text(value: unknown, max: number) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''

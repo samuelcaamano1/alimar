@@ -14,7 +14,7 @@ export type QuoteSnapshotCost = {
 
 export type QuoteSnapshot = {
   version: 1
-  jobType: 'paper-print' | '3d-print' | 'manual'
+  jobType: 'paper-print' | '3d-print' | 'manual' | 'combined'
   jobLabel: string
   quantity: number
   quantityLabel: string
