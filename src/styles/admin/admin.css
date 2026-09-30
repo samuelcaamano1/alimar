@@ -11533,3 +11533,210 @@
     display: none;
   }
 }
+
+
+/* ALIMAR UI POLISH 1UI.15 - QUOTE STATUS MENU */
+
+.admin-saved-quote-status,
+.admin-quote-detail-status {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+}
+
+.admin-quote-status-label {
+  color: var(--admin-muted);
+  font-size: .56rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.admin-quote-status-menu {
+  position: relative;
+  min-width: 142px;
+}
+
+.admin-quote-status-menu > summary {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid rgba(12, 16, 20, .12);
+  border-radius: 999px;
+  color: var(--admin-ink);
+  background: rgba(255, 253, 248, .88);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.admin-quote-status-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-quote-status-menu > summary:hover {
+  border-color: rgba(63, 120, 138, .34);
+  box-shadow: 0 5px 14px rgba(12, 16, 20, .06);
+}
+
+.admin-quote-status-menu[open] > summary {
+  border-color: var(--admin-blue-dark);
+  box-shadow: 0 0 0 3px rgba(100, 175, 198, .11);
+}
+
+.admin-quote-status-menu > summary strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: .68rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-quote-status-chevron {
+  color: var(--admin-muted);
+  font-size: .65rem;
+  transition: transform 150ms ease;
+}
+
+.admin-quote-status-menu[open] .admin-quote-status-chevron {
+  transform: rotate(180deg);
+}
+
+.admin-quote-status-options {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 7px);
+  right: 0;
+  width: max(190px, 100%);
+  display: grid;
+  gap: 3px;
+  padding: 6px;
+  border: 1px solid rgba(12, 16, 20, .12);
+  border-radius: 14px;
+  background: #fffdf8;
+  box-shadow: 0 18px 46px rgba(12, 16, 20, .18);
+}
+
+.admin-quote-status-options button {
+  width: 100%;
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--admin-ink);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.admin-quote-status-options button:hover,
+.admin-quote-status-options button.is-active {
+  background: rgba(100, 175, 198, .11);
+}
+
+.admin-quote-status-options button strong {
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.admin-quote-status-check {
+  justify-self: end;
+  color: var(--admin-blue-dark);
+  font-weight: 950;
+}
+
+.admin-quote-status-menu[data-status='draft'] > summary {
+  background: rgba(101, 113, 119, .08);
+}
+
+.admin-quote-status-menu[data-status='sent'] > summary {
+  color: #245f73;
+  border-color: rgba(63, 120, 138, .22);
+  background: rgba(100, 175, 198, .13);
+}
+
+.admin-quote-status-menu[data-status='accepted'] > summary {
+  color: #315d3a;
+  border-color: rgba(65, 113, 74, .20);
+  background: rgba(91, 143, 101, .12);
+}
+
+.admin-quote-status-menu[data-status='rejected'] > summary {
+  color: #7a3434;
+  border-color: rgba(166, 63, 63, .20);
+  background: rgba(166, 63, 63, .09);
+}
+
+.admin-quote-status-menu[data-status='expired'] > summary {
+  color: #755727;
+  border-color: rgba(154, 112, 43, .22);
+  background: rgba(196, 153, 80, .12);
+}
+
+.admin-quote-status-options button[data-status='sent']:hover,
+.admin-quote-status-options button[data-status='sent'].is-active {
+  background: rgba(100, 175, 198, .13);
+}
+
+.admin-quote-status-options button[data-status='accepted']:hover,
+.admin-quote-status-options button[data-status='accepted'].is-active {
+  background: rgba(91, 143, 101, .12);
+}
+
+.admin-quote-status-options button[data-status='rejected']:hover,
+.admin-quote-status-options button[data-status='rejected'].is-active {
+  background: rgba(166, 63, 63, .09);
+}
+
+.admin-quote-status-options button[data-status='expired']:hover,
+.admin-quote-status-options button[data-status='expired'].is-active {
+  background: rgba(196, 153, 80, .12);
+}
+
+.admin-quote-detail-status .admin-quote-status-options {
+  left: 0;
+  right: auto;
+}
+
+@media (max-width: 900px) {
+  .admin-saved-quote-status {
+    width: 100%;
+  }
+
+  .admin-quote-status-menu {
+    width: 100%;
+  }
+
+  .admin-quote-status-options {
+    left: 0;
+    right: auto;
+    width: 100%;
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-quote-status-menu > summary {
+    min-height: 42px;
+  }
+
+  .admin-quote-status-options button {
+    min-height: 42px;
+  }
+}

@@ -60,6 +60,14 @@ type AdminCostCalculatorProps = {
   onQuoteSourceConsumed?: () => void
 }
 
+const quoteStatusIcons: Record<QuoteStatus, string> = {
+  draft: '✏️',
+  sent: '📤',
+  accepted: '✅',
+  rejected: '❌',
+  expired: '⏰',
+}
+
 export default function AdminCostCalculator({
   quoteSource = null,
   onQuoteSourceConsumed,
@@ -2144,19 +2152,51 @@ export default function AdminCostCalculator({
                   <small>Válido hasta {dateLabel(quote.valid_until)}</small>
                 </div>
 
-                <label className="admin-saved-quote-status">
-                  Estado
-                  <select
-                    value={quote.status}
-                    onChange={(event) =>
-                      void updateQuoteStatus(quote, event.target.value as QuoteStatus)
-                    }
+                <div className="admin-saved-quote-status">
+                  <span className="admin-quote-status-label">Estado</span>
+                  <details
+                    className="admin-quote-status-menu"
+                    data-status={quote.status}
                   >
-                    {quoteStatusOptions.map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </label>
+                    <summary>
+                      <span aria-hidden="true">
+                        {quoteStatusIcons[quote.status]}
+                      </span>
+                      <strong>{quoteStatusLabels[quote.status]}</strong>
+                      <span className="admin-quote-status-chevron" aria-hidden="true">
+                        ▾
+                      </span>
+                    </summary>
+
+                    <div className="admin-quote-status-options" role="menu">
+                      {quoteStatusOptions.map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          role="menuitem"
+                          data-status={value}
+                          className={value === quote.status ? 'is-active' : ''}
+                          onClick={(event) => {
+                            event.currentTarget
+                              .closest('details')
+                              ?.removeAttribute('open')
+                            void updateQuoteStatus(quote, value)
+                          }}
+                        >
+                          <span aria-hidden="true">
+                            {quoteStatusIcons[value]}
+                          </span>
+                          <strong>{label}</strong>
+                          {value === quote.status && (
+                            <span className="admin-quote-status-check" aria-hidden="true">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
+                </div>
 
                 <div className="admin-saved-quote-actions">
                   <button
@@ -2734,22 +2774,51 @@ export default function AdminCostCalculator({
             </div>
 
             <footer>
-              <label>
-                Estado
-                <select
-                  value={selectedQuote.status}
-                  onChange={(event) =>
-                    void updateQuoteStatus(
-                      selectedQuote,
-                      event.target.value as QuoteStatus,
-                    )
-                  }
+              <div className="admin-quote-detail-status">
+                <span className="admin-quote-status-label">Estado</span>
+                <details
+                  className="admin-quote-status-menu"
+                  data-status={selectedQuote.status}
                 >
-                  {quoteStatusOptions.map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </label>
+                  <summary>
+                    <span aria-hidden="true">
+                      {quoteStatusIcons[selectedQuote.status]}
+                    </span>
+                    <strong>{quoteStatusLabels[selectedQuote.status]}</strong>
+                    <span className="admin-quote-status-chevron" aria-hidden="true">
+                      ▾
+                    </span>
+                  </summary>
+
+                  <div className="admin-quote-status-options" role="menu">
+                    {quoteStatusOptions.map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="menuitem"
+                        data-status={value}
+                        className={value === selectedQuote.status ? 'is-active' : ''}
+                        onClick={(event) => {
+                          event.currentTarget
+                            .closest('details')
+                            ?.removeAttribute('open')
+                          void updateQuoteStatus(selectedQuote, value)
+                        }}
+                      >
+                        <span aria-hidden="true">
+                          {quoteStatusIcons[value]}
+                        </span>
+                        <strong>{label}</strong>
+                        {value === selectedQuote.status && (
+                          <span className="admin-quote-status-check" aria-hidden="true">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              </div>
 
               <div className="admin-quote-commercial-actions">
                 {selectedQuote.customer_phone && selectedQuote.status === 'sent' && (
