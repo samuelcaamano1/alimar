@@ -11213,3 +11213,323 @@
     grid-template-rows: max-content 46px max-content;
   }
 }
+
+
+/* ALIMAR UX 1UX.12 - GUIDED BUDGET WIZARD */
+
+.admin-budget-overlay {
+  padding: clamp(8px, 2vw, 22px);
+}
+
+.admin-budget-modal {
+  width: min(1120px, 100%);
+  max-height: calc(100dvh - clamp(16px, 4vw, 44px));
+}
+
+.admin-budget-body {
+  overscroll-behavior: contain;
+}
+
+.admin-budget-copy {
+  max-width: 760px;
+}
+
+.admin-budget-copy p {
+  max-width: 680px;
+  margin-bottom: 0;
+}
+
+.admin-budget-next-banner {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  border: 1px solid rgba(63, 120, 138, .24);
+  border-radius: 12px;
+  color: #204e5c;
+  background: rgba(100, 175, 198, .13);
+  font-size: .68rem;
+}
+
+.admin-budget-next-banner > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-budget-next-banner.is-complete {
+  color: #365a3c;
+  border-color: rgba(77, 122, 82, .2);
+  background: rgba(108, 151, 111, .1);
+}
+
+.admin-budget-guided-field,
+.admin-budget-secondary-field {
+  position: relative;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.admin-budget-guided-field {
+  padding: 9px;
+}
+
+.admin-budget-guided-field.is-next {
+  border-color: var(--admin-blue-dark);
+  background: rgba(100, 175, 198, .16);
+  box-shadow:
+    0 0 0 3px rgba(100, 175, 198, .10),
+    0 8px 22px rgba(63, 120, 138, .08);
+}
+
+.admin-budget-guided-field.is-next > span:first-child {
+  color: #245f73;
+}
+
+.admin-budget-guided-field.is-next::after {
+  content: 'Siguiente';
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--admin-blue-dark);
+  font-size: .52rem;
+  font-weight: 900;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.admin-budget-guided-field.is-complete:not(.is-next) {
+  border-color: rgba(63, 120, 138, .09);
+  background: rgba(255,255,255,.28);
+}
+
+.admin-budget-guided-field.is-complete:not(.is-next)::after {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  color: var(--admin-blue-dark);
+  font-size: .75rem;
+  font-weight: 900;
+}
+
+.admin-budget-secondary-field {
+  padding: 7px 0 0;
+}
+
+.admin-budget-auto {
+  border: 1px dashed rgba(63, 120, 138, .22);
+  background: rgba(100, 175, 198, .075);
+}
+
+.admin-budget-percent-rule {
+  border-style: dashed;
+}
+
+.admin-budget-percent-rule > div {
+  position: relative;
+}
+
+.admin-budget-percent-rule > div::after {
+  content: 'auto';
+  justify-self: start;
+  color: var(--admin-blue-dark);
+  font-size: .5rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.admin-budget-footer-hint {
+  max-width: 260px !important;
+  color: #245f73 !important;
+  font-weight: 800;
+}
+
+.admin-budget-footer .admin-primary:disabled {
+  opacity: .38;
+  filter: grayscale(.25);
+}
+
+.admin-budget-step input:not([type='checkbox']),
+.admin-budget-step select {
+  font-size: max(16px, .72rem);
+}
+
+.admin-budget-step input:not([type='checkbox']):focus,
+.admin-budget-step select:focus {
+  border-color: var(--admin-blue-dark);
+}
+
+@media (max-width: 960px) {
+  .admin-budget-modal {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+  }
+
+  .admin-budget-card-grid,
+  .admin-budget-result-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-budget-worker .admin-budget-fields-2,
+  .admin-budget-price-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-budget-step-quantity {
+    grid-template-columns: minmax(0,1fr) minmax(200px,.55fr);
+    gap: 16px;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .admin-budget-overlay {
+    padding: 0;
+  }
+
+  .admin-budget-modal {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .admin-budget-header {
+    padding: 13px 14px 9px;
+  }
+
+  .admin-budget-header h3 {
+    font-size: clamp(1.45rem, 7vw, 2rem);
+  }
+
+  .admin-budget-progress {
+    padding-inline: 14px;
+  }
+
+  .admin-budget-body {
+    padding: 8px 14px 16px;
+  }
+
+  .admin-budget-step {
+    gap: 12px;
+  }
+
+  .admin-budget-step-quantity,
+  .admin-budget-worker .admin-budget-fields-2,
+  .admin-budget-fields-2,
+  .admin-budget-price-controls,
+  .admin-budget-result-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-budget-copy h4 {
+    font-size: clamp(1.35rem, 7vw, 1.8rem);
+  }
+
+  .admin-budget-copy p,
+  .admin-budget-cost-card small,
+  .admin-budget-worker small {
+    line-height: 1.35;
+  }
+
+  .admin-budget-guided-field {
+    padding: 10px;
+  }
+
+  .admin-budget-guided-field.is-next {
+    transform: none;
+  }
+
+  .admin-budget-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .admin-budget-footer > div:first-child {
+    display: none;
+  }
+
+  .admin-budget-footer-main {
+    width: 100%;
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    gap: 8px;
+  }
+
+  .admin-budget-footer-main > span {
+    grid-column: 1 / -1;
+    max-width: none !important;
+  }
+
+  .admin-budget-footer-main > button {
+    width: 100%;
+  }
+
+  .admin-budget-footer-main > .admin-primary:last-child {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 430px) {
+  .admin-budget-header > div > span {
+    font-size: .58rem;
+  }
+
+  .admin-budget-next-banner {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+  }
+
+  .admin-budget-percent-rule {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-budget-percent-rule p {
+    grid-column: 1 / -1;
+  }
+
+  .admin-budget-footer-main {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-budget-footer-main > span {
+    grid-column: 1;
+  }
+}
+
+@media (max-height: 700px) and (min-width: 701px) {
+  .admin-budget-modal {
+    max-height: calc(100dvh - 12px);
+  }
+
+  .admin-budget-header {
+    padding-top: 10px;
+    padding-bottom: 8px;
+  }
+
+  .admin-budget-body {
+    padding-top: 2px;
+  }
+
+  .admin-budget-step {
+    gap: 10px;
+  }
+
+  .admin-budget-copy p {
+    display: none;
+  }
+}
