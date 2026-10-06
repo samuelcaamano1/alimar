@@ -18,6 +18,7 @@ export type QuoteSnapshot = {
   jobLabel: string
   quantity: number
   quantityLabel: string
+  customerDetail?: string
   workerName: string
   projectHours: number
   printSides: 'single' | 'double' | null

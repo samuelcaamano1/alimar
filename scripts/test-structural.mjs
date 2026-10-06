@@ -34,6 +34,9 @@ try {
   const combined = await server.ssrLoadModule(
     '/src/admin/costs/combined.ts',
   )
+  const quoteCustomerPrint = await server.ssrLoadModule(
+    '/src/quoteCustomerPrint.ts',
+  )
   const orderSelectors = await server.ssrLoadModule(
     '/src/admin/orders/selectors.ts',
   )
@@ -175,6 +178,41 @@ try {
     assert.equal(result.lightCost, 17)
     assert.equal(result.wearCost, 34)
     assert.equal(result.realCost, 221)
+  })
+
+  test('PDF cliente nunca expone costos internos', () => {
+    const html = quoteCustomerPrint.buildQuoteCustomerPrintHtml({
+      public_code: 'PRE-999999',
+      title: 'Photocard BTS',
+      customer_name: 'Cliente',
+      valid_until: '2026-10-20',
+      created_at: '2026-10-06T12:00:00.000Z',
+      total_price: '42900',
+      quantity: 10,
+      snapshot: {
+        jobLabel: 'Proyecto combinado',
+        customerDetail: '10 photocards con marco personalizado.',
+        printSides: null,
+        workerName: 'SECRETO_RESPONSABLE_INTERNO',
+        costs: [
+          {
+            key: 'secret',
+            label: 'SECRETO_TINTA_Y_PAPEL',
+            detail: 'SECRETO_COSTO_MATERIAL',
+            total: 12345,
+          },
+        ],
+      },
+    })
+
+    assert.match(html, /10 photocards con marco personalizado/)
+    assert.match(html, /42[.\s\u00a0]?900/)
+    assert.doesNotMatch(html, /SECRETO_TINTA_Y_PAPEL/)
+    assert.doesNotMatch(html, /SECRETO_COSTO_MATERIAL/)
+    assert.doesNotMatch(html, /SECRETO_RESPONSABLE_INTERNO/)
+    assert.doesNotMatch(html, /Costo real/)
+    assert.doesNotMatch(html, /Desglose interno/)
+    assert.doesNotMatch(html, /Recargo \/ ganancia/)
   })
 
   test('resumen de pedidos separa abiertos, listos y pagos', () => {

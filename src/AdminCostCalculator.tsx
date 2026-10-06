@@ -9,6 +9,7 @@ import {
   type QuoteSnapshot,
   type QuoteStatus,
 } from './adminQuotePrint'
+import { openQuoteCustomerPrintView } from './quoteCustomerPrint'
 import {
   LIGHT_PERCENT,
   WEAR_PERCENT,
@@ -100,6 +101,7 @@ export default function AdminCostCalculator({
   const [quoteCustomer, setQuoteCustomer] = useState('')
   const [quotePhone, setQuotePhone] = useState('')
   const [quoteValidityDays, setQuoteValidityDays] = useState('7')
+  const [quoteCustomerDetail, setQuoteCustomerDetail] = useState('')
   const [quoteNotes, setQuoteNotes] = useState('')
 
   const [quoteOpen, setQuoteOpen] = useState(false)
@@ -212,6 +214,7 @@ export default function AdminCostCalculator({
     setQuoteCustomer(quoteSource.customer_name)
     setQuotePhone(quoteSource.customer_phone)
     setQuoteValidityDays('7')
+    setQuoteCustomerDetail(customRequestNotes(quoteSource))
     setQuoteNotes(customRequestNotes(quoteSource))
     setMessage(`Solicitud ${quoteSource.public_code} lista para presupuestar.`)
   }, [quoteSource])
@@ -473,6 +476,7 @@ export default function AdminCostCalculator({
       jobLabel: jobTitle,
       quantity: guidedCalculation.quantity,
       quantityLabel,
+      customerDetail: quoteCustomerDetail.trim(),
       workerName: worker?.name ?? '',
       projectHours: Math.max(0, number(projectHours)),
       printSides: jobType === 'paper-print' ? printSides : null,
@@ -499,12 +503,16 @@ export default function AdminCostCalculator({
       setQuoteCustomer(quoteSource.customer_name)
       setQuotePhone(quoteSource.customer_phone)
       setQuoteValidityDays('7')
+      setQuoteCustomerDetail((current) =>
+        current.trim() || customRequestNotes(quoteSource),
+      )
       setQuoteNotes((current) => current.trim() || customRequestNotes(quoteSource))
     } else {
       setQuoteTitle(jobTitle)
       setQuoteCustomer('')
       setQuotePhone('')
       setQuoteValidityDays('7')
+      setQuoteCustomerDetail('')
       setQuoteNotes('')
     }
 
@@ -580,8 +588,13 @@ export default function AdminCostCalculator({
         setMessage(`${saved.public_code} guardado correctamente.`)
       }
 
-      if (printAfter && !openQuotePrintView(saved, previewWindow)) {
-        setMessage(`${saved.public_code} guardado. El navegador bloqueó la vista de impresión.`)
+      if (
+        printAfter &&
+        !openQuoteCustomerPrintView(saved, previewWindow)
+      ) {
+        setMessage(
+          `${saved.public_code} guardado. El navegador bloqueó el PDF cliente.`,
+        )
       }
     } catch (error) {
       if (previewWindow && !previewWindow.closed) previewWindow.close()
@@ -2293,15 +2306,27 @@ export default function AdminCostCalculator({
                   </button>
 
                   <button
+                    className="admin-primary"
+                    type="button"
+                    onClick={() => {
+                      if (!openQuoteCustomerPrintView(quote)) {
+                        setMessage('El navegador bloqueó el PDF cliente.')
+                      }
+                    }}
+                  >
+                    PDF cliente
+                  </button>
+
+                  <button
                     className="admin-secondary"
                     type="button"
                     onClick={() => {
                       if (!openQuotePrintView(quote)) {
-                        setMessage('El navegador bloqueó la vista de impresión.')
+                        setMessage('El navegador bloqueó el PDF interno.')
                       }
                     }}
                   >
-                    PDF
+                    PDF interno
                   </button>
 
                   {quote.order_code ? (
@@ -2696,14 +2721,33 @@ export default function AdminCostCalculator({
               </div>
 
               <label className="admin-quote-save-span-2">
-                Notas
+                Detalle para cliente
+                <textarea
+                  value={quoteCustomerDetail}
+                  onChange={(event) =>
+                    setQuoteCustomerDetail(event.target.value)
+                  }
+                  rows={3}
+                  maxLength={3000}
+                  placeholder="Ej. 33 etiquetas personalizadas, diseño elegido y condiciones acordadas."
+                />
+                <small>
+                  Este texto sí aparece en el PDF que recibe el cliente.
+                </small>
+              </label>
+
+              <label className="admin-quote-save-span-2">
+                Notas internas
                 <textarea
                   value={quoteNotes}
                   onChange={(event) => setQuoteNotes(event.target.value)}
                   rows={3}
                   maxLength={3000}
-                  placeholder="Detalles internos, condiciones, entrega, etc."
+                  placeholder="Solo para Alimar: producción, materiales, recordatorios internos, etc."
                 />
+                <small>
+                  Estas notas no aparecen en el PDF cliente.
+                </small>
               </label>
             </div>
 
@@ -2732,7 +2776,7 @@ export default function AdminCostCalculator({
                   onClick={() => void saveCurrentQuote(true)}
                   disabled={quoteSaving}
                 >
-                  Guardar e imprimir PDF
+                  Guardar + PDF cliente
                 </button>
               </div>
             </footer>
@@ -2907,15 +2951,27 @@ export default function AdminCostCalculator({
                 </button>
 
                 <button
+                  className="admin-primary"
+                  type="button"
+                  onClick={() => {
+                    if (!openQuoteCustomerPrintView(selectedQuote)) {
+                      setMessage('El navegador bloqueó el PDF cliente.')
+                    }
+                  }}
+                >
+                  PDF cliente
+                </button>
+
+                <button
                   className="admin-secondary"
                   type="button"
                   onClick={() => {
                     if (!openQuotePrintView(selectedQuote)) {
-                      setMessage('El navegador bloqueó la vista de impresión.')
+                      setMessage('El navegador bloqueó el PDF interno.')
                     }
                   }}
                 >
-                  Imprimir / Guardar PDF
+                  PDF interno
                 </button>
 
                 {selectedQuote.order_code ? (

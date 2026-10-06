@@ -22,10 +22,10 @@ import { money, number } from './admin/costs/utils'
 import { adminRequest, responseMessage } from './admin/shared/http'
 import { useModalLifecycle } from './admin/shared/useModalLifecycle'
 import {
-  openQuotePrintView,
   type AdminQuote,
   type QuoteSnapshot,
 } from './adminQuotePrint'
+import { openQuoteCustomerPrintView } from './quoteCustomerPrint'
 
 type Props = {
   resources: CostResource[]
@@ -329,6 +329,7 @@ export default function CombinedProjectCalculator({
         jobLabel: 'Proyecto combinado',
         quantity: calculation.quantity,
         quantityLabel: 'Cantidad de unidades',
+        customerDetail: notes.trim(),
         workerName: worker?.name ?? '',
         projectHours: Math.max(0, number(projectHours)),
         printSides: null,
@@ -373,8 +374,11 @@ export default function CombinedProjectCalculator({
 
       const data = (await response.json()) as { quote: AdminQuote }
 
-      if (printAfter && !openQuotePrintView(data.quote, previewWindow)) {
-        setMessage('Guardado, pero el navegador bloqueó la vista de impresión.')
+      if (
+        printAfter &&
+        !openQuoteCustomerPrintView(data.quote, previewWindow)
+      ) {
+        setMessage('Guardado, pero el navegador bloqueó el PDF cliente.')
       }
 
       onSaved(data.quote)
@@ -989,7 +993,7 @@ export default function CombinedProjectCalculator({
                 </label>
 
                 <label className="admin-combined-notes">
-                  Notas
+                  Detalle para cliente
                   <textarea
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
@@ -1054,7 +1058,7 @@ export default function CombinedProjectCalculator({
                   disabled={saving}
                   onClick={() => void saveQuote(true)}
                 >
-                  Guardar + PDF
+                  Guardar + PDF cliente
                 </button>
                 <button
                   className="admin-primary"
