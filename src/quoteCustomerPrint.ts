@@ -1,4 +1,3 @@
-import { alimarLogoDataUrl } from './brand'
 import type { AdminQuote } from './adminQuotePrint'
 
 function escapeHtml(value: string) {
@@ -140,25 +139,26 @@ export function buildQuoteCustomerPrintHtml(quote: AdminQuote) {
       border-bottom: 1px solid var(--line);
     }
 
-    /* ALIMAR 1PDF.13 - TRANSPARENT LOGO CROP */
-    .brand-logo-crop {
-      width: 24mm;
-      height: 24mm;
-      flex: 0 0 24mm;
+    /* ALIMAR 1PDF.14 - TEXT BRAND HEADER */
+    .brand-wordmark {
       display: grid;
-      place-items: center;
-      overflow: hidden;
-      border-radius: 50%;
-      background: transparent;
+      gap: 2px;
+      min-width: 0;
     }
 
-    .brand-logo {
-      width: 128%;
-      max-width: none;
-      height: 128%;
-      display: block;
-      object-fit: cover;
-      object-position: center;
+    .brand-wordmark strong {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 27px;
+      line-height: 1;
+      letter-spacing: -.025em;
+    }
+
+    .brand-wordmark span {
+      color: var(--blue-dark);
+      font-size: 8px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
     }
 
     .doc-meta {
@@ -356,15 +356,12 @@ export function buildQuoteCustomerPrintHtml(quote: AdminQuote) {
         box-shadow: none !important;
       }
 
-      .brand-logo-crop {
-        width: 20mm;
-        height: 20mm;
-        flex-basis: 20mm;
+      .brand-wordmark strong {
+        font-size: 23px;
       }
 
-      .brand-logo {
-        width: 128%;
-        height: 128%;
+      .brand-wordmark span {
+        font-size: 7px;
       }
 
       .hero { padding: 17px 0 12px; }
@@ -434,13 +431,10 @@ export function buildQuoteCustomerPrintHtml(quote: AdminQuote) {
 
   <main class="page">
     <header class="brand">
-      <span class="brand-logo-crop" aria-label="Alimar">
-        <img
-          class="brand-logo"
-          src="${alimarLogoDataUrl}"
-          alt="Alimar"
-        />
-      </span>
+      <div class="brand-wordmark" aria-label="Alimar">
+        <strong>Alimar</strong>
+        <span>Ideas que se vuelven recuerdos</span>
+      </div>
 
       <div class="doc-meta">
         <b>Presupuesto</b>
