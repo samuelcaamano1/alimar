@@ -140,13 +140,25 @@ export function buildQuoteCustomerPrintHtml(quote: AdminQuote) {
       border-bottom: 1px solid var(--line);
     }
 
-    .brand-logo {
-      width: 46mm;
-      max-width: 54%;
+    /* ALIMAR 1PDF.13 - TRANSPARENT LOGO CROP */
+    .brand-logo-crop {
+      width: 24mm;
       height: 24mm;
-      object-fit: contain;
-      object-position: left center;
+      flex: 0 0 24mm;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 50%;
+      background: transparent;
+    }
+
+    .brand-logo {
+      width: 128%;
+      max-width: none;
+      height: 128%;
       display: block;
+      object-fit: cover;
+      object-position: center;
     }
 
     .doc-meta {
@@ -344,9 +356,15 @@ export function buildQuoteCustomerPrintHtml(quote: AdminQuote) {
         box-shadow: none !important;
       }
 
-      .brand-logo {
-        width: 42mm;
+      .brand-logo-crop {
+        width: 20mm;
         height: 20mm;
+        flex-basis: 20mm;
+      }
+
+      .brand-logo {
+        width: 128%;
+        height: 128%;
       }
 
       .hero { padding: 17px 0 12px; }
@@ -416,11 +434,13 @@ export function buildQuoteCustomerPrintHtml(quote: AdminQuote) {
 
   <main class="page">
     <header class="brand">
-      <img
-        class="brand-logo"
-        src="${alimarLogoDataUrl}"
-        alt="Alimar"
-      />
+      <span class="brand-logo-crop" aria-label="Alimar">
+        <img
+          class="brand-logo"
+          src="${alimarLogoDataUrl}"
+          alt="Alimar"
+        />
+      </span>
 
       <div class="doc-meta">
         <b>Presupuesto</b>
