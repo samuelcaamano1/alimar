@@ -4901,3 +4901,40 @@
     object-position: center;
   }
 }
+
+/* ALIMAR UI POLISH 1UI.17 - PRODUCT MODAL IMAGE FIT + CLEAN TITLE */
+
+.product-dialog-image,
+.product-dialog-gallery .product-dialog-image {
+  background: #f3eee3;
+}
+
+.product-dialog-image img,
+.product-dialog-gallery .product-dialog-image img {
+  object-fit: contain !important;
+  object-position: center !important;
+}
+
+.product-dialog-content h3 {
+  max-width: 100%;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  hyphens: none !important;
+  text-wrap: balance;
+  font-size: clamp(2rem, 3.2vw, 3.1rem);
+  line-height: 1.02;
+}
+
+@media (min-width: 701px) {
+  .product-dialog-content {
+    padding: clamp(28px, 4vw, 48px);
+  }
+}
+
+@media (max-width: 700px) {
+  .product-dialog-content h3 {
+    font-size: clamp(2rem, 10vw, 3rem);
+    line-height: 1.02;
+  }
+}
