@@ -11,6 +11,26 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1ADMIN.19",
+    "date": "2026-10-09",
+    "title": "Control de versiones",
+    "summary": "Agrega un historial consultable de los modulos instalados dentro del administrador.",
+    "commit": "22aca97f93189ac030164f4fb9ed8b9ae6b7e55b",
+    "files": [
+      "src/AdminVersionControl.tsx",
+      "src/admin/versionHistory.ts",
+      "scripts/register-version.mjs",
+      "src/AdminApp.tsx",
+      "src/styles/admin/admin.css"
+    ],
+    "changes": [
+      "Agrega la seccion Control de versiones al administrador.",
+      "Permite buscar por codigo, titulo, cambio, archivo o commit.",
+      "Precarga versiones recientes verificadas desde Git.",
+      "Incluye una herramienta reutilizable para registrar automaticamente los proximos modulos."
+    ]
+  },
+  {
     code: '1HOME.10',
     date: '2026-10-09',
     title: 'CatÃ¡logo primero',
