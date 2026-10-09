@@ -11,6 +11,23 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1ADMIN.19.1",
+    "date": "2026-10-09",
+    "title": "Correccion de codificacion",
+    "summary": "Corrige caracteres mal codificados en el Control de versiones.",
+    "commit": "573f068f88907b8d9b13258bb0ebe6b8670faef9",
+    "files": [
+      "src/AdminVersionControl.tsx",
+      "src/admin/versionHistory.ts",
+      "scripts/register-version.mjs"
+    ],
+    "changes": [
+      "Repara acentos y simbolos visibles del panel de versiones.",
+      "Corrige los textos historicos precargados.",
+      "Deja el registrador de versiones con mensajes UTF-8 correctos."
+    ]
+  },
+  {
     "code": "1ADMIN.19",
     "date": "2026-10-09",
     "title": "Control de versiones",
