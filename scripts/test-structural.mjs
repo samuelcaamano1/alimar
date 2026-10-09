@@ -44,6 +44,9 @@ try {
   const versions = await server.ssrLoadModule(
     '/src/admin/versionHistory.ts',
   )
+  const catalogQuality = await server.ssrLoadModule(
+    '/src/admin/catalogQuality.ts',
+  )
 
   test('cartItemKey no depende del orden de personalizaciones', () => {
     const left = cart.cartItemKey({
@@ -320,6 +323,55 @@ try {
       ['featured-1', 'featured-2'],
     )
     assert.equal(homeCatalog.catalogProductCount(categories), 7)
+  })
+
+  test('calidad de catálogo detecta fichas incompletas', () => {
+    const baseProduct = {
+      id: 'p1',
+      category_id: 'c1',
+      sort_order: 0,
+      name: 'Producto',
+      slug: 'producto',
+      short_description: 'Descripción',
+      kind: 'product',
+      pricing_mode: 'fixed',
+      base_price: '1500',
+      customization_allowed: false,
+      featured: false,
+      image_url: 'data:image/webp;base64,test',
+      image_count: 2,
+      customization_field_count: 0,
+    }
+
+    assert.equal(
+      catalogQuality.getProductQualityIssues(baseProduct).length,
+      0,
+    )
+
+    const pending = {
+      ...baseProduct,
+      short_description: '',
+      customization_allowed: true,
+      image_url: null,
+      image_count: 0,
+    }
+
+    const issues = catalogQuality.getProductQualityIssues(pending)
+
+    assert.deepEqual(
+      issues.map((issue) => issue.key),
+      ['image', 'description', 'customization'],
+    )
+
+    const summary = catalogQuality.summarizeCatalogQuality([
+      baseProduct,
+      pending,
+    ])
+
+    assert.equal(summary.total, 2)
+    assert.equal(summary.complete, 1)
+    assert.equal(summary.incomplete, 1)
+    assert.equal(summary.customizationPending, 1)
   })
 
   test('control de versiones mantiene módulos identificables y únicos', () => {

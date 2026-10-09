@@ -19,6 +19,8 @@ export type AdminProduct = {
   customization_allowed: boolean
   featured: boolean
   image_url: string | null
+  image_count: number
+  customization_field_count: number
 }
 
 export type AdminCatalog = {

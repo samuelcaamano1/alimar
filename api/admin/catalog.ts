@@ -55,6 +55,8 @@ type ProductRow = {
   customization_allowed: boolean
   featured: boolean
   image_url: string | null
+  image_count: number
+  customization_field_count: number
 }
 
 export async function GET(request: Request) {
@@ -129,7 +131,18 @@ export async function GET(request: Request) {
         p.base_price::text,
         p.customization_allowed,
         p.featured,
-        image.image_url
+        image.image_url,
+        (
+          SELECT COUNT(*)::int
+          FROM product_images image_count
+          WHERE image_count.product_id = p.id
+        ) AS image_count,
+        (
+          SELECT COUNT(*)::int
+          FROM product_customization_fields field_count
+          WHERE field_count.product_id = p.id
+            AND field_count.active = true
+        ) AS customization_field_count
       FROM products p
       LEFT JOIN LATERAL (
         SELECT pi.image_url

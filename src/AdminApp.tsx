@@ -21,6 +21,8 @@ import AdminProductGallery from './AdminProductGallery'
 import AdminProductCustomizations from './AdminProductCustomizations'
 import AdminNotifications from './AdminNotifications'
 import AdminVersionControl from './AdminVersionControl'
+import AdminCatalogQuality from './AdminCatalogQuality'
+import { getProductQualityIssues } from './admin/catalogQuality'
 import './styles/admin/admin.css'
 
 import type {
@@ -847,6 +849,12 @@ export default function AdminApp() {
           </button>
           <button
             type="button"
+            onClick={() => scrollAdminSection('.admin-catalog-quality')}
+          >
+            Calidad
+          </button>
+          <button
+            type="button"
             onClick={() => scrollAdminSection('.admin-grid')}
           >
             Catálogo
@@ -1123,6 +1131,12 @@ export default function AdminApp() {
           </section>
         </div>
 
+        {/* ALIMAR 1CAT.20 - CATALOG QUALITY */}
+        <AdminCatalogQuality
+          catalog={catalog}
+          onEdit={openEdit}
+        />
+
         <AdminCategoriesPanel
           categories={catalog.categories}
           products={catalog.products}
@@ -1168,6 +1182,25 @@ export default function AdminApp() {
                                   ? `Desde ${money(product.base_price)}`
                                   : money(product.base_price)}
                             </small>
+                            <div className="admin-product-quality-chips">
+                              {product.featured && (
+                                <span className="is-featured">★ Destacado</span>
+                              )}
+                              {getProductQualityIssues(product).length === 0 ? (
+                                <span className="is-complete">✓ Ficha completa</span>
+                              ) : (
+                                getProductQualityIssues(product)
+                                  .slice(0, 2)
+                                  .map((issue) => (
+                                    <span key={issue.key}>{issue.label}</span>
+                                  ))
+                              )}
+                              {getProductQualityIssues(product).length > 2 && (
+                                <span>
+                                  +{getProductQualityIssues(product).length - 2}
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <div className="admin-row-actions">
