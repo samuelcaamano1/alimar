@@ -42,14 +42,14 @@ export default function AdminVersionControl() {
       <div className="admin-version-heading">
         <div>
           <span className="admin-kicker">Control de versiones</span>
-          <h2>Historial de mÃ³dulos</h2>
+          <h2>Historial de módulos</h2>
           <p>
-            ConsultÃ¡ quÃ© se instalÃ³, cuÃ¡ndo se aplicÃ³ y quÃ© cambiÃ³ en cada mÃ³dulo de Alimar.
+            Consultá qué se instaló, cuándo se aplicó y qué cambió en cada módulo de Alimar.
           </p>
         </div>
 
         <div className="admin-version-current">
-          <small>Ãšltimo registrado</small>
+          <small>Último registrado</small>
           <strong>{latest?.code ?? 'Sin versiones'}</strong>
           {latest && <span>{latest.title}</span>}
         </div>
@@ -57,12 +57,12 @@ export default function AdminVersionControl() {
 
       <div className="admin-version-toolbar">
         <label>
-          Buscar mÃ³dulo o cambio
+          Buscar módulo o cambio
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Ej. 1HOME.10, PDF, catÃ¡logo..."
+            placeholder="Ej. 1HOME.10, PDF, catálogo..."
           />
         </label>
 
@@ -74,7 +74,7 @@ export default function AdminVersionControl() {
 
       {filtered.length === 0 ? (
         <div className="admin-version-empty">
-          No encontramos una versiÃ³n que coincida con â€œ{query}â€.
+          No encontramos una versión que coincida con “{query}”.
         </div>
       ) : (
         <div className="admin-version-list">
@@ -102,7 +102,7 @@ export default function AdminVersionControl() {
 
               <div className="admin-version-detail">
                 <div>
-                  <h3>QuÃ© cambiÃ³</h3>
+                  <h3>Qué cambió</h3>
                   <ul>
                     {entry.changes.map((change) => (
                       <li key={change}>{change}</li>
@@ -126,7 +126,7 @@ export default function AdminVersionControl() {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {entry.commit.slice(0, 8)} â†—
+                    {entry.commit.slice(0, 8)} ↗
                   </a>
                 </div>
               </div>
