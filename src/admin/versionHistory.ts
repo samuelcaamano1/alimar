@@ -11,6 +11,28 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1CAT.20",
+    "date": "2026-10-09",
+    "title": "Calidad del catalogo",
+    "summary": "Agrega controles visuales para detectar productos incompletos y ordenar el catalogo antes de vender.",
+    "commit": "dc14c2205d0b00d2e898481b9bb63eb14e7bca22",
+    "files": [
+      "src/AdminCatalogQuality.tsx",
+      "src/admin/catalogQuality.ts",
+      "src/AdminApp.tsx",
+      "src/admin/app/types.ts",
+      "api/admin/catalog.ts",
+      "db/migrations/034_catalog_quality_cleanup.sql"
+    ],
+    "changes": [
+      "Agrega un panel de salud del catalogo con porcentaje de fichas completas.",
+      "Detecta falta de foto, descripcion breve, precio, categoria y campos de personalizacion.",
+      "Muestra alertas directamente en cada producto del administrador.",
+      "Indica cuantos productos estan destacados y advierte cuando no hay ninguno.",
+      "Corrige Vuelva al Cole a Vuelta al Cole mediante una migracion versionada."
+    ]
+  },
+  {
     "code": "1HOME.11",
     "date": "2026-10-09",
     "title": "Portada comercial",
