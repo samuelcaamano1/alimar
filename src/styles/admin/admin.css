@@ -12015,3 +12015,305 @@
     padding: 11px;
   }
 }
+
+/* ALIMAR 1ADMIN.19 - CONTROL DE VERSIONES */
+
+.admin-version-control {
+  display: grid;
+  gap: 22px;
+}
+
+.admin-version-heading {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: end;
+  gap: 24px;
+}
+
+.admin-version-heading h2 {
+  margin: 4px 0 8px;
+}
+
+.admin-version-heading p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--admin-muted);
+  line-height: 1.55;
+}
+
+.admin-version-current {
+  min-width: 190px;
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid rgba(63,120,138,.2);
+  border-radius: 14px;
+  background: rgba(100,175,198,.08);
+}
+
+.admin-version-current small,
+.admin-version-current span {
+  color: var(--admin-muted);
+  font-size: .62rem;
+}
+
+.admin-version-current strong {
+  color: var(--admin-blue-dark);
+  font-size: 1.05rem;
+}
+
+.admin-version-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px,1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.admin-version-toolbar label {
+  display: grid;
+  gap: 6px;
+  color: var(--admin-ink);
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.admin-version-toolbar input {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 13px;
+  border: 1px solid var(--admin-line);
+  border-radius: 12px;
+  color: var(--admin-ink);
+  background: #fffdf8;
+  font: inherit;
+  outline: 0;
+}
+
+.admin-version-toolbar input:focus {
+  border-color: var(--admin-blue-dark);
+  box-shadow: 0 0 0 3px rgba(100,175,198,.11);
+}
+
+.admin-version-count {
+  min-height: 44px;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 0 14px;
+  border-radius: 12px;
+  color: var(--admin-muted);
+  background: rgba(255,255,255,.42);
+}
+
+.admin-version-count strong {
+  color: var(--admin-ink);
+  font-size: 1rem;
+}
+
+.admin-version-count span {
+  font-size: .64rem;
+}
+
+.admin-version-list {
+  display: grid;
+  gap: 9px;
+}
+
+.admin-version-entry {
+  overflow: hidden;
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  background: rgba(255,255,255,.38);
+}
+
+.admin-version-entry summary {
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 120px minmax(0,1fr) 28px;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.admin-version-entry summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-version-entry[open] summary {
+  border-bottom: 1px solid var(--admin-line);
+  background: rgba(100,175,198,.055);
+}
+
+.admin-version-code,
+.admin-version-summary {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-version-code strong {
+  color: var(--admin-blue-dark);
+  font-size: .78rem;
+}
+
+.admin-version-code span,
+.admin-version-summary span {
+  color: var(--admin-muted);
+  font-size: .6rem;
+}
+
+.admin-version-summary strong {
+  overflow: hidden;
+  color: var(--admin-ink);
+  font-size: .76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-version-toggle {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--admin-blue-dark);
+  background: rgba(100,175,198,.12);
+  font-size: 1rem;
+  transition: transform 160ms ease;
+}
+
+.admin-version-entry[open] .admin-version-toggle {
+  transform: rotate(45deg);
+}
+
+.admin-version-detail {
+  display: grid;
+  grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr);
+  gap: 18px;
+  padding: 16px;
+}
+
+.admin-version-detail h3 {
+  margin: 0 0 8px;
+  font-size: .68rem;
+}
+
+.admin-version-detail ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--admin-muted);
+  font-size: .64rem;
+  line-height: 1.5;
+}
+
+.admin-version-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-version-files code {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 5px 7px;
+  border: 1px solid rgba(63,120,138,.13);
+  border-radius: 7px;
+  color: var(--admin-blue-dark);
+  background: rgba(100,175,198,.07);
+  font-size: .58rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-version-commit {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 11px;
+  border-top: 1px solid var(--admin-line);
+  font-size: .62rem;
+}
+
+.admin-version-commit span {
+  color: var(--admin-muted);
+}
+
+.admin-version-commit a {
+  color: var(--admin-blue-dark);
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.admin-version-empty {
+  padding: 24px;
+  border: 1px dashed rgba(63,120,138,.24);
+  border-radius: 14px;
+  color: var(--admin-muted);
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .admin-version-heading,
+  .admin-version-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .admin-version-current {
+    min-width: 0;
+  }
+
+  .admin-version-count {
+    justify-content: center;
+  }
+
+  .admin-version-entry summary {
+    grid-template-columns: 92px minmax(0,1fr) 28px;
+    gap: 10px;
+    padding-inline: 11px;
+  }
+
+  .admin-version-detail {
+    grid-template-columns: 1fr;
+    padding: 13px;
+  }
+
+  .admin-version-commit {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-version-entry summary {
+    grid-template-columns: minmax(0,1fr) 28px;
+  }
+
+  .admin-version-code {
+    grid-column: 1;
+  }
+
+  .admin-version-summary {
+    grid-column: 1 / -1;
+  }
+
+  .admin-version-toggle {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .admin-version-summary strong {
+    white-space: normal;
+  }
+
+  .admin-version-commit {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

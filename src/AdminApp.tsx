@@ -20,6 +20,7 @@ import AdminProductVariants from './AdminProductVariants'
 import AdminProductGallery from './AdminProductGallery'
 import AdminProductCustomizations from './AdminProductCustomizations'
 import AdminNotifications from './AdminNotifications'
+import AdminVersionControl from './AdminVersionControl'
 import './styles/admin/admin.css'
 
 import type {
@@ -850,10 +851,19 @@ export default function AdminApp() {
           >
             Catálogo
           </button>
+          <button
+            type="button"
+            onClick={() => scrollAdminSection('.admin-version-control')}
+          >
+            Versiones
+          </button>
         </nav>
         <AdminWorkCenter />
 
         <AdminBusinessDashboard />
+
+        {/* ALIMAR 1ADMIN.19 - CONTROL DE VERSIONES */}
+        <AdminVersionControl />
 
         <AdminCustomersPanel />
 

@@ -40,6 +40,9 @@ try {
   const orderSelectors = await server.ssrLoadModule(
     '/src/admin/orders/selectors.ts',
   )
+  const versions = await server.ssrLoadModule(
+    '/src/admin/versionHistory.ts',
+  )
 
   test('cartItemKey no depende del orden de personalizaciones', () => {
     const left = cart.cartItemKey({
@@ -264,6 +267,16 @@ try {
     })
 
     assert.equal(visible.length, 1)
+  })
+
+  test('control de versiones mantiene módulos identificables y únicos', () => {
+    assert.ok(Array.isArray(versions.versionHistory))
+    assert.ok(versions.versionHistory.length >= 10)
+    assert.ok(versions.versionHistory.some((entry) => entry.code === '1HOME.10'))
+    assert.ok(versions.versionHistory.some((entry) => entry.code === '1PDF.11'))
+
+    const codes = versions.versionHistory.map((entry) => entry.code)
+    assert.equal(new Set(codes).size, codes.length)
   })
 
   console.log(`\n${passed} tests estructurales OK.`)
