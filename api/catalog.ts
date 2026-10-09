@@ -18,6 +18,7 @@ type CatalogRow = {
   base_price: string | null
   image_url: string | null
   customization_allowed: boolean
+  featured: boolean
 }
 
 type VariantRow = {
@@ -105,6 +106,7 @@ export async function GET(request: Request) {
         p.pricing_mode,
         p.base_price::text,
         p.customization_allowed,
+        p.featured,
         image.image_url
       FROM categories c
       LEFT JOIN products p
@@ -220,6 +222,7 @@ export async function GET(request: Request) {
           basePrice: string | null
           imageUrl: string | null
           customizationAllowed: boolean
+          featured: boolean
           customizationFields: Array<{
             id: string
             label: string
@@ -266,6 +269,7 @@ export async function GET(request: Request) {
           basePrice: row.base_price,
           imageUrl: row.image_url,
           customizationAllowed: row.customization_allowed,
+          featured: row.featured,
           customizationFields: customizationsByProduct.get(row.product_id) ?? [],
           variants: variantsByProduct.get(row.product_id) ?? [],
         })

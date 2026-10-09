@@ -35,6 +35,10 @@ import {
   productWhatsappUrl,
 } from './storefront/catalog'
 import {
+  catalogProductCount,
+  selectHomeHighlights,
+} from './storefront/homeCatalog'
+import {
   DIRECT_CUSTOM_REQUEST_KEY,
   directCustomRequestExample,
   fallbackCustomRequestExamples,
@@ -55,10 +59,53 @@ import './styles/public/storefront.css'
 const PublicQuoteView = lazy(() => import('./PublicQuoteView'))
 const PublicOrderTracking = lazy(() => import('./PublicOrderTracking'))
 
+type CatalogProductCardProps = {
+  product: CatalogProduct
+  onOpen: (product: CatalogProduct) => void
+}
+
+function CatalogProductCard({ product, onOpen }: CatalogProductCardProps) {
+  return (
+    <button
+      type="button"
+      className="product-card product-card-button"
+      onClick={() => onOpen(product)}
+      aria-label={`Ver detalles de ${product.name}`}
+    >
+      <div className="product-image">
+        {product.imageUrl ? (
+          <img src={product.imageUrl} alt="" loading="lazy" />
+        ) : (
+          <span>Alimar</span>
+        )}
+        <span className="product-kind">
+          {product.kind === 'service' ? 'Servicio' : 'Producto'}
+        </span>
+        {product.variants.length > 0 && (
+          <span className="product-options-count">
+            {product.variants.length === 1
+              ? '1 opción'
+              : `${product.variants.length} opciones`}
+          </span>
+        )}
+      </div>
+      <div className="product-content">
+        <h3>{product.name}</h3>
+        {product.shortDescription && <p>{product.shortDescription}</p>}
+        <div className="product-meta">
+          <strong>{catalogPriceLabel(product)}</strong>
+          <span aria-hidden="true">Ver ↗</span>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 function StorefrontApp() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>([])
   const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [activeCategory, setActiveCategory] = useState<string>('all')
+  const [catalogExpanded, setCatalogExpanded] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState('')
   const [selectedCustomizationValues, setSelectedCustomizationValues] = useState<
@@ -454,7 +501,7 @@ function StorefrontApp() {
     }
   }
 
-  const featuredProducts = useMemo(() => {
+  const visibleCatalogProducts = useMemo(() => {
     const source =
       activeCategory === 'all'
         ? catalog
@@ -462,6 +509,26 @@ function StorefrontApp() {
 
     return source.flatMap((category) => category.products)
   }, [catalog, activeCategory])
+
+  const homeHighlights = useMemo(
+    () => selectHomeHighlights(catalog, 6),
+    [catalog],
+  )
+  const totalCatalogProducts = useMemo(
+    () => catalogProductCount(catalog),
+    [catalog],
+  )
+
+  function showFullCatalog(categorySlug = 'all') {
+    setActiveCategory(categorySlug)
+    setCatalogExpanded(true)
+
+    window.setTimeout(() => {
+      document
+        .querySelector('#catalogo-completo')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 0)
+  }
 
   const selectedCustomRequestExample = customRequestExamples.find(
     (example) => example.key === selectedCustomRequestExampleKey,
@@ -519,122 +586,8 @@ function StorefrontApp() {
       </header>
 
       <main id="inicio">
-        {/* ALIMAR 1HOME.10 - CATALOG FIRST */}
-        <section className="section catalog-section catalog-section-first" id="catalogo">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Catálogo</p>
-              <h2>Elegí lo que te gusta.</h2>
-            </div>
-            <p>
-              Mirá los productos disponibles, elegí tu favorito y armá tu pedido.
-              Si buscás algo distinto, también podés pedirlo personalizado.
-            </p>
-          </div>
-
-          {catalogState === 'ready' && catalog.length > 0 && (
-            <div className="catalog-filters" aria-label="Filtrar por categoría">
-              <button
-                type="button"
-                className={activeCategory === 'all' ? 'is-active' : ''}
-                aria-pressed={activeCategory === 'all'}
-                onClick={() => setActiveCategory('all')}
-              >
-                Todos
-              </button>
-              {catalog.map((category) => (
-                <button
-                  type="button"
-                  key={category.id}
-                  className={activeCategory === category.slug ? 'is-active' : ''}
-                  aria-pressed={activeCategory === category.slug}
-                  onClick={() => setActiveCategory(category.slug)}
-                >
-                  {category.name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {catalogState === 'loading' && (
-            <div className="product-grid" aria-label="Cargando catálogo">
-              {[1, 2, 3].map((item) => (
-                <div className="product-card product-card-skeleton" key={item} />
-              ))}
-            </div>
-          )}
-
-          {catalogState === 'error' && (
-            <div className="catalog-message">
-              <span>Ahora mismo estamos acomodando el catálogo.</span>
-              <strong>Podés ver nuestros trabajos y consultarnos por Instagram.</strong>
-            </div>
-          )}
-
-          {catalogState === 'ready' && featuredProducts.length === 0 && (
-            <div className="catalog-empty">
-              <div>
-                <span className="catalog-empty-label">Muy pronto</span>
-                <h3>Estamos preparando la primera selección de Alimar.</h3>
-              </div>
-              <p>
-                La tienda ya está conectada a nuestro catálogo. En el próximo paso vamos a cargar
-                los primeros productos reales y sus imágenes.
-              </p>
-              <a
-                className="button button-secondary"
-                href={site.instagramUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Mientras tanto, ver Instagram ↗
-              </a>
-            </div>
-          )}
-
-          {catalogState === 'ready' && featuredProducts.length > 0 && (
-            <div className="product-grid">
-              {featuredProducts.map((product) => (
-                <button
-                  type="button"
-                  className="product-card product-card-button"
-                  key={product.id}
-                  onClick={() => openProduct(product)}
-                  aria-label={`Ver detalles de ${product.name}`}
-                >
-                  <div className="product-image">
-                    {product.imageUrl ? (
-                      <img src={product.imageUrl} alt="" loading="lazy" />
-                    ) : (
-                      <span>Alimar</span>
-                    )}
-                    <span className="product-kind">
-                      {product.kind === 'service' ? 'Servicio' : 'Producto'}
-                    </span>
-                    {product.variants.length > 0 && (
-                      <span className="product-options-count">
-                        {product.variants.length === 1
-                          ? '1 opción'
-                          : `${product.variants.length} opciones`}
-                      </span>
-                    )}
-                  </div>
-                  <div className="product-content">
-                    <h3>{product.name}</h3>
-                    {product.shortDescription && <p>{product.shortDescription}</p>}
-                    <div className="product-meta">
-                      <strong>{catalogPriceLabel(product)}</strong>
-                      <span aria-hidden="true">Ver ↗</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-
-
-        <section className="hero-section">
+        {/* ALIMAR 1HOME.11 - COMMERCIAL HOME */}
+        <section className="hero-section home-hero-compact">
           <div className="hero-copy">
             <p className="eyebrow">Diseño · Papel · Detalles · 3D</p>
             <h1>
@@ -642,13 +595,13 @@ function StorefrontApp() {
               <span> Recuerdos</span>
             </h1>
             <p className="hero-description">
-              Diseño gráfico, papelería y objetos personalizados hechos con una mirada creativa
-              para cumpleaños, eventos y momentos que merecen sentirse únicos.
+              Encontrá productos listos para pedir o contanos tu idea. Hacemos detalles
+              personalizados para cumpleaños, regalos, escuela y momentos especiales.
             </p>
 
             <div className="hero-actions">
               <a className="button button-primary" href="#catalogo">
-                Ver catálogo
+                Ver productos
                 <span aria-hidden="true">↓</span>
               </a>
               <button
@@ -656,14 +609,16 @@ function StorefrontApp() {
                 type="button"
                 onClick={openCustomRequest}
               >
-                Pedido Personalizado
+                Pedido personalizado
                 <span aria-hidden="true">✦</span>
               </button>
             </div>
 
             <div className="hero-note">
               <span className="hero-note-dot" aria-hidden="true" />
-              Pedidos personalizados · Atención directa por WhatsApp
+              {catalogState === 'ready' && totalCatalogProducts > 0
+                ? `${totalCatalogProducts} productos disponibles · Atención directa por WhatsApp`
+                : 'Productos personalizados · Atención directa por WhatsApp'}
             </div>
           </div>
 
@@ -682,6 +637,193 @@ function StorefrontApp() {
             <div className="paper-tape" aria-hidden="true" />
           </div>
         </section>
+
+        <section className="home-shop-section" id="catalogo">
+          <div className="home-shop-inner">
+            <div className="home-shop-heading">
+              <div>
+                <p className="eyebrow">Catálogo Alimar</p>
+                <h2>Encontrá algo lindo sin dar vueltas.</h2>
+                <p>
+                  Elegí una categoría o mirá esta selección. Si buscás algo distinto,
+                  también podemos hacerlo especialmente para vos.
+                </p>
+              </div>
+
+              {catalogState === 'ready' && totalCatalogProducts > 0 && (
+                <div className="home-shop-count">
+                  <strong>{totalCatalogProducts}</strong>
+                  <span>productos activos</span>
+                </div>
+              )}
+            </div>
+
+            {catalogState === 'ready' && catalog.length > 0 && (
+              <div className="home-category-grid" aria-label="Categorías del catálogo">
+                {catalog
+                  .filter((category) => category.products.length > 0)
+                  .map((category) => (
+                    <button
+                      type="button"
+                      className="home-category-card"
+                      key={category.id}
+                      onClick={() => showFullCatalog(category.slug)}
+                    >
+                      <span>{category.name}</span>
+                      <small>
+                        {category.products.length === 1
+                          ? '1 producto'
+                          : `${category.products.length} productos`}
+                      </small>
+                      <i aria-hidden="true">→</i>
+                    </button>
+                  ))}
+              </div>
+            )}
+
+            <div className="home-highlight-heading">
+              <div>
+                <strong>
+                  {homeHighlights.some((product) => product.featured)
+                    ? 'Destacados'
+                    : 'Una selección para empezar'}
+                </strong>
+                <span>
+                  Abrí cualquier producto para ver sus fotos, opciones y precio.
+                </span>
+              </div>
+            </div>
+
+            {catalogState === 'loading' && (
+              <div className="product-grid home-highlight-grid" aria-label="Cargando catálogo">
+                {[1, 2, 3].map((item) => (
+                  <div className="product-card product-card-skeleton" key={item} />
+                ))}
+              </div>
+            )}
+
+            {catalogState === 'error' && (
+              <div className="catalog-message">
+                <span>Ahora mismo estamos acomodando el catálogo.</span>
+                <strong>Podés consultarnos directamente por WhatsApp.</strong>
+              </div>
+            )}
+
+            {catalogState === 'ready' && homeHighlights.length === 0 && (
+              <div className="catalog-empty">
+                <div>
+                  <span className="catalog-empty-label">Muy pronto</span>
+                  <h3>Estamos preparando nuevos productos.</h3>
+                </div>
+              </div>
+            )}
+
+            {catalogState === 'ready' && homeHighlights.length > 0 && (
+              <div className="product-grid home-highlight-grid">
+                {homeHighlights.map((product) => (
+                  <CatalogProductCard
+                    key={product.id}
+                    product={product}
+                    onOpen={openProduct}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="home-shop-actions">
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={() => showFullCatalog('all')}
+                disabled={catalogState !== 'ready' || totalCatalogProducts === 0}
+              >
+                Ver todo el catálogo
+                <span aria-hidden="true">↓</span>
+              </button>
+              <button
+                className="button button-secondary"
+                type="button"
+                onClick={openCustomRequest}
+              >
+                Quiero algo personalizado
+                <span aria-hidden="true">✦</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {catalogExpanded && (
+          <section className="section catalog-section catalog-section-full" id="catalogo-completo">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Catálogo completo</p>
+                <h2>
+                  {activeCategory === 'all'
+                    ? 'Todos los productos.'
+                    : catalog.find((category) => category.slug === activeCategory)?.name ??
+                      'Productos'}
+                </h2>
+              </div>
+              <p>
+                Filtrá por categoría, abrí un producto y agregalo a tu pedido.
+              </p>
+            </div>
+
+            {catalog.length > 0 && (
+              <div className="catalog-filters" aria-label="Filtrar por categoría">
+                <button
+                  type="button"
+                  className={activeCategory === 'all' ? 'is-active' : ''}
+                  aria-pressed={activeCategory === 'all'}
+                  onClick={() => setActiveCategory('all')}
+                >
+                  Todos
+                </button>
+                {catalog.map((category) => (
+                  <button
+                    type="button"
+                    key={category.id}
+                    className={activeCategory === category.slug ? 'is-active' : ''}
+                    aria-pressed={activeCategory === category.slug}
+                    onClick={() => setActiveCategory(category.slug)}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {visibleCatalogProducts.length > 0 ? (
+              <div className="product-grid">
+                {visibleCatalogProducts.map((product) => (
+                  <CatalogProductCard
+                    key={product.id}
+                    product={product}
+                    onOpen={openProduct}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="catalog-empty">
+                <div>
+                  <span className="catalog-empty-label">Sin productos</span>
+                  <h3>No hay productos activos en esta categoría.</h3>
+                </div>
+              </div>
+            )}
+
+            <div className="catalog-collapse-row">
+              <button
+                className="button button-secondary"
+                type="button"
+                onClick={() => setCatalogExpanded(false)}
+              >
+                Cerrar catálogo
+                <span aria-hidden="true">↑</span>
+              </button>
+            </div>
+          </section>
+        )}
 
         <section className="manifesto-strip" aria-label="Características de Alimar">
           <span>Personalizado</span>

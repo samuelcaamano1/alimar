@@ -27,6 +27,7 @@ function test(name, fn) {
 try {
   const cart = await server.ssrLoadModule('/src/storefront/cart.ts')
   const catalog = await server.ssrLoadModule('/src/storefront/catalog.ts')
+  const homeCatalog = await server.ssrLoadModule('/src/storefront/homeCatalog.ts')
   const costUtils = await server.ssrLoadModule('/src/admin/costs/utils.ts')
   const calculation = await server.ssrLoadModule(
     '/src/admin/costs/calculation.ts',
@@ -267,6 +268,58 @@ try {
     })
 
     assert.equal(visible.length, 1)
+  })
+
+  test('home comercial prioriza destacados y completa hasta seis productos', () => {
+    const makeProduct = (id, featured) => ({
+      id,
+      name: id,
+      slug: id,
+      shortDescription: null,
+      kind: 'product',
+      pricingMode: 'fixed',
+      basePrice: '1000',
+      imageUrl: null,
+      customizationAllowed: false,
+      featured,
+      customizationFields: [],
+      variants: [],
+    })
+
+    const categories = [
+      {
+        id: 'cat-a',
+        name: 'A',
+        slug: 'a',
+        description: null,
+        products: [
+          makeProduct('normal-1', false),
+          makeProduct('featured-1', true),
+          makeProduct('normal-2', false),
+        ],
+      },
+      {
+        id: 'cat-b',
+        name: 'B',
+        slug: 'b',
+        description: null,
+        products: [
+          makeProduct('featured-2', true),
+          makeProduct('normal-3', false),
+          makeProduct('normal-4', false),
+          makeProduct('normal-5', false),
+        ],
+      },
+    ]
+
+    const selected = homeCatalog.selectHomeHighlights(categories, 6)
+
+    assert.equal(selected.length, 6)
+    assert.deepEqual(
+      selected.slice(0, 2).map((product) => product.id),
+      ['featured-1', 'featured-2'],
+    )
+    assert.equal(homeCatalog.catalogProductCount(categories), 7)
   })
 
   test('control de versiones mantiene módulos identificables y únicos', () => {

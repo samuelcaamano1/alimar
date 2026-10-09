@@ -37,6 +37,7 @@ export type CatalogProduct = {
   basePrice: string | null
   imageUrl: string | null
   customizationAllowed: boolean
+  featured: boolean
   customizationFields: CatalogCustomizationField[]
   variants: CatalogVariant[]
 }
