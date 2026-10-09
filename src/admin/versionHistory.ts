@@ -11,6 +11,27 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1HOME.11",
+    "date": "2026-10-09",
+    "title": "Portada comercial",
+    "summary": "Recupera la identidad visual de Alimar sin alejar el catalogo del inicio.",
+    "commit": "429d886419801d594f325cdf838e7b37d8d4e305",
+    "files": [
+      "src/App.tsx",
+      "src/styles/public/storefront.css",
+      "src/storefront/homeCatalog.ts",
+      "src/storefront/types.ts",
+      "api/catalog.ts"
+    ],
+    "changes": [
+      "Reemplaza el bloque oscuro inicial por un mini hero claro y comercial.",
+      "Muestra categorias visuales y una seleccion inicial de hasta seis productos.",
+      "Prioriza productos destacados y usa un fallback automatico cuando no hay destacados.",
+      "Deja el catalogo completo disponible con filtros sin saturar la portada.",
+      "Conecta el campo featured existente de productos con el storefront."
+    ]
+  },
+  {
     "code": "1ADMIN.19.1",
     "date": "2026-10-09",
     "title": "Correccion de codificacion",
