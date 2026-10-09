@@ -479,18 +479,19 @@ function StorefrontApp() {
         </a>
 
         <nav className="main-nav" aria-label="Navegación principal">
-          <a href="#servicios">Qué hacemos</a>
           <a href="#catalogo">Catálogo</a>
+          <a href="#pedido-personalizado">Pedido personalizado</a>
           <a href="/cuenta">Mis pedidos</a>
-          <a href="#como-trabajamos">Cómo trabajamos</a>
+          <a href="#servicios">Qué hacemos</a>
         </nav>
 
         
         <details className="mobile-menu">
           <summary>Menú</summary>
           <div className="mobile-menu-panel">
-            <a href="#servicios">Qué hacemos</a>
             <a href="#catalogo">Catálogo</a>
+            <a href="#pedido-personalizado">Pedido personalizado</a>
+            <a href="#servicios">Qué hacemos</a>
             <a href="#como-trabajamos">Cómo trabajamos</a>
             <a href="/cuenta">Mi cuenta</a>
             <a href={site.instagramUrl} target="_blank" rel="noreferrer">
@@ -517,8 +518,123 @@ function StorefrontApp() {
         </div>
       </header>
 
-      <main>
-        <section className="hero-section" id="inicio">
+      <main id="inicio">
+        {/* ALIMAR 1HOME.10 - CATALOG FIRST */}
+        <section className="section catalog-section catalog-section-first" id="catalogo">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Catálogo</p>
+              <h2>Elegí lo que te gusta.</h2>
+            </div>
+            <p>
+              Mirá los productos disponibles, elegí tu favorito y armá tu pedido.
+              Si buscás algo distinto, también podés pedirlo personalizado.
+            </p>
+          </div>
+
+          {catalogState === 'ready' && catalog.length > 0 && (
+            <div className="catalog-filters" aria-label="Filtrar por categoría">
+              <button
+                type="button"
+                className={activeCategory === 'all' ? 'is-active' : ''}
+                aria-pressed={activeCategory === 'all'}
+                onClick={() => setActiveCategory('all')}
+              >
+                Todos
+              </button>
+              {catalog.map((category) => (
+                <button
+                  type="button"
+                  key={category.id}
+                  className={activeCategory === category.slug ? 'is-active' : ''}
+                  aria-pressed={activeCategory === category.slug}
+                  onClick={() => setActiveCategory(category.slug)}
+                >
+                  {category.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {catalogState === 'loading' && (
+            <div className="product-grid" aria-label="Cargando catálogo">
+              {[1, 2, 3].map((item) => (
+                <div className="product-card product-card-skeleton" key={item} />
+              ))}
+            </div>
+          )}
+
+          {catalogState === 'error' && (
+            <div className="catalog-message">
+              <span>Ahora mismo estamos acomodando el catálogo.</span>
+              <strong>Podés ver nuestros trabajos y consultarnos por Instagram.</strong>
+            </div>
+          )}
+
+          {catalogState === 'ready' && featuredProducts.length === 0 && (
+            <div className="catalog-empty">
+              <div>
+                <span className="catalog-empty-label">Muy pronto</span>
+                <h3>Estamos preparando la primera selección de Alimar.</h3>
+              </div>
+              <p>
+                La tienda ya está conectada a nuestro catálogo. En el próximo paso vamos a cargar
+                los primeros productos reales y sus imágenes.
+              </p>
+              <a
+                className="button button-secondary"
+                href={site.instagramUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Mientras tanto, ver Instagram ↗
+              </a>
+            </div>
+          )}
+
+          {catalogState === 'ready' && featuredProducts.length > 0 && (
+            <div className="product-grid">
+              {featuredProducts.map((product) => (
+                <button
+                  type="button"
+                  className="product-card product-card-button"
+                  key={product.id}
+                  onClick={() => openProduct(product)}
+                  aria-label={`Ver detalles de ${product.name}`}
+                >
+                  <div className="product-image">
+                    {product.imageUrl ? (
+                      <img src={product.imageUrl} alt="" loading="lazy" />
+                    ) : (
+                      <span>Alimar</span>
+                    )}
+                    <span className="product-kind">
+                      {product.kind === 'service' ? 'Servicio' : 'Producto'}
+                    </span>
+                    {product.variants.length > 0 && (
+                      <span className="product-options-count">
+                        {product.variants.length === 1
+                          ? '1 opción'
+                          : `${product.variants.length} opciones`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="product-content">
+                    <h3>{product.name}</h3>
+                    {product.shortDescription && <p>{product.shortDescription}</p>}
+                    <div className="product-meta">
+                      <strong>{catalogPriceLabel(product)}</strong>
+                      <span aria-hidden="true">Ver ↗</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+
+        <section className="hero-section">
           <div className="hero-copy">
             <p className="eyebrow">Diseño · Papel · Detalles · 3D</p>
             <h1>
@@ -624,119 +740,6 @@ function StorefrontApp() {
               </article>
             ))}
           </div>
-        </section>
-
-        <section className="section catalog-section" id="catalogo">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Catálogo</p>
-              <h2>Productos con precio publicado.</h2>
-            </div>
-            <p>
-              Los precios de esta sección corresponden únicamente a los productos publicados.
-              Si querés algo distinto o hecho desde cero, usá Pedido Personalizado.
-            </p>
-          </div>
-
-          {catalogState === 'ready' && catalog.length > 0 && (
-            <div className="catalog-filters" aria-label="Filtrar por categoría">
-              <button
-                type="button"
-                className={activeCategory === 'all' ? 'is-active' : ''}
-                aria-pressed={activeCategory === 'all'}
-                onClick={() => setActiveCategory('all')}
-              >
-                Todos
-              </button>
-              {catalog.map((category) => (
-                <button
-                  type="button"
-                  key={category.id}
-                  className={activeCategory === category.slug ? 'is-active' : ''}
-                  aria-pressed={activeCategory === category.slug}
-                  onClick={() => setActiveCategory(category.slug)}
-                >
-                  {category.name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {catalogState === 'loading' && (
-            <div className="product-grid" aria-label="Cargando catálogo">
-              {[1, 2, 3].map((item) => (
-                <div className="product-card product-card-skeleton" key={item} />
-              ))}
-            </div>
-          )}
-
-          {catalogState === 'error' && (
-            <div className="catalog-message">
-              <span>Ahora mismo estamos acomodando el catálogo.</span>
-              <strong>Podés ver nuestros trabajos y consultarnos por Instagram.</strong>
-            </div>
-          )}
-
-          {catalogState === 'ready' && featuredProducts.length === 0 && (
-            <div className="catalog-empty">
-              <div>
-                <span className="catalog-empty-label">Muy pronto</span>
-                <h3>Estamos preparando la primera selección de Alimar.</h3>
-              </div>
-              <p>
-                La tienda ya está conectada a nuestro catálogo. En el próximo paso vamos a cargar
-                los primeros productos reales y sus imágenes.
-              </p>
-              <a
-                className="button button-secondary"
-                href={site.instagramUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Mientras tanto, ver Instagram ↗
-              </a>
-            </div>
-          )}
-
-          {catalogState === 'ready' && featuredProducts.length > 0 && (
-            <div className="product-grid">
-              {featuredProducts.map((product) => (
-                <button
-                  type="button"
-                  className="product-card product-card-button"
-                  key={product.id}
-                  onClick={() => openProduct(product)}
-                  aria-label={`Ver detalles de ${product.name}`}
-                >
-                  <div className="product-image">
-                    {product.imageUrl ? (
-                      <img src={product.imageUrl} alt="" loading="lazy" />
-                    ) : (
-                      <span>Alimar</span>
-                    )}
-                    <span className="product-kind">
-                      {product.kind === 'service' ? 'Servicio' : 'Producto'}
-                    </span>
-                    {product.variants.length > 0 && (
-                      <span className="product-options-count">
-                        {product.variants.length === 1
-                          ? '1 opción'
-                          : `${product.variants.length} opciones`}
-                      </span>
-                    )}
-                  </div>
-                  <div className="product-content">
-                    <h3>{product.name}</h3>
-                    {product.shortDescription && <p>{product.shortDescription}</p>}
-                    <div className="product-meta">
-                      <strong>{catalogPriceLabel(product)}</strong>
-                      <span aria-hidden="true">Ver ↗</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
         </section>
 
         <section className="section process-section" id="como-trabajamos">

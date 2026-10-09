@@ -4938,3 +4938,39 @@
     line-height: 1.02;
   }
 }
+
+/* ALIMAR 1HOME.10 - CATALOG FIRST */
+.catalog-section-first {
+  padding-top: clamp(30px, 4vw, 54px);
+  padding-bottom: clamp(68px, 7vw, 96px);
+}
+.catalog-section-first .section-heading {
+  align-items: center;
+  gap: clamp(20px, 4vw, 48px);
+  margin-bottom: 28px;
+}
+.catalog-section-first .section-heading h2 {
+  max-width: 620px;
+  font-size: clamp(2.25rem, 4.3vw, 4rem);
+  line-height: .96;
+}
+.catalog-section-first .section-heading > p {
+  max-width: 430px;
+  line-height: 1.5;
+}
+.catalog-section-first .catalog-filters { margin: 0 0 24px; }
+.catalog-section-first .product-grid { align-items: start; }
+@media (max-width: 820px) {
+  .catalog-section-first { padding-top: 26px; padding-bottom: 68px; }
+  .catalog-section-first .section-heading { grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
+  .catalog-section-first .section-heading h2 { font-size: clamp(2.15rem, 8vw, 3.4rem); }
+  .catalog-section-first .section-heading > p { max-width: 680px; justify-self: start; }
+  .catalog-section-first .catalog-filters { margin-bottom: 18px; }
+}
+@media (max-width: 560px) {
+  .catalog-section-first { padding-top: 20px; padding-inline: 14px; }
+  .catalog-section-first .section-heading { margin-bottom: 16px; }
+  .catalog-section-first .section-heading h2 { font-size: clamp(2rem, 11vw, 2.9rem); }
+  .catalog-section-first .section-heading > p { font-size: .88rem; line-height: 1.45; }
+  .catalog-section-first .catalog-filters { margin-bottom: 14px; }
+}
