@@ -5391,3 +5391,7 @@
   }
 }
 
+/* ALIMAR 1CAT.21 - STOREFRONT PERSONALIZATION UX */
+.product-customization-reference-note{margin:1px 0 3px;padding:9px 10px;border-radius:9px;color:var(--muted);background:rgba(100,175,198,.08);font-size:.68rem;font-weight:600;line-height:1.45}
+.product-customization-fields label>span[aria-hidden='true']{color:var(--berry);font-weight:900}
+

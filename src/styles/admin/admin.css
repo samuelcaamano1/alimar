@@ -12645,3 +12645,15 @@
   }
 }
 
+/* ALIMAR 1CAT.21 - REAL CUSTOMIZATIONS */
+.admin-customizations-ready{display:flex;align-items:flex-start;gap:8px;margin:0;padding:10px 12px;border:1px solid rgba(70,123,86,.16);border-radius:10px;color:#467b56;background:rgba(98,157,114,.06);font-size:.69rem;line-height:1.45}
+.admin-customizations-ready strong{white-space:nowrap}
+.admin-customizations-preset{display:grid;gap:10px;padding:13px;border:1px solid rgba(100,175,198,.2);border-radius:12px;background:rgba(100,175,198,.07)}
+.admin-customizations-preset-copy{display:grid;gap:3px}
+.admin-customizations-preset-copy strong{color:var(--admin-ink);font-size:.76rem}
+.admin-customizations-preset-copy span{color:var(--admin-muted);font-size:.64rem;line-height:1.45}
+.admin-customizations-preset-fields{display:flex;flex-wrap:wrap;gap:5px}
+.admin-customizations-preset-fields span{padding:5px 8px;border:1px solid rgba(63,120,138,.14);border-radius:999px;color:var(--admin-blue-dark);background:rgba(255,255,255,.5);font-size:.57rem;font-weight:800}
+.admin-customizations-preset .admin-primary{justify-self:start}
+@media(max-width:600px){.admin-customizations-ready{display:grid}.admin-customizations-preset .admin-primary{width:100%}}
+

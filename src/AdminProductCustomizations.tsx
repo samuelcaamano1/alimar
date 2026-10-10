@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { getCustomizationPreset } from './admin/customizationPresets'
+
+/* ALIMAR 1CAT.21 - REAL CUSTOMIZATIONS */
 
 type ProductForCustomizations = {
   id: string
   name: string
+  slug: string
   customization_allowed: boolean
 }
 
@@ -22,6 +26,7 @@ type CustomizationField = {
 
 type Props = {
   product: ProductForCustomizations
+  onChanged?: () => Promise<void>
 }
 
 type Draft = {
@@ -88,7 +93,10 @@ function payloadFromDraft(productId: string, draft: Draft) {
   }
 }
 
-export default function AdminProductCustomizations({ product }: Props) {
+export default function AdminProductCustomizations({
+  product,
+  onChanged,
+}: Props) {
   const [fields, setFields] = useState<CustomizationField[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [message, setMessage] = useState('')
@@ -127,6 +135,15 @@ export default function AdminProductCustomizations({ product }: Props) {
     () => [...fields].sort((a, b) => a.sort_order - b.sort_order),
     [fields],
   )
+  const suggestedFields = useMemo(
+    () => getCustomizationPreset(product.slug),
+    [product.slug],
+  )
+
+  async function refreshAfterChange() {
+    await loadFields()
+    await onChanged?.()
+  }
 
   async function createField(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -145,7 +162,7 @@ export default function AdminProductCustomizations({ product }: Props) {
       if (!response.ok) throw new Error(await responseMessage(response))
 
       setCreateDraft(emptyDraft)
-      await loadFields()
+      await refreshAfterChange()
       setMessage('Campo de personalización creado.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo crear el campo.')
@@ -175,7 +192,7 @@ export default function AdminProductCustomizations({ product }: Props) {
       if (!response.ok) throw new Error(await responseMessage(response))
 
       setEditingId(null)
-      await loadFields()
+      await refreshAfterChange()
       setMessage('Campo actualizado.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo actualizar el campo.')
@@ -213,7 +230,7 @@ export default function AdminProductCustomizations({ product }: Props) {
 
       if (!response.ok) throw new Error(await responseMessage(response))
 
-      await loadFields()
+      await refreshAfterChange()
       setMessage('Orden de campos actualizado.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo reordenar el campo.')
@@ -238,10 +255,52 @@ export default function AdminProductCustomizations({ product }: Props) {
       if (!response.ok) throw new Error(await responseMessage(response))
 
       if (editingId === field.id) setEditingId(null)
-      await loadFields()
+      await refreshAfterChange()
       setMessage('Campo quitado.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo quitar el campo.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function applySuggestedFields() {
+    if (fields.length > 0 || suggestedFields.length === 0) return
+
+    setBusyId('preset')
+    setMessage('')
+    let created = 0
+
+    try {
+      for (const field of suggestedFields) {
+        const response = await fetch('/api/admin/products?action=customizations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: product.id,
+            label: field.label,
+            fieldType: field.fieldType,
+            placeholder: field.placeholder,
+            options: field.options,
+            required: field.required,
+            maxLength: field.maxLength,
+          }),
+        })
+
+        if (!response.ok) throw new Error(await responseMessage(response))
+        created += 1
+      }
+
+      await refreshAfterChange()
+      setMessage('Campos sugeridos cargados. Podés editarlos cuando quieras.')
+    } catch (error) {
+      await loadFields()
+      await onChanged?.()
+      setMessage(
+        error instanceof Error
+          ? `Se cargaron ${created} campos. ${error.message}`
+          : 'No se pudieron cargar todos los campos sugeridos.',
+      )
     } finally {
       setBusyId(null)
     }
@@ -284,6 +343,45 @@ export default function AdminProductCustomizations({ product }: Props) {
         <div className="admin-customizations-empty">
           Todavía no hay campos configurados para este producto.
         </div>
+      )}
+
+      {state === 'ready' &&
+        orderedFields.length === 0 &&
+        suggestedFields.length > 0 && (
+          <div className="admin-customizations-preset">
+            <div className="admin-customizations-preset-copy">
+              <strong>Configuración sugerida para {product.name}</strong>
+              <span>
+                Cargamos una base pensada para este producto. Después podés editar,
+                ordenar o quitar cualquier campo.
+              </span>
+            </div>
+
+            <div className="admin-customizations-preset-fields">
+              {suggestedFields.map((field) => (
+                <span key={field.label}>{field.label}</span>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="admin-primary"
+              onClick={() => void applySuggestedFields()}
+              disabled={busyId !== null}
+            >
+              {busyId === 'preset' ? 'Cargando…' : 'Cargar campos sugeridos'}
+            </button>
+          </div>
+        )}
+
+      {orderedFields.length > 0 && (
+        <p className="admin-customizations-ready">
+          <strong>✓ Personalización lista.</strong>
+          <span>
+            Estos datos se muestran al cliente y viajan guardados con el pedido y
+            el mensaje de WhatsApp.
+          </span>
+        </p>
       )}
 
       {orderedFields.length > 0 && (

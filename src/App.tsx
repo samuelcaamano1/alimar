@@ -1335,9 +1335,16 @@ function StorefrontApp() {
                   selectedProduct.customizationFields.length > 0 && (
                     <div className="product-customization-fields">
                       <div className="product-customization-heading">
-                        <strong>Personalización</strong>
-                        <span>Completá los datos para este producto.</span>
+                        <strong>Personalizá este producto</strong>
+                        <span>
+                          Completá los datos. Los campos marcados con * son obligatorios.
+                        </span>
                       </div>
+
+                      <p className="product-customization-reference-note">
+                        Si tu pedido necesita una foto o imagen de referencia, vas a
+                        poder enviárnosla por WhatsApp después de armar el pedido.
+                      </p>
                 
                       {selectedProduct.customizationFields.map((field) => {
                         const value = selectedCustomizationValues[field.id] ?? ''

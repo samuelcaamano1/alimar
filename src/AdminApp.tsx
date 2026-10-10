@@ -1625,6 +1625,7 @@ export default function AdminApp() {
             <AdminProductCustomizations
               key={`customizations-${editingProduct.id}`}
               product={editingProduct}
+              onChanged={loadCatalog}
             />
 
             <AdminProductGallery

@@ -47,6 +47,9 @@ try {
   const catalogQuality = await server.ssrLoadModule(
     '/src/admin/catalogQuality.ts',
   )
+  const customizationPresets = await server.ssrLoadModule(
+    '/src/admin/customizationPresets.ts',
+  )
 
   test('cartItemKey no depende del orden de personalizaciones', () => {
     const left = cart.cartItemKey({
@@ -372,6 +375,35 @@ try {
     assert.equal(summary.complete, 1)
     assert.equal(summary.incomplete, 1)
     assert.equal(summary.customizationPending, 1)
+  })
+
+  test('presets de personalización respetan los productos reales', () => {
+    const topper = customizationPresets.getCustomizationPreset('topper-torta-2')
+    const photocard = customizationPresets.getCustomizationPreset('porta-photocards')
+    const school = customizationPresets.getCustomizationPreset('caratulas')
+
+    assert.equal(topper.length, 5)
+    assert.ok(
+      topper.some(
+        (field) => field.label === 'Temática o personaje' && field.required,
+      ),
+    )
+    assert.ok(
+      photocard.some(
+        (field) =>
+          field.label === 'Tipo de photocard' &&
+          field.fieldType === 'select' &&
+          field.options.length === 2,
+      ),
+    )
+    assert.equal(school.length, 6)
+    assert.ok(
+      school.some((field) => field.label === 'Materia' && field.required),
+    )
+    assert.deepEqual(
+      customizationPresets.getCustomizationPreset('producto-sin-preset'),
+      [],
+    )
   })
 
   test('control de versiones mantiene módulos identificables y únicos', () => {
