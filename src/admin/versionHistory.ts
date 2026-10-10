@@ -11,6 +11,27 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1CAT.21",
+    "date": "2026-10-10",
+    "title": "Personalizaciones reales",
+    "summary": "Configura preguntas concretas para los productos personalizables y mejora su gestion desde el administrador.",
+    "commit": "bb6a929510c9be8ba58d39f9f28b5273127956f3",
+    "files": [
+      "src/AdminProductCustomizations.tsx",
+      "src/admin/customizationPresets.ts",
+      "src/App.tsx",
+      "src/AdminApp.tsx",
+      "db/migrations/035_real_product_customizations.sql"
+    ],
+    "changes": [
+      "Carga campos especificos para los siete productos personalizables actuales.",
+      "No pisa productos que ya tengan campos configurados manualmente.",
+      "Agrega presets recuperables desde el administrador.",
+      "Actualiza automaticamente el panel Calidad cuando cambian los campos.",
+      "Aclara al cliente que fotos o referencias pueden enviarse por WhatsApp."
+    ]
+  },
+  {
     "code": "1CAT.20",
     "date": "2026-10-09",
     "title": "Calidad del catalogo",
