@@ -11,6 +11,25 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1SHOP.10",
+    "date": "2026-10-10",
+    "title": "Buscador y filtros",
+    "summary": "Agrega busqueda instantanea al catalogo y la combina con los filtros por categoria.",
+    "commit": "c8f4dddae43639cad2429dc40bcb8bd716f7ae91",
+    "files": [
+      "src/App.tsx",
+      "src/storefront/catalogSearch.ts",
+      "src/styles/public/storefront.css"
+    ],
+    "changes": [
+      "Agrega un buscador visible desde la portada.",
+      "Busca por nombre descripcion y categoria sin distinguir mayusculas ni acentos.",
+      "Mantiene la busqueda al abrir el catalogo completo.",
+      "Permite combinar texto y filtro por categoria.",
+      "Muestra conteo de resultados y estados vacios claros."
+    ]
+  },
+  {
     "code": "1CAT.21",
     "date": "2026-10-10",
     "title": "Personalizaciones reales",
