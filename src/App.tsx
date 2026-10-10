@@ -39,6 +39,10 @@ import {
   selectHomeHighlights,
 } from './storefront/homeCatalog'
 import {
+  catalogSearchLabel,
+  searchCatalogProducts,
+} from './storefront/catalogSearch'
+import {
   DIRECT_CUSTOM_REQUEST_KEY,
   directCustomRequestExample,
   fallbackCustomRequestExamples,
@@ -105,6 +109,7 @@ function StorefrontApp() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>([])
   const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [activeCategory, setActiveCategory] = useState<string>('all')
+  const [catalogQuery, setCatalogQuery] = useState('')
   const [catalogExpanded, setCatalogExpanded] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState('')
@@ -501,18 +506,25 @@ function StorefrontApp() {
     }
   }
 
-  const visibleCatalogProducts = useMemo(() => {
-    const source =
-      activeCategory === 'all'
-        ? catalog
-        : catalog.filter((category) => category.slug === activeCategory)
-
-    return source.flatMap((category) => category.products)
-  }, [catalog, activeCategory])
+  const visibleCatalogProducts = useMemo(
+    () => searchCatalogProducts(catalog, catalogQuery, activeCategory),
+    [catalog, catalogQuery, activeCategory],
+  )
 
   const homeHighlights = useMemo(
     () => selectHomeHighlights(catalog, 6),
     [catalog],
+  )
+  const homeVisibleProducts = useMemo(
+    () =>
+      catalogQuery.trim()
+        ? searchCatalogProducts(catalog, catalogQuery).slice(0, 6)
+        : homeHighlights,
+    [catalog, catalogQuery, homeHighlights],
+  )
+  const totalSearchResults = useMemo(
+    () => searchCatalogProducts(catalog, catalogQuery).length,
+    [catalog, catalogQuery],
   )
   const totalCatalogProducts = useMemo(
     () => catalogProductCount(catalog),
@@ -528,6 +540,21 @@ function StorefrontApp() {
         .querySelector('#catalogo-completo')
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 0)
+  }
+
+  function showCategory(categorySlug: string) {
+    setCatalogQuery('')
+    showFullCatalog(categorySlug)
+  }
+
+  function submitCatalogSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!catalogQuery.trim()) return
+    showFullCatalog('all')
+  }
+
+  function clearCatalogSearch() {
+    setCatalogQuery('')
   }
 
   const selectedCustomRequestExample = customRequestExamples.find(
@@ -658,6 +685,52 @@ function StorefrontApp() {
               )}
             </div>
 
+            {/* ALIMAR 1SHOP.10 - SEARCH AND FILTERS */}
+            {catalogState === 'ready' && totalCatalogProducts > 0 && (
+              <form
+                className="catalog-search-box"
+                role="search"
+                onSubmit={submitCatalogSearch}
+              >
+                <label htmlFor="catalog-search-home">Buscar en el catálogo</label>
+                <div className="catalog-search-control">
+                  <span className="catalog-search-icon" aria-hidden="true">⌕</span>
+                  <input
+                    id="catalog-search-home"
+                    type="search"
+                    value={catalogQuery}
+                    onChange={(event) => setCatalogQuery(event.target.value)}
+                    placeholder="Ej. tatuajes, caratulas, 3D, cumpleaños..."
+                    autoComplete="off"
+                  />
+                  <button
+                    className="catalog-search-submit"
+                    type="submit"
+                    disabled={!catalogQuery.trim()}
+                  >
+                    Ver resultados
+                  </button>
+                </div>
+
+                <div className="catalog-search-meta" aria-live="polite">
+                  <span>
+                    {catalogQuery.trim()
+                      ? catalogSearchLabel(totalSearchResults)
+                      : 'Buscá por producto, descripción o categoría.'}
+                  </span>
+                  {catalogQuery.trim() && (
+                    <button
+                      className="catalog-search-clear"
+                      type="button"
+                      onClick={clearCatalogSearch}
+                    >
+                      Limpiar búsqueda
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
+
             {catalogState === 'ready' && catalog.length > 0 && (
               <div className="home-category-grid" aria-label="Categorías del catálogo">
                 {catalog
@@ -667,7 +740,7 @@ function StorefrontApp() {
                       type="button"
                       className="home-category-card"
                       key={category.id}
-                      onClick={() => showFullCatalog(category.slug)}
+                      onClick={() => showCategory(category.slug)}
                     >
                       <span>{category.name}</span>
                       <small>
@@ -681,15 +754,21 @@ function StorefrontApp() {
               </div>
             )}
 
-            <div className="home-highlight-heading">
+            <div
+              className={`home-highlight-heading${catalogQuery.trim() ? ' is-searching' : ''}`}
+            >
               <div>
                 <strong>
-                  {homeHighlights.some((product) => product.featured)
-                    ? 'Destacados'
-                    : 'Una selección para empezar'}
+                  {catalogQuery.trim()
+                    ? `Resultados para “${catalogQuery.trim()}”`
+                    : homeHighlights.some((product) => product.featured)
+                      ? 'Destacados'
+                      : 'Una selección para empezar'}
                 </strong>
                 <span>
-                  Abrí cualquier producto para ver sus fotos, opciones y precio.
+                  {catalogQuery.trim()
+                    ? catalogSearchLabel(totalSearchResults)
+                    : 'Abrí cualquier producto para ver sus fotos, opciones y precio.'}
                 </span>
               </div>
             </div>
@@ -709,18 +788,24 @@ function StorefrontApp() {
               </div>
             )}
 
-            {catalogState === 'ready' && homeHighlights.length === 0 && (
+            {catalogState === 'ready' && homeVisibleProducts.length === 0 && (
               <div className="catalog-empty">
                 <div>
-                  <span className="catalog-empty-label">Muy pronto</span>
-                  <h3>Estamos preparando nuevos productos.</h3>
+                  <span className="catalog-empty-label">
+                    {catalogQuery.trim() ? 'Sin resultados' : 'Muy pronto'}
+                  </span>
+                  <h3>
+                    {catalogQuery.trim()
+                      ? 'Probá con otra palabra o mirá las categorías.'
+                      : 'Estamos preparando nuevos productos.'}
+                  </h3>
                 </div>
               </div>
             )}
 
-            {catalogState === 'ready' && homeHighlights.length > 0 && (
+            {catalogState === 'ready' && homeVisibleProducts.length > 0 && (
               <div className="product-grid home-highlight-grid">
-                {homeHighlights.map((product) => (
+                {homeVisibleProducts.map((product) => (
                   <CatalogProductCard
                     key={product.id}
                     product={product}
@@ -735,9 +820,16 @@ function StorefrontApp() {
                 className="button button-primary"
                 type="button"
                 onClick={() => showFullCatalog('all')}
-                disabled={catalogState !== 'ready' || totalCatalogProducts === 0}
+                disabled={
+                  catalogState !== 'ready' ||
+                  (catalogQuery.trim()
+                    ? totalSearchResults === 0
+                    : totalCatalogProducts === 0)
+                }
               >
-                Ver todo el catálogo
+                {catalogQuery.trim()
+                  ? `Ver ${catalogSearchLabel(totalSearchResults)}`
+                  : 'Ver todo el catálogo'}
                 <span aria-hidden="true">↓</span>
               </button>
               <button
@@ -765,9 +857,51 @@ function StorefrontApp() {
                 </h2>
               </div>
               <p>
-                Filtrá por categoría, abrí un producto y agregalo a tu pedido.
+                Buscá por nombre o categoría, filtrá y abrí el producto que quieras.
               </p>
             </div>
+
+            <form
+              className="catalog-search-box"
+              role="search"
+              onSubmit={submitCatalogSearch}
+            >
+              <label htmlFor="catalog-search-full">Buscar productos</label>
+              <div className="catalog-search-control">
+                <span className="catalog-search-icon" aria-hidden="true">⌕</span>
+                <input
+                  id="catalog-search-full"
+                  type="search"
+                  value={catalogQuery}
+                  onChange={(event) => setCatalogQuery(event.target.value)}
+                  placeholder="Escribí lo que estás buscando..."
+                  autoComplete="off"
+                />
+                <button
+                  className="catalog-search-submit"
+                  type="submit"
+                  disabled={!catalogQuery.trim()}
+                >
+                  Buscar
+                </button>
+              </div>
+              <div className="catalog-search-meta">
+                <span>
+                  {catalogQuery.trim()
+                    ? catalogSearchLabel(visibleCatalogProducts.length)
+                    : 'Podés combinar búsqueda y categoría.'}
+                </span>
+                {catalogQuery.trim() && (
+                  <button
+                    className="catalog-search-clear"
+                    type="button"
+                    onClick={clearCatalogSearch}
+                  >
+                    Limpiar búsqueda
+                  </button>
+                )}
+              </div>
+            </form>
 
             {catalog.length > 0 && (
               <div className="catalog-filters" aria-label="Filtrar por categoría">
@@ -793,6 +927,16 @@ function StorefrontApp() {
               </div>
             )}
 
+            <div className="catalog-results-summary" aria-live="polite">
+              <span>
+                {activeCategory === 'all'
+                  ? 'Todas las categorías'
+                  : catalog.find((category) => category.slug === activeCategory)?.name ??
+                    'Categoría'}
+              </span>
+              <strong>{catalogSearchLabel(visibleCatalogProducts.length)}</strong>
+            </div>
+
             {visibleCatalogProducts.length > 0 ? (
               <div className="product-grid">
                 {visibleCatalogProducts.map((product) => (
@@ -806,8 +950,12 @@ function StorefrontApp() {
             ) : (
               <div className="catalog-empty">
                 <div>
-                  <span className="catalog-empty-label">Sin productos</span>
-                  <h3>No hay productos activos en esta categoría.</h3>
+                  <span className="catalog-empty-label">Sin resultados</span>
+                  <h3>
+                    {catalogQuery.trim()
+                      ? 'No encontramos productos que coincidan con tu búsqueda.'
+                      : 'No hay productos activos en esta categoría.'}
+                  </h3>
                 </div>
               </div>
             )}

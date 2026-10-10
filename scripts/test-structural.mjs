@@ -28,6 +28,9 @@ try {
   const cart = await server.ssrLoadModule('/src/storefront/cart.ts')
   const catalog = await server.ssrLoadModule('/src/storefront/catalog.ts')
   const homeCatalog = await server.ssrLoadModule('/src/storefront/homeCatalog.ts')
+  const catalogSearch = await server.ssrLoadModule(
+    '/src/storefront/catalogSearch.ts',
+  )
   const costUtils = await server.ssrLoadModule('/src/admin/costs/utils.ts')
   const calculation = await server.ssrLoadModule(
     '/src/admin/costs/calculation.ts',
@@ -326,6 +329,74 @@ try {
       ['featured-1', 'featured-2'],
     )
     assert.equal(homeCatalog.catalogProductCount(categories), 7)
+  })
+
+  test('buscador de catálogo ignora acentos y combina categoría', () => {
+    const product = (id, name, shortDescription = null) => ({
+      id,
+      name,
+      slug: id,
+      shortDescription,
+      kind: 'product',
+      pricingMode: 'fixed',
+      basePrice: '1000',
+      imageUrl: null,
+      customizationAllowed: false,
+      featured: false,
+      customizationFields: [],
+      variants: [],
+    })
+
+    const categories = [
+      {
+        id: 'cumple',
+        name: 'Cumpleaños',
+        slug: 'cumpleanos',
+        description: 'Detalles para fiestas',
+        products: [
+          product('tatuajes', 'Tatuajes temporales', 'Diseños personalizados'),
+        ],
+      },
+      {
+        id: 'escuela',
+        name: 'Vuelta al Cole',
+        slug: 'vuelta-al-cole',
+        description: null,
+        products: [
+          product('caratulas', 'Carátulas', 'Para materias y cuadernos'),
+        ],
+      },
+      {
+        id: '3d',
+        name: 'Juguetes para Pintar',
+        slug: 'juguetes-para-pintar',
+        description: 'Impresión 3D',
+        products: [
+          product('personaje-3d', 'Personajes para Pintar 3D'),
+        ],
+      },
+    ]
+
+    assert.deepEqual(
+      catalogSearch
+        .searchCatalogProducts(categories, 'caratula')
+        .map((item) => item.id),
+      ['caratulas'],
+    )
+    assert.deepEqual(
+      catalogSearch
+        .searchCatalogProducts(categories, 'pintar 3d')
+        .map((item) => item.id),
+      ['personaje-3d'],
+    )
+    assert.deepEqual(
+      catalogSearch
+        .searchCatalogProducts(categories, 'personalizados', 'cumpleanos')
+        .map((item) => item.id),
+      ['tatuajes'],
+    )
+    assert.equal(catalogSearch.catalogSearchLabel(1), '1 resultado')
+    assert.equal(catalogSearch.catalogSearchLabel(3), '3 resultados')
   })
 
   test('calidad de catálogo detecta fichas incompletas', () => {

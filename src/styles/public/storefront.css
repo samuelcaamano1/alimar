@@ -5395,3 +5395,196 @@
 .product-customization-reference-note{margin:1px 0 3px;padding:9px 10px;border-radius:9px;color:var(--muted);background:rgba(100,175,198,.08);font-size:.68rem;font-weight:600;line-height:1.45}
 .product-customization-fields label>span[aria-hidden='true']{color:var(--berry);font-weight:900}
 
+/* ALIMAR 1SHOP.10 - SEARCH AND FILTERS */
+
+.catalog-search-box {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 24px;
+}
+
+.catalog-search-box > label {
+  color: var(--ink);
+  font-size: .68rem;
+  font-weight: 850;
+}
+
+.catalog-search-control {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(63,120,138,.19);
+  border-radius: 15px;
+  background: rgba(255,255,255,.78);
+  box-shadow: 0 8px 24px rgba(35,48,52,.045);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.catalog-search-control:focus-within {
+  border-color: rgba(63,120,138,.48);
+  box-shadow:
+    0 8px 24px rgba(35,48,52,.05),
+    0 0 0 3px rgba(100,175,198,.1);
+}
+
+.catalog-search-control input {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  box-sizing: border-box;
+  padding: 0 14px 0 42px;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-size: .82rem;
+}
+
+.catalog-search-control input::placeholder {
+  color: rgba(80,74,73,.6);
+}
+
+.catalog-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--blue-dark);
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.catalog-search-submit {
+  min-height: 38px;
+  margin-right: 6px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--paper);
+  background: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: .66rem;
+  font-weight: 850;
+}
+
+.catalog-search-submit:disabled {
+  cursor: default;
+  opacity: .42;
+}
+
+.catalog-search-meta {
+  min-height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: .64rem;
+}
+
+.catalog-search-meta strong {
+  color: var(--blue-dark);
+}
+
+.catalog-search-clear {
+  padding: 0;
+  border: 0;
+  color: var(--blue-dark);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: .62rem;
+  font-weight: 850;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.home-highlight-heading.is-searching strong {
+  color: var(--blue-dark);
+}
+
+.catalog-section-full .catalog-search-box {
+  width: min(720px, 100%);
+  margin-bottom: 18px;
+}
+
+.catalog-section-full .catalog-search-control {
+  border-color: rgba(255,255,255,.22);
+  background: rgba(255,255,255,.09);
+  box-shadow: none;
+}
+
+.catalog-section-full .catalog-search-control:focus-within {
+  border-color: rgba(255,255,255,.48);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.08);
+}
+
+.catalog-section-full .catalog-search-control input {
+  color: var(--paper);
+}
+
+.catalog-section-full .catalog-search-control input::placeholder {
+  color: rgba(255,250,240,.58);
+}
+
+.catalog-section-full .catalog-search-icon {
+  color: var(--paper);
+}
+
+.catalog-section-full .catalog-search-submit {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.catalog-section-full .catalog-search-meta,
+.catalog-section-full .catalog-search-meta strong,
+.catalog-section-full .catalog-search-clear {
+  color: rgba(255,250,240,.78);
+}
+
+.catalog-results-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -8px 0 20px;
+  color: rgba(255,250,240,.7);
+  font-size: .67rem;
+}
+
+.catalog-results-summary strong {
+  color: var(--paper);
+}
+
+@media (max-width: 620px) {
+  .catalog-search-control {
+    grid-template-columns: minmax(0,1fr);
+  }
+
+  .catalog-search-control input {
+    min-height: 48px;
+    padding-right: 12px;
+  }
+
+  .catalog-search-submit {
+    display: none;
+  }
+
+  .catalog-search-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .catalog-results-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
