@@ -44,6 +44,10 @@ import {
 } from './storefront/catalogSearch'
 import { getProductBadges } from './storefront/productBadges'
 import {
+  productGalleryLabel,
+  productLeadTimeLabel,
+} from './storefront/productDetails'
+import {
   DIRECT_CUSTOM_REQUEST_KEY,
   directCustomRequestExample,
   fallbackCustomRequestExamples,
@@ -64,6 +68,7 @@ import './styles/public/storefront.css'
 const PublicQuoteView = lazy(() => import('./PublicQuoteView'))
 const PublicOrderTracking = lazy(() => import('./PublicOrderTracking'))
 
+/* ALIMAR 1CAT.22 - COMPLETE PRODUCT DETAIL */
 type CatalogProductCardProps = {
   product: CatalogProduct
   onOpen: (product: CatalogProduct) => void
@@ -1473,6 +1478,36 @@ function StorefrontApp() {
                 {selectedProduct.shortDescription && (
                   <p>{selectedProduct.shortDescription}</p>
                 )}
+
+                {selectedProduct.description && (
+                  <p className="product-dialog-description">
+                    {selectedProduct.description}
+                  </p>
+                )}
+
+                <div className="product-dialog-facts">
+                  <div className="product-dialog-fact">
+                    <span>Tiempo estimado</span>
+                    <strong>
+                      {productLeadTimeLabel(selectedProduct.estimatedDays)}
+                    </strong>
+                  </div>
+                  <div className="product-dialog-fact">
+                    <span>Galería</span>
+                    <strong>{productGalleryLabel(productImages.length)}</strong>
+                  </div>
+                  <div className="product-dialog-fact">
+                    <span>Modalidad</span>
+                    <strong>
+                      {selectedProduct.customizationAllowed
+                        ? 'Personalizable'
+                        : selectedProduct.kind === 'service'
+                          ? 'Servicio'
+                          : 'Listo para pedir'}
+                    </strong>
+                  </div>
+                </div>
+
                 {selectedProduct.variants.length > 0 && (
                   <label className="product-variant-picker">
                     Elegí una opción
@@ -1593,30 +1628,42 @@ function StorefrontApp() {
                       )}
                     </div>
                   )}
-                                <strong className="product-dialog-price" aria-live="polite">
-                  {formatSelectionPrice(selectedProduct, selectedVariant)}
-                </strong>
+                <div className="product-dialog-purchase">
+                  <div className="product-dialog-purchase-price">
+                    <span>Precio</span>
+                    <strong className="product-dialog-price" aria-live="polite">
+                      {formatSelectionPrice(selectedProduct, selectedVariant)}
+                    </strong>
+                  </div>
 
-                <div className="product-dialog-actions">
-                  <button
-                    type="button"
-                    className="button button-primary product-dialog-cta"
-                    onClick={() => addToCart(selectedProduct, selectedVariantId)}
-                    disabled={selectedProduct.variants.length > 0 && !selectedVariant}
-                  >
-                    Agregar al pedido
-                    <span aria-hidden="true">+</span>
-                  </button>
+                  <div className="product-dialog-actions">
+                    <button
+                      type="button"
+                      className="button button-primary product-dialog-cta"
+                      onClick={() => addToCart(selectedProduct, selectedVariantId)}
+                      disabled={selectedProduct.variants.length > 0 && !selectedVariant}
+                    >
+                      {selectedProduct.customizationAllowed
+                        ? 'Personalizar y agregar'
+                        : 'Agregar al pedido'}
+                      <span aria-hidden="true">+</span>
+                    </button>
 
-                  <a
-                    className="button button-secondary product-dialog-cta"
-                    href={productWhatsappUrl(selectedProduct, selectedVariant)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Consultar
-                    <span aria-hidden="true">↗</span>
-                  </a>
+                    <a
+                      className="button button-secondary product-dialog-cta"
+                      href={productWhatsappUrl(selectedProduct, selectedVariant)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Consultar
+                      <span aria-hidden="true">↗</span>
+                    </a>
+                  </div>
+
+                  <p className="product-dialog-purchase-note">
+                    El pedido queda registrado y después continuamos la coordinación
+                    por WhatsApp.
+                  </p>
                 </div>
               </div>
             </section>

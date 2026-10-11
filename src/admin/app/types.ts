@@ -13,6 +13,8 @@ export type AdminProduct = {
   name: string
   slug: string
   short_description: string | null
+  description: string | null
+  estimated_days: number | null
   kind: 'service' | 'product'
   pricing_mode: 'fixed' | 'from' | 'quote'
   base_price: string | null

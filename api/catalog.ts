@@ -13,6 +13,8 @@ type CatalogRow = {
   product_name: string | null
   product_slug: string | null
   short_description: string | null
+  description: string | null
+  estimated_days: number | null
   kind: 'service' | 'product' | null
   pricing_mode: 'fixed' | 'from' | 'quote' | null
   base_price: string | null
@@ -102,6 +104,8 @@ export async function GET(request: Request) {
         p.name AS product_name,
         p.slug AS product_slug,
         p.short_description,
+        p.description,
+        p.estimated_days,
         p.kind,
         p.pricing_mode,
         p.base_price::text,
@@ -217,6 +221,8 @@ export async function GET(request: Request) {
           name: string
           slug: string
           shortDescription: string | null
+          description: string | null
+          estimatedDays: number | null
           kind: 'service' | 'product'
           pricingMode: 'fixed' | 'from' | 'quote'
           basePrice: string | null
@@ -264,6 +270,8 @@ export async function GET(request: Request) {
           name: row.product_name,
           slug: row.product_slug,
           shortDescription: row.short_description,
+          description: row.description,
+          estimatedDays: row.estimated_days,
           kind: row.kind,
           pricingMode: row.pricing_mode,
           basePrice: row.base_price,

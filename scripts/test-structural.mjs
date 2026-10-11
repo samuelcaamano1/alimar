@@ -34,6 +34,9 @@ try {
   const productBadges = await server.ssrLoadModule(
     '/src/storefront/productBadges.ts',
   )
+  const productDetails = await server.ssrLoadModule(
+    '/src/storefront/productDetails.ts',
+  )
   const costUtils = await server.ssrLoadModule('/src/admin/costs/utils.ts')
   const calculation = await server.ssrLoadModule(
     '/src/admin/costs/calculation.ts',
@@ -438,6 +441,15 @@ try {
     )
   })
 
+  test('ficha de producto formatea tiempos y galería', () => {
+    assert.equal(productDetails.productLeadTimeLabel(null), 'A coordinar')
+    assert.equal(productDetails.productLeadTimeLabel(1), '1 día')
+    assert.equal(productDetails.productLeadTimeLabel(5), '5 días')
+    assert.equal(productDetails.productGalleryLabel(0), 'Sin fotos')
+    assert.equal(productDetails.productGalleryLabel(1), '1 foto')
+    assert.equal(productDetails.productGalleryLabel(4), '4 fotos')
+  })
+
   test('calidad de catálogo detecta fichas incompletas', () => {
     const baseProduct = {
       id: 'p1',
@@ -446,6 +458,8 @@ try {
       name: 'Producto',
       slug: 'producto',
       short_description: 'Descripción',
+      description: 'Detalle completo del producto',
+      estimated_days: 5,
       kind: 'product',
       pricing_mode: 'fixed',
       base_price: '1500',

@@ -5678,3 +5678,133 @@
   }
 }
 
+/* ALIMAR 1CAT.22 - COMPLETE PRODUCT DETAIL */
+
+.product-dialog {
+  width: min(1020px, calc(100vw - 48px));
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+}
+
+.product-dialog-content {
+  justify-content: flex-start;
+  padding: clamp(30px, 4.2vw, 50px);
+}
+
+.product-dialog-content .product-dialog-description {
+  margin-top: 14px;
+  color: var(--charcoal);
+  font-size: .86rem;
+  line-height: 1.62;
+  white-space: pre-line;
+}
+
+.product-dialog-facts {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.product-dialog-fact {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid rgba(49,39,40,.1);
+  border-radius: 12px;
+  background: rgba(100,175,198,.055);
+}
+
+.product-dialog-fact span {
+  color: var(--muted);
+  font-size: .58rem;
+  font-weight: 780;
+  line-height: 1.25;
+}
+
+.product-dialog-fact strong {
+  color: var(--charcoal);
+  font-size: .72rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.product-dialog-purchase {
+  width: 100%;
+  box-sizing: border-box;
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid rgba(63,120,138,.18);
+  border-radius: 16px;
+  background: rgba(100,175,198,.07);
+}
+
+.product-dialog-purchase-price {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.product-dialog-purchase-price > span {
+  color: var(--muted);
+  font-size: .62rem;
+  font-weight: 800;
+}
+
+.product-dialog-purchase .product-dialog-price {
+  margin: 0;
+  color: var(--charcoal);
+  font-family: var(--display);
+  font-size: 1.42rem;
+  line-height: 1;
+}
+
+.product-dialog-purchase .product-dialog-actions {
+  margin-top: 0;
+}
+
+.product-dialog-purchase .product-dialog-actions .button-primary {
+  flex: 1 1 210px;
+}
+
+.product-dialog-purchase-note {
+  margin: 0 !important;
+  color: var(--muted) !important;
+  font-size: .64rem;
+  line-height: 1.45 !important;
+}
+
+.admin-product-form textarea[name='description'] {
+  min-height: 118px;
+}
+
+@media (max-width: 700px) {
+  .product-dialog {
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .product-dialog-facts {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .product-dialog-fact:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .product-dialog-purchase {
+    padding: 14px;
+  }
+
+  .product-dialog-purchase-price {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+}
+

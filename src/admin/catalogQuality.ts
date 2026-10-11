@@ -4,6 +4,8 @@ export type CatalogQualityIssueKey =
   | 'category'
   | 'image'
   | 'description'
+  | 'details'
+  | 'leadTime'
   | 'price'
   | 'customization'
 
@@ -18,7 +20,7 @@ export function getProductQualityIssues(
   const issues: CatalogQualityIssue[] = []
 
   if (!product.category_id) {
-    issues.push({ key: 'category', label: 'Sin categorÃ­a' })
+    issues.push({ key: 'category', label: 'Sin categoría' })
   }
 
   if (!product.image_url || product.image_count <= 0) {
@@ -26,7 +28,15 @@ export function getProductQualityIssues(
   }
 
   if (!product.short_description?.trim()) {
-    issues.push({ key: 'description', label: 'Sin descripciÃ³n breve' })
+    issues.push({ key: 'description', label: 'Sin descripción breve' })
+  }
+
+  if (!product.description?.trim()) {
+    issues.push({ key: 'details', label: 'Sin descripción completa' })
+  }
+
+  if (!product.estimated_days || product.estimated_days <= 0) {
+    issues.push({ key: 'leadTime', label: 'Sin tiempo estimado' })
   }
 
   if (
@@ -42,7 +52,7 @@ export function getProductQualityIssues(
   ) {
     issues.push({
       key: 'customization',
-      label: 'PersonalizaciÃ³n sin campos',
+      label: 'Personalización sin campos',
     })
   }
 
@@ -65,6 +75,12 @@ export function summarizeCatalogQuality(products: AdminProduct[]) {
     ).length,
     withoutDescription: issueMap.filter(({ issues }) =>
       issues.some((issue) => issue.key === 'description'),
+    ).length,
+    withoutDetails: issueMap.filter(({ issues }) =>
+      issues.some((issue) => issue.key === 'details'),
+    ).length,
+    withoutLeadTime: issueMap.filter(({ issues }) =>
+      issues.some((issue) => issue.key === 'leadTime'),
     ).length,
     withoutImage: issueMap.filter(({ issues }) =>
       issues.some((issue) => issue.key === 'image'),

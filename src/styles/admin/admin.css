@@ -12657,3 +12657,32 @@
 .admin-customizations-preset .admin-primary{justify-self:start}
 @media(max-width:600px){.admin-customizations-ready{display:grid}.admin-customizations-preset .admin-primary{width:100%}}
 
+/* ALIMAR 1CAT.22 - PRODUCT DETAIL ADMIN */
+
+.admin-product-detail-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  gap: 12px;
+}
+
+.admin-product-detail-fields > label:first-child {
+  min-width: 0;
+}
+
+.admin-product-detail-fields textarea {
+  min-height: 120px;
+}
+
+.admin-product-detail-help {
+  margin: -2px 0 0;
+  color: var(--admin-muted);
+  font-size: .6rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 680px) {
+  .admin-product-detail-fields {
+    grid-template-columns: 1fr;
+  }
+}
+

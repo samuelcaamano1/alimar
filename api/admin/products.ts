@@ -15,6 +15,8 @@ type ProductInput = {
   name: string
   categoryId: string
   shortDescription: string | null
+  description: string | null
+  estimatedDays: number | null
   imageUrl: string | null
   kind: 'service' | 'product'
   pricingMode: 'fixed' | 'from' | 'quote'
@@ -49,6 +51,9 @@ function parseProductInput(body: Record<string, unknown>): ProductInput | Respon
   const name = text(body.name, 120)
   const categoryId = text(body.categoryId, 40)
   const shortDescription = text(body.shortDescription, 280) || null
+  const description = text(body.description, 2600) || null
+  const estimatedDaysText = text(body.estimatedDays, 4)
+  const estimatedDays = estimatedDaysText ? Number(estimatedDaysText) : null
   const rawImageUrl = typeof body.imageUrl === 'string' ? body.imageUrl.trim() : ''
   const imageUrl = rawImageUrl || null
   const kind = body.kind === 'product' ? 'product' : 'service'
@@ -76,6 +81,16 @@ function parseProductInput(body: Record<string, unknown>): ProductInput | Respon
     return Response.json({ error: 'Valid price is required' }, { status: 400 })
   }
 
+  if (
+    estimatedDays !== null &&
+    (!Number.isInteger(estimatedDays) || estimatedDays < 1 || estimatedDays > 365)
+  ) {
+    return Response.json(
+      { error: 'Estimated days must be between 1 and 365' },
+      { status: 400 },
+    )
+  }
+
   if (imageUrl && !validImageUrl(imageUrl)) {
     return Response.json(
       { error: 'Image must be HTTPS or a supported image data URL under 1.5 MB' },
@@ -87,6 +102,8 @@ function parseProductInput(body: Record<string, unknown>): ProductInput | Respon
     name,
     categoryId,
     shortDescription,
+    description,
+    estimatedDays,
     imageUrl,
     kind,
     pricingMode,
@@ -299,6 +316,8 @@ export async function POST(request: Request) {
             name,
             slug,
             short_description,
+            description,
+            estimated_days,
             kind,
             pricing_mode,
             base_price,
@@ -311,6 +330,8 @@ export async function POST(request: Request) {
             ${parsed.name},
             ${slug},
             ${parsed.shortDescription},
+            ${parsed.description},
+            ${parsed.estimatedDays},
             ${parsed.kind},
             ${parsed.pricingMode},
             ${parsed.priceNumber},
@@ -347,6 +368,8 @@ export async function POST(request: Request) {
           name,
           slug,
           short_description,
+          description,
+          estimated_days,
           kind,
           pricing_mode,
           base_price,
@@ -359,6 +382,8 @@ export async function POST(request: Request) {
           ${parsed.name},
           ${slug},
           ${parsed.shortDescription},
+          ${parsed.description},
+          ${parsed.estimatedDays},
           ${parsed.kind},
           ${parsed.pricingMode},
           ${parsed.priceNumber},
@@ -478,6 +503,8 @@ export async function PATCH(request: Request) {
             name = ${parsed.name},
             slug = ${slug},
             short_description = ${parsed.shortDescription},
+            description = ${parsed.description},
+            estimated_days = ${parsed.estimatedDays},
             kind = ${parsed.kind},
             pricing_mode = ${parsed.pricingMode},
             base_price = ${parsed.priceNumber},
@@ -518,6 +545,8 @@ export async function PATCH(request: Request) {
             name = ${parsed.name},
             slug = ${slug},
             short_description = ${parsed.shortDescription},
+            description = ${parsed.description},
+            estimated_days = ${parsed.estimatedDays},
             kind = ${parsed.kind},
             pricing_mode = ${parsed.pricingMode},
             base_price = ${parsed.priceNumber},
@@ -541,6 +570,8 @@ export async function PATCH(request: Request) {
           name = ${parsed.name},
           slug = ${slug},
           short_description = ${parsed.shortDescription},
+          description = ${parsed.description},
+          estimated_days = ${parsed.estimatedDays},
           kind = ${parsed.kind},
           pricing_mode = ${parsed.pricingMode},
           base_price = ${parsed.priceNumber},

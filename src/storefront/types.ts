@@ -32,6 +32,8 @@ export type CatalogProduct = {
   name: string
   slug: string
   shortDescription: string | null
+  description: string | null
+  estimatedDays: number | null
   kind: 'service' | 'product'
   pricingMode: 'fixed' | 'from' | 'quote'
   basePrice: string | null

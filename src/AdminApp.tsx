@@ -496,6 +496,8 @@ export default function AdminApp() {
           categoryId: form.get('categoryId'),
           name: productName,
           shortDescription: form.get('shortDescription'),
+          description: form.get('description'),
+          estimatedDays: form.get('estimatedDays'),
           kind: form.get('kind'),
           pricingMode: createPricingMode,
           basePrice:
@@ -609,6 +611,8 @@ export default function AdminApp() {
             categoryId: form.get('categoryId'),
             name: form.get('name'),
             shortDescription: form.get('shortDescription'),
+            description: form.get('description'),
+            estimatedDays: form.get('estimatedDays'),
             kind: form.get('kind'),
             pricingMode: editPricingMode,
             basePrice: editPricingMode === 'quote' ? null : form.get('basePrice'),
@@ -1010,11 +1014,38 @@ export default function AdminApp() {
                   Descripción breve
                   <textarea
                     name="shortDescription"
-                    placeholder="Qué incluye y para qué sirve"
+                    placeholder="Resumen corto para la tarjeta del catálogo"
                     maxLength={280}
                     rows={3}
                   />
                 </label>
+
+                <div className="admin-span-2 admin-product-detail-fields">
+                  <label>
+                    Descripción completa
+                    <textarea
+                      name="description"
+                      placeholder="Explicá qué incluye, materiales, medidas, usos o cualquier dato que ayude a decidir la compra."
+                      maxLength={2600}
+                      rows={5}
+                    />
+                  </label>
+
+                  <label>
+                    Tiempo estimado (días)
+                    <input
+                      name="estimatedDays"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={365}
+                      placeholder="Ej. 5"
+                    />
+                    <small className="admin-product-detail-help">
+                      Tiempo habitual de preparación o producción.
+                    </small>
+                  </label>
+                </div>
 
                 <div className="admin-span-2 admin-image-field">
                   <span className="admin-field-label">
@@ -1528,6 +1559,34 @@ export default function AdminApp() {
                   rows={3}
                 />
               </label>
+
+              <div className="admin-span-2 admin-product-detail-fields">
+                <label>
+                  Descripción completa
+                  <textarea
+                    name="description"
+                    defaultValue={editingProduct.description ?? ''}
+                    maxLength={2600}
+                    rows={5}
+                  />
+                </label>
+
+                <label>
+                  Tiempo estimado (días)
+                  <input
+                    name="estimatedDays"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={365}
+                    defaultValue={editingProduct.estimated_days ?? ''}
+                    placeholder="Ej. 5"
+                  />
+                  <small className="admin-product-detail-help">
+                    Tiempo habitual de preparación o producción.
+                  </small>
+                </label>
+              </div>
 
               <div className="admin-span-2 admin-image-field">
                 <span className="admin-field-label">Imagen</span>
