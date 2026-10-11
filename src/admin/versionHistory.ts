@@ -11,6 +11,30 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1CAT.22",
+    "date": "2026-10-11",
+    "title": "Ficha de producto completa",
+    "summary": "Completa la ficha comercial del producto y conecta descripcion detallada y tiempo estimado desde el administrador hasta la tienda.",
+    "commit": "881b874a761cf8420946b7cafa0b4ce1fe468f71",
+    "files": [
+      "src/App.tsx",
+      "api/catalog.ts",
+      "src/storefront/types.ts",
+      "src/storefront/productDetails.ts",
+      "src/AdminApp.tsx",
+      "api/admin/products.ts",
+      "api/admin/catalog.ts",
+      "src/admin/catalogQuality.ts"
+    ],
+    "changes": [
+      "Permite administrar descripcion completa y tiempo estimado sin migraciones nuevas.",
+      "Expone esos datos en el catalogo publico.",
+      "Agrega resumen de tiempo galeria y modalidad en la ficha del producto.",
+      "Refuerza el bloque de precio y la llamada a la accion.",
+      "El control de calidad detecta productos sin descripcion completa o tiempo estimado."
+    ]
+  },
+  {
     "code": "1SHOP.11",
     "date": "2026-10-11",
     "title": "Badges comerciales",
