@@ -31,6 +31,9 @@ try {
   const catalogSearch = await server.ssrLoadModule(
     '/src/storefront/catalogSearch.ts',
   )
+  const productBadges = await server.ssrLoadModule(
+    '/src/storefront/productBadges.ts',
+  )
   const costUtils = await server.ssrLoadModule('/src/admin/costs/utils.ts')
   const calculation = await server.ssrLoadModule(
     '/src/admin/costs/calculation.ts',
@@ -397,6 +400,42 @@ try {
     )
     assert.equal(catalogSearch.catalogSearchLabel(1), '1 resultado')
     assert.equal(catalogSearch.catalogSearchLabel(3), '3 resultados')
+  })
+
+  test('badges comerciales salen de datos reales del producto', () => {
+    const product = {
+      featured: false,
+      customizationAllowed: false,
+      kind: 'product',
+      variants: [],
+    }
+
+    assert.deepEqual(productBadges.getProductBadges(product), [])
+
+    assert.deepEqual(
+      productBadges
+        .getProductBadges({
+          ...product,
+          featured: true,
+          customizationAllowed: true,
+          variants: [
+            { id: 'v1', name: 'A', priceOverride: null },
+            { id: 'v2', name: 'B', priceOverride: null },
+          ],
+        })
+        .map((badge) => badge.label),
+      ['Destacado', 'Personalizable', '2 opciones'],
+    )
+
+    assert.deepEqual(
+      productBadges
+        .getProductBadges({
+          ...product,
+          kind: 'service',
+        })
+        .map((badge) => badge.label),
+      ['Servicio'],
+    )
   })
 
   test('calidad de catálogo detecta fichas incompletas', () => {

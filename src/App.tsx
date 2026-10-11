@@ -42,6 +42,7 @@ import {
   catalogSearchLabel,
   searchCatalogProducts,
 } from './storefront/catalogSearch'
+import { getProductBadges } from './storefront/productBadges'
 import {
   DIRECT_CUSTOM_REQUEST_KEY,
   directCustomRequestExample,
@@ -68,6 +69,35 @@ type CatalogProductCardProps = {
   onOpen: (product: CatalogProduct) => void
 }
 
+/* ALIMAR 1SHOP.11 - COMMERCIAL BADGES */
+function ProductBadges({
+  product,
+  dialog = false,
+}: {
+  product: CatalogProduct
+  dialog?: boolean
+}) {
+  const badges = getProductBadges(product)
+
+  if (badges.length === 0) return null
+
+  return (
+    <div
+      className={`product-badges${dialog ? ' product-badges-dialog' : ''}`}
+      aria-label={badges.map((badge) => badge.label).join(', ')}
+    >
+      {badges.map((badge) => (
+        <span
+          className={`product-badge is-${badge.tone}`}
+          key={badge.key}
+        >
+          {badge.label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function CatalogProductCard({ product, onOpen }: CatalogProductCardProps) {
   return (
     <button
@@ -82,16 +112,7 @@ function CatalogProductCard({ product, onOpen }: CatalogProductCardProps) {
         ) : (
           <span>Alimar</span>
         )}
-        <span className="product-kind">
-          {product.kind === 'service' ? 'Servicio' : 'Producto'}
-        </span>
-        {product.variants.length > 0 && (
-          <span className="product-options-count">
-            {product.variants.length === 1
-              ? '1 opción'
-              : `${product.variants.length} opciones`}
-          </span>
-        )}
+        <ProductBadges product={product} />
       </div>
       <div className="product-content">
         <h3>{product.name}</h3>
@@ -1447,9 +1468,7 @@ function StorefrontApp() {
               </div>
 
               <div className="product-dialog-content">
-                <span className="product-dialog-kind">
-                  {selectedProduct.kind === 'service' ? 'Servicio personalizado' : 'Producto'}
-                </span>
+                <ProductBadges product={selectedProduct} dialog />
                 <h3 id="product-dialog-title">{selectedProduct.name}</h3>
                 {selectedProduct.shortDescription && (
                   <p>{selectedProduct.shortDescription}</p>

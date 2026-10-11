@@ -5588,3 +5588,93 @@
   }
 }
 
+/* ALIMAR 1SHOP.11 - COMMERCIAL BADGES */
+
+.product-badges {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 2;
+  max-width: calc(100% - 24px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.product-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 0 9px;
+  border: 1px solid rgba(49,39,40,.08);
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(255,253,248,.94);
+  box-shadow: 0 6px 18px rgba(35,48,52,.08);
+  backdrop-filter: blur(7px);
+  font-family: var(--sans);
+  font-size: .6rem;
+  font-weight: 850;
+  letter-spacing: .025em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.product-badge.is-featured {
+  border-color: rgba(178,122,71,.22);
+  color: #744d2d;
+  background: rgba(249,225,190,.95);
+}
+
+.product-badge.is-customizable {
+  border-color: rgba(63,120,138,.2);
+  color: #315f6c;
+  background: rgba(224,242,246,.95);
+}
+
+.product-badge.is-service {
+  border-color: rgba(120,83,124,.18);
+  color: #65476a;
+  background: rgba(239,228,241,.95);
+}
+
+.product-badge.is-options {
+  border-color: rgba(49,39,40,.12);
+  color: var(--ink);
+  background: rgba(255,253,248,.94);
+}
+
+.product-badges-dialog {
+  position: static;
+  max-width: none;
+  margin: 0 0 8px;
+  pointer-events: auto;
+}
+
+.product-badges-dialog .product-badge {
+  min-height: 25px;
+  padding-inline: 8px;
+  box-shadow: none;
+}
+
+@media (max-width: 620px) {
+  .product-badges {
+    left: 10px;
+    top: 10px;
+    max-width: calc(100% - 20px);
+    gap: 5px;
+  }
+
+  .product-badge {
+    min-height: 25px;
+    padding-inline: 8px;
+    font-size: .56rem;
+  }
+
+  .product-badges-dialog {
+    left: auto;
+    top: auto;
+  }
+}
+
