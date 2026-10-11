@@ -11,6 +11,25 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1SHOP.11",
+    "date": "2026-10-11",
+    "title": "Badges comerciales",
+    "summary": "Reemplaza etiquetas genericas por seÃ±ales comerciales basadas en datos reales de cada producto.",
+    "commit": "ec02654119a779e26731be798d7e64439bbf01e8",
+    "files": [
+      "src/App.tsx",
+      "src/storefront/productBadges.ts",
+      "src/styles/public/storefront.css"
+    ],
+    "changes": [
+      "Muestra Destacado solo cuando el admin marco el producto como destacado.",
+      "Muestra Personalizable solo en productos que realmente admiten personalizacion.",
+      "Identifica servicios y productos con variantes de forma automatica.",
+      "Elimina el badge generico Producto para reducir ruido visual.",
+      "Repite los badges en la ficha del producto para mantener consistencia."
+    ]
+  },
+  {
     "code": "1SHOP.10",
     "date": "2026-10-10",
     "title": "Buscador y filtros",
