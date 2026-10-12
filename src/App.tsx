@@ -47,6 +47,7 @@ import {
   productGalleryLabel,
   productLeadTimeLabel,
 } from './storefront/productDetails'
+import { bundleToCartItem } from './storefront/bundles'
 import {
   DIRECT_CUSTOM_REQUEST_KEY,
   directCustomRequestExample,
@@ -55,6 +56,7 @@ import {
 import { serviceLines } from './storefront/content'
 import type {
   CartItem,
+  CatalogBundle,
   CatalogCategory,
   CatalogImage,
   CatalogProduct,
@@ -133,6 +135,7 @@ function CatalogProductCard({ product, onOpen }: CatalogProductCardProps) {
 
 function StorefrontApp() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>([])
+  const [bundles, setBundles] = useState<CatalogBundle[]>([])
   const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [catalogQuery, setCatalogQuery] = useState('')
@@ -190,6 +193,7 @@ function StorefrontApp() {
 
         const data = (await response.json()) as CatalogResponse
         setCatalog(data.categories)
+        setBundles(Array.isArray(data.bundles) ? data.bundles : [])
         setCatalogState('ready')
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return
@@ -316,6 +320,8 @@ function StorefrontApp() {
 
     const nextItem: CartItem = {
       ...product,
+      bundleId: null,
+      bundleItems: [],
       variantId: variant?.id ?? null,
       variantName: variant?.name ?? null,
       unitPrice: priceForSelection(product, variant),
@@ -344,6 +350,27 @@ function StorefrontApp() {
     setSelectedVariantId('')
     setSelectedCustomizationValues({})
     setSelectedCustomizationMessage('')
+    setCartOpen(true)
+  }
+
+  function addBundleToCart(bundle: CatalogBundle) {
+    const nextItem = bundleToCartItem(bundle)
+    const key = cartItemKey(nextItem)
+
+    setCart((current) => {
+      const existing = current.find((item) => cartItemKey(item) === key)
+
+      if (existing) {
+        return current.map((item) =>
+          cartItemKey(item) === key
+            ? { ...item, quantity: Math.min(item.quantity + 1, 99) }
+            : item,
+        )
+      }
+
+      return [...current, nextItem]
+    })
+
     setCartOpen(true)
   }
 
@@ -838,6 +865,64 @@ function StorefrontApp() {
                     onOpen={openProduct}
                   />
                 ))}
+              </div>
+            )}
+
+            {!catalogQuery.trim() && bundles.length > 0 && (
+              <div className="home-combos">
+                <div className="home-combos-heading">
+                  <div>
+                    <strong>Combos</strong>
+                    <span>Opciones armadas para resolver más fácil.</span>
+                  </div>
+                </div>
+
+                <div className="combo-grid">
+                  {bundles.map((bundle) => (
+                    <article className="combo-card" key={bundle.id}>
+                      <div className="combo-card-media">
+                        {bundle.imageUrl ? (
+                          <img src={bundle.imageUrl} alt="" loading="lazy" />
+                        ) : (
+                          <span>Alimar</span>
+                        )}
+                      </div>
+
+                      <div className="combo-card-content">
+                        <h3>{bundle.name}</h3>
+                        <p>
+                          {bundle.shortDescription ??
+                            'Una selección de productos Alimar en un solo pedido.'}
+                        </p>
+
+                        <ul className="combo-items">
+                          {bundle.items.map((item) => (
+                            <li key={item.productId}>
+                              <span>{item.name}</span>
+                              <strong>{item.quantity}x</strong>
+                            </li>
+                          ))}
+                        </ul>
+
+                        <div className="combo-card-footer">
+                          <div className="combo-card-price">
+                            <span>Precio del combo</span>
+                            <strong>{formatAmount(Number(bundle.bundlePrice))}</strong>
+                          </div>
+
+                          <button
+                            className="button button-primary"
+                            type="button"
+                            onClick={() => addBundleToCart(bundle)}
+                          >
+                            Agregar combo
+                            <span aria-hidden="true">+</span>
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1788,6 +1873,12 @@ function StorefrontApp() {
                             {item.variantName && (
                               <small className="cart-item-variant">{item.variantName}</small>
                             )}
+                            {item.bundleId && item.bundleItems.length > 0 && (
+                              <small className="cart-bundle-summary">
+                                <strong>Incluye:</strong>
+                                {item.bundleItems.join(' · ')}
+                              </small>
+                            )}
                           </div>
 
                           <button
@@ -1869,6 +1960,7 @@ function StorefrontApp() {
                     sessionReady={customerSessionReady}
                     items={cart.map((item) => ({
                       id: item.id,
+                      bundleId: item.bundleId,
                       variantId: item.variantId,
                       quantity: item.quantity,
                       note: item.note,

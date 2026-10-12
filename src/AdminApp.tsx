@@ -22,6 +22,7 @@ import AdminProductCustomizations from './AdminProductCustomizations'
 import AdminNotifications from './AdminNotifications'
 import AdminVersionControl from './AdminVersionControl'
 import AdminCatalogQuality from './AdminCatalogQuality'
+import AdminCombosPanel from './AdminCombosPanel'
 import { getProductQualityIssues } from './admin/catalogQuality'
 import './styles/admin/admin.css'
 
@@ -853,6 +854,12 @@ export default function AdminApp() {
           </button>
           <button
             type="button"
+            onClick={() => scrollAdminSection('.admin-combos')}
+          >
+            Combos
+          </button>
+          <button
+            type="button"
             onClick={() => scrollAdminSection('.admin-catalog-quality')}
           >
             Calidad
@@ -1173,6 +1180,9 @@ export default function AdminApp() {
           products={catalog.products}
           onChanged={loadCatalog}
         />
+
+        {/* ALIMAR 1SHOP.12 - PRODUCT BUNDLES */}
+        <AdminCombosPanel products={catalog.products} />
 
         <section className="admin-panel admin-list-panel">
           <div className="admin-panel-heading">

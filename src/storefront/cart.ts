@@ -54,6 +54,13 @@ export function loadStoredCart(): CartItem[] {
                 ]
               })
             : [],
+          bundleId:
+            typeof item.bundleId === 'string' ? item.bundleId : null,
+          bundleItems: Array.isArray(item.bundleItems)
+            ? item.bundleItems.filter(
+                (value: unknown): value is string => typeof value === 'string',
+              )
+            : [],
           variantId:
             typeof item.variantId === 'string' ? item.variantId : null,
           variantName:
@@ -112,9 +119,12 @@ function customizationSignature(
 }
 
 export function cartItemKey(
-  item: Pick<CartItem, 'id' | 'variantId' | 'customizations'>,
+  item: Pick<CartItem, 'id' | 'variantId' | 'customizations'> & {
+    bundleId?: string | null
+  },
 ) {
-  return `${item.id}:${item.variantId ?? 'base'}:${customizationSignature(
+  const source = item.bundleId ? `bundle:${item.bundleId}` : `product:${item.id}`
+  return `${source}:${item.variantId ?? 'base'}:${customizationSignature(
     item.customizations,
   )}`
 }

@@ -37,6 +37,7 @@ try {
   const productDetails = await server.ssrLoadModule(
     '/src/storefront/productDetails.ts',
   )
+  const bundles = await server.ssrLoadModule('/src/storefront/bundles.ts')
   const costUtils = await server.ssrLoadModule('/src/admin/costs/utils.ts')
   const calculation = await server.ssrLoadModule(
     '/src/admin/costs/calculation.ts',
@@ -448,6 +449,36 @@ try {
     assert.equal(productDetails.productGalleryLabel(0), 'Sin fotos')
     assert.equal(productDetails.productGalleryLabel(1), '1 foto')
     assert.equal(productDetails.productGalleryLabel(4), '4 fotos')
+  })
+
+  test('combo se convierte en item de carrito con identidad propia', () => {
+    const bundle = {
+      id: 'bundle-1',
+      name: 'Combo cumple',
+      slug: 'combo-cumple',
+      shortDescription: 'Todo junto',
+      bundlePrice: '12000',
+      imageUrl: null,
+      featured: true,
+      items: [
+        { productId: 'p1', name: 'Topper', quantity: 1 },
+        { productId: 'p2', name: 'Tatuajes', quantity: 2 },
+      ],
+    }
+
+    const item = bundles.bundleToCartItem(bundle)
+
+    assert.equal(item.bundleId, 'bundle-1')
+    assert.equal(item.unitPrice, '12000')
+    assert.deepEqual(item.bundleItems, ['1x Topper', '2x Tatuajes'])
+    assert.equal(
+      cart.cartItemKey(item).startsWith('bundle:bundle-1:base:'),
+      true,
+    )
+    assert.equal(
+      bundles.bundleItemsLabel(bundle),
+      '1x Topper · 2x Tatuajes',
+    )
   })
 
   test('calidad de catálogo detecta fichas incompletas', () => {

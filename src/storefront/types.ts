@@ -44,7 +44,26 @@ export type CatalogProduct = {
   variants: CatalogVariant[]
 }
 
+export type CatalogBundleItem = {
+  productId: string
+  name: string
+  quantity: number
+}
+
+export type CatalogBundle = {
+  id: string
+  name: string
+  slug: string
+  shortDescription: string | null
+  bundlePrice: string
+  imageUrl: string | null
+  featured: boolean
+  items: CatalogBundleItem[]
+}
+
 export type CartItem = CatalogProduct & {
+  bundleId: string | null
+  bundleItems: string[]
   variantId: string | null
   variantName: string | null
   unitPrice: string | null
@@ -63,6 +82,7 @@ export type CatalogCategory = {
 
 export type CatalogResponse = {
   categories: CatalogCategory[]
+  bundles: CatalogBundle[]
 }
 
 export type CustomRequestSuccess = {

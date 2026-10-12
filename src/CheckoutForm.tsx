@@ -5,6 +5,7 @@ import { site } from './site'
 
 type CheckoutItem = {
   id: string
+  bundleId?: string | null
   variantId: string | null
   quantity: number
   note: string
@@ -43,7 +44,10 @@ export default function CheckoutForm({
   const [message, setMessage] = useState('')
   const requestId = useRef(crypto.randomUUID())
   const cartSignature = items
-    .map((item) => `${item.id}:${item.variantId ?? 'base'}:${item.quantity}:${item.note}`)
+    .map(
+      (item) =>
+        `${item.bundleId ? `bundle:${item.bundleId}` : `product:${item.id}`}:${item.variantId ?? 'base'}:${item.quantity}:${item.note}`,
+    )
     .join('|')
 
   useEffect(() => {

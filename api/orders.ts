@@ -25,6 +25,7 @@ import {
   requireJsonBodyWithinLimit,
   requireRequestOrigin,
 } from './_lib/request-security.js'
+import { loadActiveProductBundles } from './_lib/product-bundles.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const MAX_ITEMS = 25
@@ -52,6 +53,7 @@ type CustomizationFieldSnapshot = {
 
 type IncomingItem = {
   productId: string
+  bundleId: string | null
   variantId: string | null
   quantity: number
   note: string
@@ -75,6 +77,7 @@ type VariantSnapshot = {
 }
 
 type ValidatedItem = ProductSnapshot & {
+  bundleId: string | null
   quantity: number
   note: string | null
   variantId: string | null
@@ -450,6 +453,8 @@ export async function POST(request: Request) {
 
     const value = rawItem as Record<string, unknown>
     const productId = text(value.id ?? value.productId, 40)
+    const rawBundleId = text(value.bundleId, 40)
+    const bundleId = rawBundleId || null
     const rawVariantId = text(value.variantId, 40)
     const variantId = rawVariantId || null
     const quantity = Number(value.quantity)
@@ -494,7 +499,10 @@ export async function POST(request: Request) {
 
     if (
       !UUID_RE.test(productId) ||
+      (bundleId !== null && !UUID_RE.test(bundleId)) ||
       (variantId !== null && !UUID_RE.test(variantId)) ||
+      (bundleId !== null && variantId !== null) ||
+      (bundleId !== null && customizations.length > 0) ||
       !Number.isInteger(quantity) ||
       quantity < 1 ||
       quantity > 99
@@ -507,14 +515,22 @@ export async function POST(request: Request) {
         .sort((left, right) => left.fieldId.localeCompare(right.fieldId))
         .map((customization) => [customization.fieldId, customization.value]),
     )
-    const itemKey = `${productId}:${variantId ?? 'base'}:${customizationKey}`
+    const sourceKey = bundleId ? `bundle:${bundleId}` : `product:${productId}`
+    const itemKey = `${sourceKey}:${variantId ?? 'base'}:${customizationKey}`
 
     if (seen.has(itemKey)) {
       return Response.json({ error: 'El pedido contiene opciones duplicadas.' }, { status: 400 })
     }
 
     seen.add(itemKey)
-    incoming.push({ productId, variantId, quantity, note, customizations })
+    incoming.push({
+      productId,
+      bundleId,
+      variantId,
+      quantity,
+      note,
+      customizations,
+    })
   }
 
   const sql = neon(databaseUrl)
@@ -551,8 +567,55 @@ export async function POST(request: Request) {
     }
 
     const items: ValidatedItem[] = []
+    const activeBundles = await loadActiveProductBundles(sql)
+    const bundlesById = new Map(
+      activeBundles.map((bundle) => [bundle.id, bundle]),
+    )
 
     for (const item of incoming) {
+      if (item.bundleId) {
+        const bundle = bundlesById.get(item.bundleId)
+
+        if (!bundle) {
+          return Response.json(
+            { error: 'Uno de los combos ya no está disponible. Actualizá el catálogo.' },
+            { status: 409, headers: { 'Cache-Control': 'no-store' } },
+          )
+        }
+
+        const numericPrice = Number(bundle.bundlePrice)
+        if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+          return Response.json(
+            { error: 'No se pudo validar el precio de un combo.' },
+            { status: 409, headers: { 'Cache-Control': 'no-store' } },
+          )
+        }
+
+        items.push({
+          id: bundle.id,
+          name: bundle.name,
+          kind: 'product',
+          pricing_mode: 'fixed',
+          base_price: bundle.bundlePrice,
+          has_variants: false,
+          customization_allowed: false,
+          bundleId: bundle.id,
+          quantity: item.quantity,
+          note: item.note || null,
+          variantId: null,
+          variantName: 'Combo',
+          unitPrice: numericPrice,
+          lineTotal: numericPrice * item.quantity,
+          customizations: bundle.items.map((bundleItem) => ({
+            fieldId: bundleItem.productId,
+            label: 'Incluye',
+            fieldType: 'text',
+            value: String(bundleItem.quantity) + 'x ' + bundleItem.name,
+          })),
+        })
+        continue
+      }
+
       const rows = await sql`
         SELECT
           p.id::text,
@@ -735,6 +798,7 @@ export async function POST(request: Request) {
 
       items.push({
         ...product,
+        bundleId: null,
         quantity: item.quantity,
         note: item.note || null,
         variantId: variant?.id ?? null,
@@ -813,7 +877,7 @@ export async function POST(request: Request) {
         )
         VALUES (
           ${orderId}::uuid,
-          ${item.id}::uuid,
+          ${item.bundleId ? null : item.id}::uuid,
           ${item.variantId}::uuid,
           ${item.name},
           ${item.variantName},

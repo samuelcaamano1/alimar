@@ -3,6 +3,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 import { neon } from '@neondatabase/serverless'
 import { getPublicQuote } from './_lib/public-quotes.js'
 import { listPublicCustomRequestExamples } from './_lib/custom-request-examples.js'
+import { loadActiveProductBundles } from './_lib/product-bundles.js'
 
 type CatalogRow = {
   category_id: string
@@ -284,8 +285,10 @@ export async function GET(request: Request) {
       }
     }
 
+    const bundles = await loadActiveProductBundles(sql)
+
     return Response.json(
-      { categories: Array.from(categories.values()) },
+      { categories: Array.from(categories.values()), bundles },
       {
         headers: {
           'Cache-Control': 'public, max-age=0, s-maxage=10, stale-while-revalidate=30',

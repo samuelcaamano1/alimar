@@ -12686,3 +12686,222 @@
   }
 }
 
+/* ALIMAR 1SHOP.12 - COMBOS ADMIN */
+
+.admin-combos {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-combos-form {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--admin-line);
+  border-radius: 15px;
+  background: rgba(255,255,255,.3);
+}
+
+.admin-combos-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(180px,.42fr);
+  gap: 12px;
+}
+
+.admin-combos-form label,
+.admin-combo-quantity {
+  display: grid;
+  gap: 6px;
+  color: var(--admin-ink);
+  font-size: .64rem;
+  font-weight: 800;
+}
+
+.admin-combos-form input,
+.admin-combos-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-combo-products {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-combo-products > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-combo-products > div:first-child strong {
+  font-size: .72rem;
+}
+
+.admin-combo-products > div:first-child span {
+  color: var(--admin-muted);
+  font-size: .6rem;
+}
+
+.admin-combo-product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 8px;
+}
+
+.admin-combo-product {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 78px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--admin-line);
+  border-radius: 11px;
+  background: rgba(255,255,255,.38);
+}
+
+.admin-combo-product.is-selected {
+  border-color: rgba(63,120,138,.28);
+  background: rgba(100,175,198,.075);
+}
+
+.admin-combo-product > label:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-combo-product > label:first-child > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-combo-product strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .66rem;
+}
+
+.admin-combo-product small {
+  color: var(--admin-muted);
+  font-size: .56rem;
+}
+
+.admin-combo-quantity {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 5px;
+  font-size: .56rem;
+}
+
+.admin-combo-quantity input {
+  min-width: 0;
+  padding-inline: 7px;
+}
+
+.admin-combo-featured {
+  width: fit-content;
+}
+
+.admin-combo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-combo-list {
+  overflow: hidden;
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+}
+
+.admin-combo-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--admin-line);
+  background: rgba(100,175,198,.045);
+}
+
+.admin-combo-list-heading strong {
+  font-size: .7rem;
+}
+
+.admin-combo-list-heading span {
+  color: var(--admin-muted);
+  font-size: .58rem;
+}
+
+.admin-combo-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 13px;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.admin-combo-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-combo-row > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-combo-row > div:first-child > span {
+  color: var(--admin-blue-dark);
+  font-size: .54rem;
+  font-weight: 850;
+}
+
+.admin-combo-row > div:first-child > strong {
+  font-size: .72rem;
+}
+
+.admin-combo-row > div:first-child > small {
+  color: var(--admin-muted);
+  font-size: .57rem;
+  line-height: 1.4;
+}
+
+.admin-combo-row > strong {
+  color: var(--admin-ink);
+  font-size: .72rem;
+}
+
+@media (max-width: 760px) {
+  .admin-combos-form-grid,
+  .admin-combo-product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-combo-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .admin-combo-row .admin-row-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-combo-product {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-combo-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-combo-row .admin-row-actions {
+    grid-column: auto;
+  }
+}
+
