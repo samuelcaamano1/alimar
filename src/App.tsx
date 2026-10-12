@@ -1958,6 +1958,10 @@ function StorefrontApp() {
                   <CheckoutForm
                     session={customerSession}
                     sessionReady={customerSessionReady}
+                    onSessionChanged={(account) => {
+                      setCustomerSession(account)
+                      setCustomerSessionReady(true)
+                    }}
                     items={cart.map((item) => ({
                       id: item.id,
                       bundleId: item.bundleId,

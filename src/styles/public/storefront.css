@@ -6028,3 +6028,150 @@
   }
 }
 
+/* ALIMAR 1SHOP.13 - DIRECT CHECKOUT */
+
+.checkout-inline-auth {
+  gap: 14px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 92% 4%, rgba(239,228,241,.72), transparent 34%),
+    rgba(100,175,198,.075);
+}
+
+.checkout-inline-auth-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.checkout-inline-auth-heading > span {
+  color: var(--blue-dark);
+  font-size: .6rem;
+  font-weight: 900;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.checkout-inline-auth-heading > strong {
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1.18rem;
+  line-height: 1.05;
+}
+
+.checkout-inline-auth-heading > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .7rem;
+  line-height: 1.45;
+}
+
+.checkout-inline-auth-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 5px !important;
+  padding: 4px;
+  border: 1px solid rgba(63,120,138,.14);
+  border-radius: 12px;
+  background: rgba(255,255,255,.45);
+}
+
+.checkout-inline-auth-tabs button {
+  min-height: 38px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: .64rem;
+  font-weight: 850;
+}
+
+.checkout-inline-auth-tabs button.is-active {
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 3px 12px rgba(35,48,52,.08);
+}
+
+.checkout-inline-auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+.checkout-inline-auth-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 9px !important;
+}
+
+.checkout-inline-auth-form label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  color: var(--ink);
+  font-size: .65rem;
+  font-weight: 800;
+}
+
+.checkout-inline-auth-form input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid rgba(12,16,20,.13);
+  border-radius: 10px;
+  outline: none;
+  color: var(--ink);
+  background: rgba(255,253,248,.94);
+  font: inherit;
+  font-size: .75rem;
+}
+
+.checkout-inline-auth-form input:focus {
+  border-color: var(--blue-dark);
+  box-shadow: 0 0 0 3px rgba(100,175,198,.13);
+}
+
+.checkout-inline-auth-submit {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 2px;
+}
+
+.checkout-inline-auth-error {
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 9px;
+  color: #7a3535;
+  background: rgba(191,79,79,.08);
+  font-size: .64rem;
+  line-height: 1.4;
+}
+
+.checkout-inline-auth-note {
+  padding-top: 2px;
+  border-top: 1px solid rgba(49,39,40,.07);
+  color: var(--muted);
+  font-size: .61rem !important;
+  line-height: 1.4 !important;
+}
+
+.checkout-inline-auth-account-link {
+  color: var(--blue-dark);
+  font-size: .62rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 520px) {
+  .checkout-inline-auth-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-inline-auth {
+    padding: 14px;
+  }
+}
+

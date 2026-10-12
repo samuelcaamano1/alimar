@@ -2,6 +2,11 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { saveRecoveredOrder, type RecoveredOrder } from './orderRecovery'
 import type { CustomerSession } from './customerAccount'
 import { site } from './site'
+import {
+  checkoutAuthEndpoint,
+  checkoutAuthPayload,
+  type CheckoutAuthMode,
+} from './storefront/checkoutAuth'
 
 type CheckoutItem = {
   id: string
@@ -18,10 +23,16 @@ type CreateOrderResponse = {
   trackingToken: string
 }
 
+type AuthResponse = {
+  error?: string
+  account?: CustomerSession
+}
+
 type CheckoutFormProps = {
   items: CheckoutItem[]
   session: CustomerSession | null
   sessionReady: boolean
+  onSessionChanged: (account: CustomerSession | null) => void
   onCreated: (order: RecoveredOrder) => void
 }
 
@@ -38,10 +49,14 @@ export default function CheckoutForm({
   items,
   session,
   sessionReady,
+  onSessionChanged,
   onCreated,
 }: CheckoutFormProps) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [authMode, setAuthMode] = useState<CheckoutAuthMode>('register')
+  const [authBusy, setAuthBusy] = useState(false)
+  const [authMessage, setAuthMessage] = useState('')
   const requestId = useRef(crypto.randomUUID())
   const cartSignature = items
     .map(
@@ -53,6 +68,68 @@ export default function CheckoutForm({
   useEffect(() => {
     requestId.current = crypto.randomUUID()
   }, [cartSignature])
+
+  function changeAuthMode(mode: CheckoutAuthMode) {
+    setAuthMode(mode)
+    setAuthMessage('')
+  }
+
+  async function handleInlineAuth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (authBusy) return
+
+    const form = new FormData(event.currentTarget)
+    const payload = checkoutAuthPayload(authMode, {
+      name: String(form.get('name') ?? ''),
+      phone: String(form.get('phone') ?? ''),
+      email: String(form.get('email') ?? ''),
+      password: String(form.get('password') ?? ''),
+    })
+
+    setAuthBusy(true)
+    setAuthMessage('')
+
+    try {
+      const response = await fetch(checkoutAuthEndpoint(authMode), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      let data: AuthResponse = {}
+
+      try {
+        data = (await response.json()) as AuthResponse
+      } catch {
+        // A generic message is shown below if the body is not JSON.
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            (authMode === 'register'
+              ? 'No pudimos crear tu cuenta.'
+              : 'No pudimos iniciar sesión.'),
+        )
+      }
+
+      if (!data.account) {
+        throw new Error('La cuenta se creó, pero la respuesta fue incompleta.')
+      }
+
+      onSessionChanged(data.account)
+      setMessage('')
+      setAuthMessage('')
+    } catch (error) {
+      setAuthMessage(
+        error instanceof Error
+          ? error.message
+          : 'No pudimos validar tu cuenta.',
+      )
+    } finally {
+      setAuthBusy(false)
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -78,7 +155,12 @@ export default function CheckoutForm({
       })
 
       if (response.status === 401) {
-        window.location.assign('/cuenta?next=/')
+        setBusy(false)
+        setAuthMode('login')
+        setAuthMessage(
+          'Tu sesión venció. Ingresá de nuevo; el carrito sigue guardado.',
+        )
+        onSessionChanged(null)
         return
       }
 
@@ -96,7 +178,11 @@ export default function CheckoutForm({
       onCreated(recoveredOrder)
       window.location.assign(site.whatsappUrlFor(data.whatsappMessage))
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo registrar el pedido.')
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo registrar el pedido.',
+      )
       setBusy(false)
     }
   }
@@ -112,19 +198,131 @@ export default function CheckoutForm({
 
   if (!session) {
     return (
-      <div className="checkout-login-gate">
-        <div>
-          <span>Cuenta requerida</span>
-          <strong>Iniciá sesión para confirmar el pedido</strong>
+      <div className="checkout-login-gate checkout-inline-auth">
+        <div className="checkout-inline-auth-heading">
+          <span>Último paso</span>
+          <strong>Terminá tu pedido acá mismo</strong>
           <p>
-            Así el PED queda guardado en “Mi cuenta” y podés volver al seguimiento sin buscar el código.
+            Creá tu cuenta o ingresá sin salir del carrito. Así el pedido queda
+            guardado en “Mi cuenta” y podés seguirlo después.
           </p>
         </div>
-        <a className="button button-primary" href="/cuenta?next=/">
-          Ingresar o crear cuenta
-          <span aria-hidden="true">→</span>
-        </a>
-        <small>Tu carrito queda guardado en este dispositivo.</small>
+
+        <div
+          className="checkout-inline-auth-tabs"
+          role="tablist"
+          aria-label="Acceso para confirmar el pedido"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={authMode === 'register'}
+            className={authMode === 'register' ? 'is-active' : ''}
+            onClick={() => changeAuthMode('register')}
+          >
+            Crear cuenta
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={authMode === 'login'}
+            className={authMode === 'login' ? 'is-active' : ''}
+            onClick={() => changeAuthMode('login')}
+          >
+            Ya tengo cuenta
+          </button>
+        </div>
+
+        <form className="checkout-inline-auth-form" onSubmit={handleInlineAuth}>
+          {authMode === 'register' && (
+            <div className="checkout-inline-auth-grid">
+              <label>
+                Nombre
+                <input
+                  name="name"
+                  autoComplete="name"
+                  maxLength={100}
+                  required
+                  placeholder="Tu nombre"
+                />
+              </label>
+              <label>
+                WhatsApp
+                <input
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  maxLength={40}
+                  required
+                  placeholder="11 1234 5678"
+                />
+              </label>
+            </div>
+          )}
+
+          <label>
+            Email
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              maxLength={160}
+              required
+              placeholder="tu@email.com"
+            />
+          </label>
+
+          <label>
+            Contraseña
+            <input
+              name="password"
+              type="password"
+              autoComplete={
+                authMode === 'register'
+                  ? 'new-password'
+                  : 'current-password'
+              }
+              minLength={authMode === 'register' ? 8 : undefined}
+              maxLength={128}
+              required
+              placeholder={
+                authMode === 'register'
+                  ? 'Mínimo 8 caracteres'
+                  : 'Tu contraseña'
+              }
+            />
+          </label>
+
+          {authMessage && (
+            <p className="checkout-inline-auth-error" role="alert">
+              {authMessage}
+            </p>
+          )}
+
+          <button
+            className="button button-primary checkout-inline-auth-submit"
+            type="submit"
+            disabled={authBusy}
+          >
+            {authBusy
+              ? 'Validando…'
+              : authMode === 'register'
+                ? 'Crear cuenta y continuar'
+                : 'Ingresar y continuar'}
+            {!authBusy && <span aria-hidden="true">→</span>}
+          </button>
+        </form>
+
+        <small className="checkout-inline-auth-note">
+          Tu carrito no se pierde. Después de ingresar vas a poder confirmar el
+          pedido desde este mismo lugar.
+        </small>
+
+        {authMode === 'login' && (
+          <a className="checkout-inline-auth-account-link" href="/cuenta">
+            ¿Necesitás recuperar tu contraseña? Ir a Mi cuenta
+          </a>
+        )}
       </div>
     )
   }
@@ -161,7 +359,11 @@ export default function CheckoutForm({
 
       {message && <p className="checkout-error">{message}</p>}
 
-      <button className="button button-primary checkout-submit" type="submit" disabled={busy}>
+      <button
+        className="button button-primary checkout-submit"
+        type="submit"
+        disabled={busy}
+      >
         {busy ? 'Registrando pedido…' : 'Confirmar pedido y abrir WhatsApp'}
         {!busy && <span aria-hidden="true">↗</span>}
       </button>

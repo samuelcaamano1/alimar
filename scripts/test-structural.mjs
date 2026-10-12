@@ -37,6 +37,9 @@ try {
   const productDetails = await server.ssrLoadModule(
     '/src/storefront/productDetails.ts',
   )
+  const checkoutAuth = await server.ssrLoadModule(
+    '/src/storefront/checkoutAuth.ts',
+  )
   const bundles = await server.ssrLoadModule('/src/storefront/bundles.ts')
   const costUtils = await server.ssrLoadModule('/src/admin/costs/utils.ts')
   const calculation = await server.ssrLoadModule(
@@ -449,6 +452,45 @@ try {
     assert.equal(productDetails.productGalleryLabel(0), 'Sin fotos')
     assert.equal(productDetails.productGalleryLabel(1), '1 foto')
     assert.equal(productDetails.productGalleryLabel(4), '4 fotos')
+  })
+
+  test('checkout directo arma login y registro sin salir del carrito', () => {
+    assert.equal(
+      checkoutAuth.checkoutAuthEndpoint('login'),
+      '/api/orders?action=account-login',
+    )
+    assert.equal(
+      checkoutAuth.checkoutAuthEndpoint('register'),
+      '/api/orders?action=account-register',
+    )
+
+    assert.deepEqual(
+      checkoutAuth.checkoutAuthPayload('login', {
+        name: 'Ignorado',
+        phone: 'Ignorado',
+        email: '  cliente@correo.com ',
+        password: 'clave-segura',
+      }),
+      {
+        email: 'cliente@correo.com',
+        password: 'clave-segura',
+      },
+    )
+
+    assert.deepEqual(
+      checkoutAuth.checkoutAuthPayload('register', {
+        name: '  Ana Cliente ',
+        phone: ' 11 5555 5555 ',
+        email: ' ana@correo.com ',
+        password: '12345678',
+      }),
+      {
+        name: 'Ana Cliente',
+        phone: '11 5555 5555',
+        email: 'ana@correo.com',
+        password: '12345678',
+      },
+    )
   })
 
   test('combo se convierte en item de carrito con identidad propia', () => {
