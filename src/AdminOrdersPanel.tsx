@@ -1006,6 +1006,12 @@ export default function AdminOrdersPanel() {
                       <small>Entrega</small>
                       <strong>{promisedTimingLabel(order.promised_for)}</strong>
                     </span>
+                    <span className="is-requested-date">
+                      <small>Cliente necesita</small>
+                      <strong>
+                        {order.requested_for ? dateOnly(order.requested_for) : 'Sin fecha'}
+                      </strong>
+                    </span>
                     <span>
                       <small>Cobro</small>
                       <strong>{paymentStatusLabels[order.payment_status]}</strong>
@@ -1454,6 +1460,15 @@ export default function AdminOrdersPanel() {
                                   <span className={`admin-order-priority is-${order.production_priority}`}>
                                     Prioridad {productionPriorityLabels[order.production_priority]}
                                   </span>
+                                </div>
+
+                                <div className="admin-order-requested-date">
+                                  <span>Fecha solicitada por el cliente</span>
+                                  <strong>
+                                    {order.requested_for
+                                      ? dateOnly(order.requested_for)
+                                      : 'No indicó fecha'}
+                                  </strong>
                                 </div>
 
                                 <div className="admin-order-schedule-form">

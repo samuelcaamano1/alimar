@@ -83,6 +83,7 @@ export type AdminOrder = {
   customer_phone: string
   customer_email: string | null
   customer_notes: string | null
+  requested_for: string | null
   known_total: string
   agreed_total: string | null
   paid_total: string

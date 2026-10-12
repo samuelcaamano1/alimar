@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { saveRecoveredOrder, type RecoveredOrder } from './orderRecovery'
 import type { CustomerSession } from './customerAccount'
 import { site } from './site'
+import { todayOrderDate } from './shared/orderDates'
 import {
   checkoutAuthEndpoint,
   checkoutAuthPayload,
@@ -142,6 +143,7 @@ export default function CheckoutForm({
     const payload = {
       requestId: requestId.current,
       customer: {
+        requestedFor: String(form.get('requestedFor') ?? '').trim(),
         notes: String(form.get('notes') ?? '').trim(),
       },
       items,
@@ -347,13 +349,25 @@ export default function CheckoutForm({
         <a href="/cuenta">Mi cuenta</a>
       </div>
 
+      <label className="checkout-requested-date">
+        Lo necesito para <span aria-hidden="true">(opcional)</span>
+        <input
+          name="requestedFor"
+          type="date"
+          min={todayOrderDate()}
+        />
+        <small>
+          Es la fecha que necesitás. Alimar te confirma después la fecha de entrega.
+        </small>
+      </label>
+
       <label className="checkout-note-only">
         Nota general
         <textarea
           name="notes"
           rows={2}
           maxLength={500}
-          placeholder="Fecha del evento, aclaraciones generales, etc."
+          placeholder="Aclaraciones generales, retiro, evento, etc."
         />
       </label>
 

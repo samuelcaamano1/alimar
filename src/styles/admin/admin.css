@@ -12905,3 +12905,41 @@
   }
 }
 
+/* ALIMAR 1SHOP.14 - REQUESTED DATE ADMIN */
+
+.admin-order-compact-metrics > span.is-requested-date {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(63,120,138,.13);
+  background: rgba(100,175,198,.07);
+}
+
+.admin-order-requested-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(63,120,138,.13);
+  border-radius: 10px;
+  background: rgba(100,175,198,.065);
+}
+
+.admin-order-requested-date span {
+  color: var(--admin-muted);
+  font-size: .55rem;
+  font-weight: 800;
+}
+
+.admin-order-requested-date strong {
+  color: var(--admin-blue-dark);
+  font-size: .65rem;
+}
+
+@media (max-width: 650px) {
+  .admin-order-requested-date {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+

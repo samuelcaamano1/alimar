@@ -40,6 +40,7 @@ try {
   const checkoutAuth = await server.ssrLoadModule(
     '/src/storefront/checkoutAuth.ts',
   )
+  const orderDates = await server.ssrLoadModule('/src/shared/orderDates.ts')
   const bundles = await server.ssrLoadModule('/src/storefront/bundles.ts')
   const costUtils = await server.ssrLoadModule('/src/admin/costs/utils.ts')
   const calculation = await server.ssrLoadModule(
@@ -452,6 +453,17 @@ try {
     assert.equal(productDetails.productGalleryLabel(0), 'Sin fotos')
     assert.equal(productDetails.productGalleryLabel(1), '1 foto')
     assert.equal(productDetails.productGalleryLabel(4), '4 fotos')
+  })
+
+  test('fecha necesaria valida calendario y no acepta fechas pasadas', () => {
+    const now = new Date('2026-10-12T15:00:00Z')
+
+    assert.equal(orderDates.todayOrderDate(now), '2026-10-12')
+    assert.equal(orderDates.validRequestedDate('', now), true)
+    assert.equal(orderDates.validRequestedDate('2026-10-11', now), false)
+    assert.equal(orderDates.validRequestedDate('2026-10-12', now), true)
+    assert.equal(orderDates.validRequestedDate('2026-10-20', now), true)
+    assert.equal(orderDates.isValidDateOnly('2026-02-30'), false)
   })
 
   test('checkout directo arma login y registro sin salir del carrito', () => {

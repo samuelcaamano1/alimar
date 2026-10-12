@@ -64,6 +64,7 @@ type OrderRow = {
   customer_phone: string
   customer_email: string | null
   customer_notes: string | null
+  requested_for: string | null
   known_total: string
   agreed_total: string | null
   promised_for: string | null
@@ -211,6 +212,7 @@ export async function GET(request: Request) {
           customer_phone,
           customer_email,
           customer_notes,
+          requested_for,
           known_total,
           has_quote,
           quote_id,
@@ -241,6 +243,7 @@ export async function GET(request: Request) {
         o.customer_phone,
         o.customer_email,
         o.customer_notes,
+        o.requested_for::text,
         o.known_total::text,
         o.agreed_total::text,
         o.promised_for::text,
@@ -311,6 +314,7 @@ export async function GET(request: Request) {
         customer_phone: string
         customer_email: string | null
         customer_notes: string | null
+        requested_for: string | null
         known_total: string
         agreed_total: string | null
         promised_for: string | null
@@ -368,6 +372,7 @@ export async function GET(request: Request) {
           customer_phone: row.customer_phone,
           customer_email: row.customer_email,
           customer_notes: row.customer_notes,
+          requested_for: row.requested_for,
           known_total: row.known_total,
           agreed_total: row.agreed_total,
           promised_for: row.promised_for,

@@ -26,6 +26,10 @@ import {
   requireRequestOrigin,
 } from './_lib/request-security.js'
 import { loadActiveProductBundles } from './_lib/product-bundles.js'
+import {
+  requestedDateLabel,
+  validRequestedDate,
+} from '../src/shared/orderDates.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const MAX_ITEMS = 25
@@ -121,6 +125,7 @@ function buildWhatsappMessage(args: {
   code: string
   customerName: string
   customerPhone: string
+  requestedFor: string | null
   items: ValidatedItem[]
   knownTotal: number
   hasQuote: boolean
@@ -133,6 +138,10 @@ function buildWhatsappMessage(args: {
     '',
     'Pedido:',
   ]
+
+  if (args.requestedFor) {
+    lines.splice(4, 0, `Lo necesito para: ${requestedDateLabel(args.requestedFor)}`)
+  }
 
   for (const item of args.items) {
     const price = item.lineTotal === null ? 'A consultar' : money(item.lineTotal)
@@ -431,6 +440,14 @@ export async function POST(request: Request) {
   const customerPhone = account.phone
   const customerEmail = account.email
   const customerNotes = text(customer.notes, 500)
+  const requestedFor = text(customer.requestedFor, 10)
+
+  if (!validRequestedDate(requestedFor)) {
+    return Response.json(
+      { error: 'La fecha necesaria no es válida o ya pasó.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
 
   if (!UUID_RE.test(requestId)) {
     return Response.json({ error: 'Identificador de pedido inválido.' }, { status: 400 })
@@ -818,6 +835,7 @@ export async function POST(request: Request) {
       code: publicCode,
       customerName,
       customerPhone,
+      requestedFor: requestedFor || null,
       items,
       knownTotal,
       hasQuote,
@@ -835,6 +853,7 @@ export async function POST(request: Request) {
           customer_phone,
           customer_email,
           customer_notes,
+          requested_for,
           customer_account_id,
           known_total,
           agreed_total,
@@ -852,6 +871,7 @@ export async function POST(request: Request) {
           ${customerPhone},
           ${customerEmail || null},
           ${customerNotes || null},
+          ${requestedFor || null},
           ${account.id}::uuid,
           ${knownTotal},
           ${hasQuote ? null : knownTotal},

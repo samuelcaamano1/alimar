@@ -6175,3 +6175,40 @@
   }
 }
 
+/* ALIMAR 1SHOP.14 - REQUESTED DATE */
+
+.checkout-requested-date {
+  display: grid;
+  gap: 6px;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: .7rem;
+  font-weight: 800;
+}
+
+.checkout-requested-date input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid rgba(12,16,20,.13);
+  border-radius: 10px;
+  outline: none;
+  color: var(--ink);
+  background: rgba(255,253,248,.94);
+  font: inherit;
+  font-size: .76rem;
+}
+
+.checkout-requested-date input:focus {
+  border-color: var(--blue-dark);
+  box-shadow: 0 0 0 3px rgba(100,175,198,.13);
+}
+
+.checkout-requested-date small {
+  color: var(--muted);
+  font-size: .6rem;
+  font-weight: 500;
+  line-height: 1.42;
+}
+
