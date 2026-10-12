@@ -6212,3 +6212,73 @@
   line-height: 1.42;
 }
 
+/* ALIMAR 1UI.18 - PRODUCT CUSTOMIZATION SCROLL */
+
+/*
+  Keep the product gallery fixed on desktop while allowing the detail column
+  to scroll independently. This restores access to every customization field
+  after the richer 1CAT.22 product detail made the right column taller.
+*/
+@media (min-width: 701px) {
+  .product-dialog {
+    overflow: hidden !important;
+  }
+
+  .product-dialog-content {
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .product-customization-fields,
+  .product-dialog-purchase,
+  .product-variant-picker {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+  }
+
+  .product-dialog-content::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .product-dialog-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .product-dialog-content::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: rgba(63, 120, 138, 0.34);
+    background-clip: padding-box;
+  }
+}
+
+@media (max-width: 700px) {
+  .product-dialog {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .product-dialog-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .product-customization-fields,
+  .product-dialog-purchase,
+  .product-variant-picker {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
