@@ -11,6 +11,22 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1UI.18",
+    "date": "2026-10-12",
+    "title": "Modal de personalizacion con scroll",
+    "summary": "Permite recorrer todos los campos de personalizacion sin mover la galeria del producto.",
+    "commit": "d4d009bdf4afc1bab37445187b3ae1eb9726adf9",
+    "files": [
+      "src/styles/public/storefront.css"
+    ],
+    "changes": [
+      "En escritorio la galeria queda fija y el panel de detalle tiene scroll propio.",
+      "Todos los campos de personalizacion quedan accesibles hasta el bloque de compra.",
+      "En mobile el modal completo conserva scroll vertical.",
+      "No modifica catalogo pedidos ni base de datos."
+    ]
+  },
+  {
     "code": "1SHOP.14",
     "date": "2026-10-12",
     "title": "Fecha necesaria",
