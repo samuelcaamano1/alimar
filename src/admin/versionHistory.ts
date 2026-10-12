@@ -11,6 +11,29 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1SHOP.14",
+    "date": "2026-10-12",
+    "title": "Fecha necesaria",
+    "summary": "Permite que el cliente indique para cuando necesita el pedido y separa esa fecha de la promesa interna de entrega.",
+    "commit": "97e7bbd8ad7139274b36e785fa05835bee15a4b6",
+    "files": [
+      "src/CheckoutForm.tsx",
+      "src/shared/orderDates.ts",
+      "api/orders.ts",
+      "api/admin/orders.ts",
+      "src/admin/orders/types.ts",
+      "src/AdminOrdersPanel.tsx",
+      "db/migrations/037_order_requested_for.sql"
+    ],
+    "changes": [
+      "Agrega una fecha necesaria opcional al checkout.",
+      "Valida que la fecha sea valida y no este vencida.",
+      "Guarda requested_for separado de promised_for.",
+      "Incluye la fecha solicitada en el mensaje de WhatsApp.",
+      "Muestra fecha solicitada y fecha prometida por separado en administracion."
+    ]
+  },
+  {
     "code": "1SHOP.13",
     "date": "2026-10-12",
     "title": "Checkout directo",
