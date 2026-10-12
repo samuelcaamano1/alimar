@@ -11,6 +11,26 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1SHOP.13",
+    "date": "2026-10-12",
+    "title": "Checkout directo",
+    "summary": "Permite crear cuenta o iniciar sesion dentro del carrito sin abandonar la compra.",
+    "commit": "7bee346966248709a346047a3c901bbd8c40790a",
+    "files": [
+      "src/CheckoutForm.tsx",
+      "src/storefront/checkoutAuth.ts",
+      "src/App.tsx",
+      "src/styles/public/storefront.css"
+    ],
+    "changes": [
+      "El registro de clientes se completa dentro del carrito.",
+      "Los clientes existentes pueden iniciar sesion sin salir del checkout.",
+      "El pedido sigue vinculado a Mi cuenta y conserva el seguimiento.",
+      "Si la sesion vence al confirmar se conserva el carrito y se vuelve a pedir acceso inline.",
+      "No modifica Neon ni reduce las validaciones server-side."
+    ]
+  },
+  {
     "code": "1SHOP.12",
     "date": "2026-10-12",
     "title": "Combos",
