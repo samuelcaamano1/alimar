@@ -11,6 +11,29 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1SHOP.12",
+    "date": "2026-10-12",
+    "title": "Combos",
+    "summary": "Agrega combos administrables con precio propio y validacion segura en el pedido.",
+    "commit": "dfe9293a0e25d9eb76a5ecfe7e5b86505b0b3864",
+    "files": [
+      "src/AdminCombosPanel.tsx",
+      "api/admin/combos.ts",
+      "api/_lib/product-bundles.ts",
+      "db/migrations/036_product_bundles.sql",
+      "src/App.tsx",
+      "api/orders.ts",
+      "src/storefront/bundles.ts"
+    ],
+    "changes": [
+      "Permite crear editar destacar y quitar combos desde el administrador.",
+      "Cada combo agrupa entre dos y ocho productos con cantidades configurables.",
+      "La tienda muestra combos activos con precio propio y los agrega al carrito.",
+      "El servidor valida combo precio y disponibilidad directamente contra Neon.",
+      "El pedido guarda una instantanea de los productos incluidos para conservar el historial."
+    ]
+  },
+  {
     "code": "1CAT.22",
     "date": "2026-10-11",
     "title": "Ficha de producto completa",
