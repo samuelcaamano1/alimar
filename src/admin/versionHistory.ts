@@ -11,6 +11,22 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1OPS.10",
+    "date": "2026-10-12",
+    "title": "Tipos Node en Vercel",
+    "summary": "Expone los tipos de Node desde el tsconfig raiz para evitar diagnosticos falsos al compilar Vercel Functions.",
+    "commit": "446e2c05aced2f9853f4ac59830244de0a961b81",
+    "files": [
+      "tsconfig.json"
+    ],
+    "changes": [
+      "El tsconfig raiz declara types node.",
+      "Mantiene separados tsconfig.app tsconfig.node y tsconfig.api.",
+      "Evita avisos TS2591 para process y node:crypto en el compilador aislado de Vercel.",
+      "No modifica runtime base de datos ni APIs."
+    ]
+  },
+  {
     "code": "1UI.18",
     "date": "2026-10-12",
     "title": "Modal de personalizacion con scroll",
