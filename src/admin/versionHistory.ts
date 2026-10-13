@@ -11,6 +11,29 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1QA.10",
+    "date": "2026-10-12",
+    "title": "Auditoria integral y reparaciones",
+    "summary": "Corrige regresiones visuales y de coherencia detectadas en tienda cuenta seguimiento y administracion.",
+    "commit": "792d4d14c3fc95693c9707e5a09b48dd5983243a",
+    "files": [
+      "src/App.tsx",
+      "src/PublicOrderTracking.tsx",
+      "api/_lib/public-order-tracking.ts",
+      "src/CustomerAccount.tsx",
+      "api/_lib/customer-auth.ts",
+      "src/styles/public/storefront.css",
+      "src/styles/admin/admin.css"
+    ],
+    "changes": [
+      "Los overlays publicos bloquean el scroll del fondo y responden a Escape.",
+      "El pedido personalizado tambien se puede cerrar tocando el fondo.",
+      "Mi cuenta muestra por separado fecha prometida fecha necesaria y modalidad de entrega.",
+      "El seguimiento vuelve a exponer retiro o envio zona y fecha solicitada.",
+      "Se corrigen checkboxes deformados en Combos personalizaciones de PED y respuesta rechazada de presupuestos."
+    ]
+  },
+  {
     "code": "1SHOP.16",
     "date": "2026-10-12",
     "title": "Compartir productos",
