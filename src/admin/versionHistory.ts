@@ -11,6 +11,25 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1OPS.11",
+    "date": "2026-10-13",
+    "title": "Vercel Hobby - 12 funciones",
+    "summary": "Reduce las funciones serverless de 13 a 12 sin perder la URL de health.",
+    "commit": "103a91465888dca744769d41f4db477183115898",
+    "files": [
+      "api/catalog.ts",
+      "api/health.ts",
+      "vercel.json",
+      "scripts/test-structural.mjs"
+    ],
+    "changes": [
+      "Integra el health check dentro de api/catalog.ts.",
+      "Conserva /api/health mediante rewrite interno.",
+      "Elimina api/health.ts como funcion independiente.",
+      "Agrega un test que impide superar 12 funciones Vercel en Hobby."
+    ]
+  },
+  {
     "code": "1QA.10",
     "date": "2026-10-12",
     "title": "Auditoria integral y reparaciones",
