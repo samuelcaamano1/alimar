@@ -40,6 +40,10 @@ import {
 import { adminRequest, responseMessage } from './admin/shared/http'
 import { useModalLifecycle } from './admin/shared/useModalLifecycle'
 import {
+  fulfillmentLabel,
+  fulfillmentSummary,
+} from './shared/orderFulfillment'
+import {
   getOrderCounts,
   getProductionCounts,
   getProductionQueue,
@@ -1003,13 +1007,22 @@ export default function AdminOrdersPanel() {
                       <strong>{productionStageLabels[order.production_stage]}</strong>
                     </span>
                     <span>
-                      <small>Entrega</small>
+                      <small>Prometido</small>
                       <strong>{promisedTimingLabel(order.promised_for)}</strong>
                     </span>
                     <span className="is-requested-date">
                       <small>Cliente necesita</small>
                       <strong>
                         {order.requested_for ? dateOnly(order.requested_for) : 'Sin fecha'}
+                      </strong>
+                    </span>
+                    <span className="is-fulfillment">
+                      <small>Entrega</small>
+                      <strong>
+                        {fulfillmentSummary(
+                          order.fulfillment_method,
+                          order.delivery_area,
+                        )}
                       </strong>
                     </span>
                     <span>
@@ -1469,6 +1482,21 @@ export default function AdminOrdersPanel() {
                                       ? dateOnly(order.requested_for)
                                       : 'No indicó fecha'}
                                   </strong>
+                                </div>
+
+                                <div className="admin-order-fulfillment">
+                                  <div>
+                                    <span>Modalidad de entrega</span>
+                                    <strong>
+                                      {fulfillmentLabel(order.fulfillment_method)}
+                                    </strong>
+                                  </div>
+                                  <div>
+                                    <span>Zona / localidad</span>
+                                    <strong>
+                                      {order.delivery_area ?? 'A coordinar'}
+                                    </strong>
+                                  </div>
                                 </div>
 
                                 <div className="admin-order-schedule-form">

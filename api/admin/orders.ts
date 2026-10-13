@@ -65,6 +65,8 @@ type OrderRow = {
   customer_email: string | null
   customer_notes: string | null
   requested_for: string | null
+  fulfillment_method: 'pickup' | 'delivery' | null
+  delivery_area: string | null
   known_total: string
   agreed_total: string | null
   promised_for: string | null
@@ -213,6 +215,8 @@ export async function GET(request: Request) {
           customer_email,
           customer_notes,
           requested_for,
+          fulfillment_method,
+          delivery_area,
           known_total,
           has_quote,
           quote_id,
@@ -244,6 +248,8 @@ export async function GET(request: Request) {
         o.customer_email,
         o.customer_notes,
         o.requested_for::text,
+        o.fulfillment_method,
+        o.delivery_area,
         o.known_total::text,
         o.agreed_total::text,
         o.promised_for::text,
@@ -315,6 +321,8 @@ export async function GET(request: Request) {
         customer_email: string | null
         customer_notes: string | null
         requested_for: string | null
+        fulfillment_method: 'pickup' | 'delivery' | null
+        delivery_area: string | null
         known_total: string
         agreed_total: string | null
         promised_for: string | null
@@ -373,6 +381,8 @@ export async function GET(request: Request) {
           customer_email: row.customer_email,
           customer_notes: row.customer_notes,
           requested_for: row.requested_for,
+          fulfillment_method: row.fulfillment_method,
+          delivery_area: row.delivery_area,
           known_total: row.known_total,
           agreed_total: row.agreed_total,
           promised_for: row.promised_for,

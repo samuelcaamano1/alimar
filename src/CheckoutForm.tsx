@@ -3,6 +3,7 @@ import { saveRecoveredOrder, type RecoveredOrder } from './orderRecovery'
 import type { CustomerSession } from './customerAccount'
 import { site } from './site'
 import { todayOrderDate } from './shared/orderDates'
+import type { FulfillmentMethod } from './shared/orderFulfillment'
 import {
   checkoutAuthEndpoint,
   checkoutAuthPayload,
@@ -58,6 +59,8 @@ export default function CheckoutForm({
   const [authMode, setAuthMode] = useState<CheckoutAuthMode>('register')
   const [authBusy, setAuthBusy] = useState(false)
   const [authMessage, setAuthMessage] = useState('')
+  const [fulfillmentMethod, setFulfillmentMethod] =
+    useState<FulfillmentMethod>('pickup')
   const requestId = useRef(crypto.randomUUID())
   const cartSignature = items
     .map(
@@ -144,6 +147,8 @@ export default function CheckoutForm({
       requestId: requestId.current,
       customer: {
         requestedFor: String(form.get('requestedFor') ?? '').trim(),
+        fulfillmentMethod,
+        deliveryArea: String(form.get('deliveryArea') ?? '').trim(),
         notes: String(form.get('notes') ?? '').trim(),
       },
       items,
@@ -360,6 +365,53 @@ export default function CheckoutForm({
           Es la fecha que necesitás. Alimar te confirma después la fecha de entrega.
         </small>
       </label>
+
+      <fieldset className="checkout-fulfillment">
+        <strong>¿Cómo querés recibirlo?</strong>
+
+        <div className="checkout-fulfillment-options">
+          <label className="checkout-fulfillment-option">
+            <input
+              type="radio"
+              name="fulfillmentMethod"
+              value="pickup"
+              checked={fulfillmentMethod === 'pickup'}
+              onChange={() => setFulfillmentMethod('pickup')}
+            />
+            <span>Retiro a coordinar</span>
+          </label>
+
+          <label className="checkout-fulfillment-option">
+            <input
+              type="radio"
+              name="fulfillmentMethod"
+              value="delivery"
+              checked={fulfillmentMethod === 'delivery'}
+              onChange={() => setFulfillmentMethod('delivery')}
+            />
+            <span>Entrega/envío a coordinar</span>
+          </label>
+        </div>
+
+        {fulfillmentMethod === 'delivery' && (
+          <label className="checkout-delivery-area">
+            Zona o localidad <span aria-hidden="true">(opcional)</span>
+            <input
+              name="deliveryArea"
+              type="text"
+              maxLength={120}
+              placeholder="Ej. Berazategui, Quilmes..."
+            />
+            <small>
+              El alcance y cualquier costo de envío se confirman por WhatsApp.
+            </small>
+          </label>
+        )}
+
+        <small>
+          La modalidad final se coordina con Alimar al confirmar el pedido.
+        </small>
+      </fieldset>
 
       <label className="checkout-note-only">
         Nota general

@@ -30,6 +30,12 @@ import {
   requestedDateLabel,
   validRequestedDate,
 } from '../src/shared/orderDates.js'
+import {
+  fulfillmentLabel,
+  normalizeDeliveryArea,
+  parseFulfillmentMethod,
+  type FulfillmentMethod,
+} from '../src/shared/orderFulfillment.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const MAX_ITEMS = 25
@@ -126,6 +132,8 @@ function buildWhatsappMessage(args: {
   customerName: string
   customerPhone: string
   requestedFor: string | null
+  fulfillmentMethod: FulfillmentMethod
+  deliveryArea: string | null
   items: ValidatedItem[]
   knownTotal: number
   hasQuote: boolean
@@ -135,13 +143,19 @@ function buildWhatsappMessage(args: {
     '',
     `Nombre: ${args.customerName}`,
     `Teléfono: ${args.customerPhone}`,
-    '',
-    'Pedido:',
   ]
 
   if (args.requestedFor) {
-    lines.splice(4, 0, `Lo necesito para: ${requestedDateLabel(args.requestedFor)}`)
+    lines.push(`Lo necesito para: ${requestedDateLabel(args.requestedFor)}`)
   }
+
+  lines.push(`Modalidad: ${fulfillmentLabel(args.fulfillmentMethod)}`)
+
+  if (args.deliveryArea) {
+    lines.push(`Zona/localidad: ${args.deliveryArea}`)
+  }
+
+  lines.push('', 'Pedido:')
 
   for (const item of args.items) {
     const price = item.lineTotal === null ? 'A consultar' : money(item.lineTotal)
@@ -441,6 +455,20 @@ export async function POST(request: Request) {
   const customerEmail = account.email
   const customerNotes = text(customer.notes, 500)
   const requestedFor = text(customer.requestedFor, 10)
+  const fulfillmentMethod = parseFulfillmentMethod(
+    text(customer.fulfillmentMethod, 20),
+  )
+  const deliveryArea = normalizeDeliveryArea(
+    fulfillmentMethod,
+    text(customer.deliveryArea, 120),
+  )
+
+  if (!fulfillmentMethod) {
+    return Response.json(
+      { error: 'Elegí retiro o entrega para continuar.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
 
   if (!validRequestedDate(requestedFor)) {
     return Response.json(
@@ -836,6 +864,8 @@ export async function POST(request: Request) {
       customerName,
       customerPhone,
       requestedFor: requestedFor || null,
+      fulfillmentMethod,
+      deliveryArea,
       items,
       knownTotal,
       hasQuote,
@@ -854,6 +884,8 @@ export async function POST(request: Request) {
           customer_email,
           customer_notes,
           requested_for,
+          fulfillment_method,
+          delivery_area,
           customer_account_id,
           known_total,
           agreed_total,
@@ -872,6 +904,8 @@ export async function POST(request: Request) {
           ${customerEmail || null},
           ${customerNotes || null},
           ${requestedFor || null},
+          ${fulfillmentMethod},
+          ${deliveryArea},
           ${account.id}::uuid,
           ${knownTotal},
           ${hasQuote ? null : knownTotal},

@@ -84,6 +84,8 @@ export type AdminOrder = {
   customer_email: string | null
   customer_notes: string | null
   requested_for: string | null
+  fulfillment_method: 'pickup' | 'delivery' | null
+  delivery_area: string | null
   known_total: string
   agreed_total: string | null
   paid_total: string

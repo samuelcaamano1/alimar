@@ -12943,3 +12943,44 @@
   }
 }
 
+/* ALIMAR 1SHOP.15 - FULFILLMENT ADMIN */
+
+.admin-order-compact-metrics > span.is-fulfillment {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(120,83,124,.12);
+  background: rgba(239,228,241,.45);
+}
+
+.admin-order-fulfillment {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.admin-order-fulfillment > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid rgba(120,83,124,.12);
+  border-radius: 10px;
+  background: rgba(239,228,241,.34);
+}
+
+.admin-order-fulfillment span {
+  color: var(--admin-muted);
+  font-size: .54rem;
+  font-weight: 800;
+}
+
+.admin-order-fulfillment strong {
+  color: var(--admin-ink);
+  font-size: .64rem;
+}
+
+@media (max-width: 650px) {
+  .admin-order-fulfillment {
+    grid-template-columns: 1fr;
+  }
+}
+

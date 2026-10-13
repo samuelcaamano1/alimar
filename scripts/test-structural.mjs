@@ -41,6 +41,9 @@ try {
     '/src/storefront/checkoutAuth.ts',
   )
   const orderDates = await server.ssrLoadModule('/src/shared/orderDates.ts')
+  const orderFulfillment = await server.ssrLoadModule(
+    '/src/shared/orderFulfillment.ts',
+  )
   const bundles = await server.ssrLoadModule('/src/storefront/bundles.ts')
   const costUtils = await server.ssrLoadModule('/src/admin/costs/utils.ts')
   const calculation = await server.ssrLoadModule(
@@ -453,6 +456,28 @@ try {
     assert.equal(productDetails.productGalleryLabel(0), 'Sin fotos')
     assert.equal(productDetails.productGalleryLabel(1), '1 foto')
     assert.equal(productDetails.productGalleryLabel(4), '4 fotos')
+  })
+
+  test('entrega y retiro normaliza modalidad y zona', () => {
+    assert.equal(orderFulfillment.parseFulfillmentMethod('pickup'), 'pickup')
+    assert.equal(orderFulfillment.parseFulfillmentMethod('delivery'), 'delivery')
+    assert.equal(orderFulfillment.parseFulfillmentMethod('otro'), null)
+    assert.equal(
+      orderFulfillment.normalizeDeliveryArea('pickup', ' Quilmes '),
+      null,
+    )
+    assert.equal(
+      orderFulfillment.normalizeDeliveryArea(
+        'delivery',
+        '  Berazategui   centro  ',
+      ),
+      'Berazategui centro',
+    )
+    assert.equal(
+      orderFulfillment.fulfillmentSummary('delivery', 'Quilmes'),
+      'Entrega/envío a coordinar · Quilmes',
+    )
+    assert.equal(orderFulfillment.fulfillmentSummary(null, null), 'A coordinar')
   })
 
   test('fecha necesaria valida calendario y no acepta fechas pasadas', () => {

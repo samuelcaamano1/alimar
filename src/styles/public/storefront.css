@@ -6282,3 +6282,90 @@
     box-sizing: border-box;
   }
 }
+
+/* ALIMAR 1SHOP.15 - FULFILLMENT */
+
+.checkout-fulfillment {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(63,120,138,.13);
+  border-radius: 12px;
+  background: rgba(100,175,198,.055);
+}
+
+.checkout-fulfillment > strong {
+  color: var(--ink);
+  font-size: .7rem;
+}
+
+.checkout-fulfillment-options {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 7px;
+}
+
+.checkout-fulfillment-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid rgba(49,39,40,.1);
+  border-radius: 10px;
+  background: rgba(255,253,248,.86);
+  cursor: pointer;
+  color: var(--ink);
+  font-size: .65rem;
+  font-weight: 800;
+}
+
+.checkout-fulfillment-option:has(input:checked) {
+  border-color: rgba(63,120,138,.34);
+  background: rgba(220,240,244,.78);
+}
+
+.checkout-fulfillment-option input {
+  margin: 0;
+}
+
+.checkout-delivery-area {
+  display: grid;
+  gap: 5px;
+  color: var(--ink);
+  font-size: .64rem;
+  font-weight: 800;
+}
+
+.checkout-delivery-area input {
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid rgba(12,16,20,.13);
+  border-radius: 10px;
+  outline: none;
+  color: var(--ink);
+  background: rgba(255,253,248,.94);
+  font: inherit;
+}
+
+.checkout-delivery-area input:focus {
+  border-color: var(--blue-dark);
+  box-shadow: 0 0 0 3px rgba(100,175,198,.13);
+}
+
+.checkout-delivery-area small,
+.checkout-fulfillment > small {
+  color: var(--muted);
+  font-size: .58rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+@media (max-width: 520px) {
+  .checkout-fulfillment-options {
+    grid-template-columns: 1fr;
+  }
+}
+
