@@ -191,6 +191,37 @@ function StorefrontApp() {
   }, [])
 
   useEffect(() => {
+    const overlayOpen = Boolean(selectedProduct || customRequestOpen || cartOpen)
+    if (!overlayOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+
+      if (selectedProduct) {
+        closeProduct()
+        return
+      }
+
+      if (customRequestOpen) {
+        setCustomRequestOpen(false)
+        return
+      }
+
+      setCartOpen(false)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [selectedProduct, customRequestOpen, cartOpen])
+
+  useEffect(() => {
     const controller = new AbortController()
 
     async function loadCatalog() {
@@ -706,7 +737,14 @@ function StorefrontApp() {
         
         <details className="mobile-menu">
           <summary>Menú</summary>
-          <div className="mobile-menu-panel">
+          <div
+            className="mobile-menu-panel"
+            onClick={(event) => {
+              if (event.target instanceof Element && event.target.closest('a')) {
+                event.currentTarget.closest('details')?.removeAttribute('open')
+              }
+            }}
+          >
             <a href="#catalogo">Catálogo</a>
             <a href="#pedido-personalizado">Pedido personalizado</a>
             <a href="#servicios">Qué hacemos</a>
@@ -1246,7 +1284,13 @@ function StorefrontApp() {
         </section>
 
         {customRequestOpen && (
-          <div className="custom-request-overlay" role="presentation">
+          <div
+            className="custom-request-overlay"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setCustomRequestOpen(false)
+            }}
+          >
             <section
               className="custom-request-modal"
               role="dialog"

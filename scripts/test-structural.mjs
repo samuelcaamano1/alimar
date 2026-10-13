@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { createServer } from 'vite'
 
 const server = await createServer({
@@ -459,6 +460,28 @@ try {
     assert.equal(productDetails.productGalleryLabel(0), 'Sin fotos')
     assert.equal(productDetails.productGalleryLabel(1), '1 foto')
     assert.equal(productDetails.productGalleryLabel(4), '4 fotos')
+  })
+
+  test('auditoria integral mantiene coherencia de entrega y overlays', () => {
+    const appSource = readFileSync('src/App.tsx', 'utf8')
+    const accountSource = readFileSync('src/CustomerAccount.tsx', 'utf8')
+    const trackingApiSource = readFileSync(
+      'api/_lib/public-order-tracking.ts',
+      'utf8',
+    )
+    const trackingUiSource = readFileSync('src/PublicOrderTracking.tsx', 'utf8')
+    const adminCssSource = readFileSync('src/styles/admin/admin.css', 'utf8')
+
+    assert.match(appSource, /document\.body\.style\.overflow = 'hidden'/)
+    assert.match(appSource, /event\.key !== 'Escape'/)
+    assert.match(accountSource, /fulfillmentSummary/)
+    assert.match(accountSource, /Lo necesitás/)
+    assert.match(trackingApiSource, /requested_for/)
+    assert.match(trackingApiSource, /fulfillment_method/)
+    assert.match(trackingUiSource, /Entrega \/ retiro/)
+    assert.match(adminCssSource, /\.admin-order-customizations/)
+    assert.match(adminCssSource, /input\[type='checkbox'\]/)
+    assert.match(adminCssSource, /\.admin-quote-response-feedback/)
   })
 
   test('entrega y retiro normaliza modalidad y zona', () => {

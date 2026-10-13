@@ -6407,3 +6407,43 @@
   }
 }
 
+/* ALIMAR 1QA.10 - INTEGRAL AUDIT FIXES */
+
+/* Public overlays: keep the page behind the active modal stable. */
+.product-dialog-backdrop,
+.cart-backdrop,
+.custom-request-overlay {
+  overscroll-behavior: contain;
+}
+
+/* Use the dynamic viewport on mobile browser chrome, not the old static vh. */
+.custom-request-modal {
+  max-height: min(92dvh, 860px);
+}
+
+@media (max-width: 650px) {
+  .custom-request-modal {
+    max-height: 96dvh;
+  }
+}
+
+/* Customer-facing delivery data added by 1SHOP.14 / 1SHOP.15. */
+.customer-order-meta strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tracking-detail-card.is-fulfillment {
+  grid-column: 1 / -1;
+}
+
+.tracking-detail-card.is-fulfillment strong {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 650px) {
+  .tracking-detail-card.is-fulfillment {
+    grid-column: auto;
+  }
+}
+

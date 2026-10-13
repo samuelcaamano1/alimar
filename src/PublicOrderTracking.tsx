@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { site } from './site'
+import { fulfillmentSummary } from './shared/orderFulfillment'
 
 type TrackingStatus =
   | 'new'
@@ -58,6 +59,9 @@ type PublicTrackingOrder = {
   status: TrackingStatus
   productionStage: ProductionStage
   promisedFor: string | null
+  requestedFor: string | null
+  fulfillmentMethod: 'pickup' | 'delivery' | null
+  deliveryArea: string | null
   agreedTotal: string | null
   balanceDue: string | null
   paymentStatus: PaymentStatus
@@ -563,6 +567,19 @@ export default function PublicOrderTracking({ token }: { token: string }) {
 
                 {order.balanceDue !== null && order.paymentStatus !== 'paid' && (
                   <small>Saldo pendiente: {money(order.balanceDue)}</small>
+                )}
+              </div>
+
+              <div className="tracking-detail-card is-fulfillment">
+                <span>Entrega / retiro</span>
+                <strong>
+                  {fulfillmentSummary(
+                    order.fulfillmentMethod,
+                    order.deliveryArea,
+                  )}
+                </strong>
+                {order.requestedFor && (
+                  <small>Fecha solicitada: {dateLabel(order.requestedFor)}</small>
                 )}
               </div>
             </section>

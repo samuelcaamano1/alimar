@@ -137,6 +137,15 @@ function formatTrackingRow(row: Record<string, unknown>) {
     status: String(row.status ?? 'new'),
     productionStage: String(row.production_stage ?? 'not_started'),
     promisedFor: row.promised_for ? String(row.promised_for).slice(0, 10) : null,
+    requestedFor: row.requested_for ? String(row.requested_for).slice(0, 10) : null,
+    fulfillmentMethod:
+      row.fulfillment_method === 'pickup' || row.fulfillment_method === 'delivery'
+        ? row.fulfillment_method
+        : null,
+    deliveryArea:
+      typeof row.delivery_area === 'string' && row.delivery_area.trim()
+        ? row.delivery_area.trim().slice(0, 120)
+        : null,
     agreedTotal:
       row.agreed_total === null || row.agreed_total === undefined
         ? null
@@ -165,6 +174,9 @@ async function selectPublicOrderTracking(
       o.status,
       o.production_stage,
       o.promised_for::text,
+      o.requested_for::text,
+      o.fulfillment_method,
+      o.delivery_area,
       o.agreed_total::text,
       CASE
         WHEN o.agreed_total IS NULL THEN NULL

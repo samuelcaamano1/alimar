@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { alimarLogoDataUrl } from './brand'
 import type { CustomerSession } from './customerAccount'
+import { fulfillmentSummary } from './shared/orderFulfillment'
 import './styles/public/storefront.css'
 
 type AccountOrder = {
@@ -9,6 +10,9 @@ type AccountOrder = {
   status: string
   productionStage: string
   promisedFor: string | null
+  requestedFor: string | null
+  fulfillmentMethod: 'pickup' | 'delivery' | null
+  deliveryArea: string | null
   knownTotal: string
   agreedTotal: string | null
   createdAt: string
@@ -670,8 +674,21 @@ export default function CustomerAccount() {
                         </span>
                       </div>
                       <div className="customer-order-meta">
-                        <span>Entrega <strong>{formatDate(order.promisedFor)}</strong></span>
-                        <span>Total <strong>{formatMoney(order.agreedTotal ?? order.knownTotal)}</strong></span>
+                        <span>Prometido <strong>{formatDate(order.promisedFor)}</strong></span>
+                        <span>Lo necesitás <strong>{formatDate(order.requestedFor)}</strong></span>
+                        <span>
+                          Entrega
+                          <strong>
+                            {fulfillmentSummary(
+                              order.fulfillmentMethod,
+                              order.deliveryArea,
+                            )}
+                          </strong>
+                        </span>
+                        <span>
+                          Total
+                          <strong>{formatMoney(order.agreedTotal ?? order.knownTotal)}</strong>
+                        </span>
                       </div>
                       <a className="button button-primary" href={`/?pedido=${encodeURIComponent(order.trackingToken)}`}>
                         Ver seguimiento

@@ -924,6 +924,9 @@ export async function customerOverviewResponse(
           status,
           production_stage,
           promised_for::text,
+          requested_for::text,
+          fulfillment_method,
+          delivery_area,
           known_total::text,
           agreed_total::text,
           created_at::text
@@ -955,6 +958,15 @@ export async function customerOverviewResponse(
           status: String(row.status),
           productionStage: String(row.production_stage ?? 'not_started'),
           promisedFor: row.promised_for ? String(row.promised_for).slice(0, 10) : null,
+          requestedFor: row.requested_for ? String(row.requested_for).slice(0, 10) : null,
+          fulfillmentMethod:
+            row.fulfillment_method === 'pickup' || row.fulfillment_method === 'delivery'
+              ? row.fulfillment_method
+              : null,
+          deliveryArea:
+            typeof row.delivery_area === 'string' && row.delivery_area.trim()
+              ? row.delivery_area.trim().slice(0, 120)
+              : null,
           knownTotal: String(row.known_total ?? '0'),
           agreedTotal: row.agreed_total === null ? null : String(row.agreed_total),
           createdAt: String(row.created_at),
