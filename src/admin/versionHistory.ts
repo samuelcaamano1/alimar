@@ -11,6 +11,23 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1UI.19",
+    "date": "2026-10-13",
+    "title": "Menu rapido admin mas comodo",
+    "summary": "Aumenta el tamano y mejora la legibilidad del menu sticky del administrador.",
+    "commit": "05a0c5c9f3e162820279337bcb41e569febf34c2",
+    "files": [
+      "src/styles/admin/admin.css"
+    ],
+    "changes": [
+      "Los accesos del menu pasan de 34 a 44 px de alto en escritorio.",
+      "La tipografia y el espacio interno aumentan para mejorar precision y lectura.",
+      "Se mejora contraste sombra hover y foco de teclado.",
+      "En pantallas angostas mantiene una sola fila con scroll horizontal suave.",
+      "Se ajusta scroll-margin para que el menu sticky no tape los titulos al navegar."
+    ]
+  },
+  {
     "code": "1OPS.11",
     "date": "2026-10-13",
     "title": "Vercel Hobby - 12 funciones",
