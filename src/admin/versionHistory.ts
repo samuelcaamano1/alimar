@@ -11,6 +11,25 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1SHOP.16",
+    "date": "2026-10-12",
+    "title": "Compartir productos",
+    "summary": "Agrega enlaces directos a productos y un boton para compartir cada ficha desde el catalogo.",
+    "commit": "35a461e757fc245fdfcc756a2d507a9a9f0e9f2b",
+    "files": [
+      "src/App.tsx",
+      "src/storefront/productSharing.ts",
+      "src/styles/public/storefront.css"
+    ],
+    "changes": [
+      "Cada producto tiene una URL directa con ?producto=slug.",
+      "Abrir un enlace compartido muestra automaticamente la ficha correcta.",
+      "En celular usa el menu nativo de compartir cuando esta disponible.",
+      "En escritorio copia el enlace al portapapeles.",
+      "Cerrar o agregar el producto limpia el parametro de la URL sin recargar la pagina."
+    ]
+  },
+  {
     "code": "1SHOP.15",
     "date": "2026-10-12",
     "title": "Entrega y retiro",
