@@ -4,6 +4,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/health",
+      "destination": "/api/catalog?view=health"
+    },
+    {
       "source": "/admin",
       "destination": "/"
     },

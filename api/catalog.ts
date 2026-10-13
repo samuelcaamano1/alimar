@@ -43,28 +43,49 @@ type CustomizationFieldRow = {
 }
 
 export async function GET(request: Request) {
+  const requestUrl = new URL(request.url)
+  const view = requestUrl.searchParams.get('view')
   const databaseUrl = process.env.DATABASE_URL
 
   if (!databaseUrl) {
+    if (view === 'health') {
+      return Response.json(
+        { ok: false, error: 'Database not configured' },
+        { status: 503 },
+      )
+    }
+
     return Response.json({ error: 'Catalog unavailable' }, { status: 503 })
   }
 
   try {
     const sql = neon(databaseUrl)
-    const requestUrl = new URL(request.url)
 
-    if (requestUrl.searchParams.get('view') === 'quote') {
+    if (view === 'health') {
+      const [row] = await sql`
+        SELECT current_database() AS database, current_timestamp AS time
+      `
+
+      return Response.json({
+        ok: true,
+        service: 'alimar-api',
+        database: row.database,
+        time: row.time,
+      })
+    }
+
+    if (view === 'quote') {
       return getPublicQuote(
         databaseUrl,
         requestUrl.searchParams.get('token') ?? '',
       )
     }
 
-    if (requestUrl.searchParams.get('view') === 'custom-examples') {
+    if (view === 'custom-examples') {
       return listPublicCustomRequestExamples(databaseUrl)
     }
 
-    if (requestUrl.searchParams.get('view') === 'images') {
+    if (view === 'images') {
       const productId = requestUrl.searchParams.get('productId') ?? ''
 
       if (!UUID_RE.test(productId)) {
@@ -296,6 +317,13 @@ export async function GET(request: Request) {
       },
     )
   } catch {
+    if (view === 'health') {
+      return Response.json(
+        { ok: false, error: 'Database unavailable' },
+        { status: 503 },
+      )
+    }
+
     return Response.json({ error: 'Catalog unavailable' }, { status: 500 })
   }
 }

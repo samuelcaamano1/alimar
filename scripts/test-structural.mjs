@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { createServer } from 'vite'
 
 const server = await createServer({
@@ -23,6 +23,27 @@ function test(name, fn) {
     console.error(`✗ ${name}`)
     throw error
   }
+}
+
+function countVercelApiFunctions(directory) {
+  let total = 0
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name.startsWith('_')) continue
+
+    const fullPath = `${directory}/${entry.name}`
+
+    if (entry.isDirectory()) {
+      total += countVercelApiFunctions(fullPath)
+      continue
+    }
+
+    if (/\.(?:ts|js|mjs)$/.test(entry.name)) {
+      total += 1
+    }
+  }
+
+  return total
 }
 
 try {
@@ -695,6 +716,14 @@ try {
     assert.deepEqual(
       customizationPresets.getCustomizationPreset('producto-sin-preset'),
       [],
+    )
+  })
+
+  test('Vercel Hobby mantiene como maximo 12 funciones serverless', () => {
+    const functionCount = countVercelApiFunctions('api')
+    assert.ok(
+      functionCount <= 12,
+      `Vercel Hobby admite 12 funciones y el proyecto tiene ${functionCount}.`,
     )
   })
 
