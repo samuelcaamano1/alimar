@@ -37,6 +37,9 @@ try {
   const productDetails = await server.ssrLoadModule(
     '/src/storefront/productDetails.ts',
   )
+  const productSharing = await server.ssrLoadModule(
+    '/src/storefront/productSharing.ts',
+  )
   const checkoutAuth = await server.ssrLoadModule(
     '/src/storefront/checkoutAuth.ts',
   )
@@ -478,6 +481,38 @@ try {
       'Entrega/envío a coordinar · Quilmes',
     )
     assert.equal(orderFulfillment.fulfillmentSummary(null, null), 'A coordinar')
+  })
+
+  test('links de producto encuentran ficha y generan URL compartible', () => {
+    const product = { id: 'p1', slug: 'topper-torta' }
+    const categories = [{ id: 'c1', name: 'Cumpleaños', products: [product] }]
+
+    assert.equal(
+      productSharing.findCatalogProductBySlug(categories, 'TOPPER-TORTA'),
+      product,
+    )
+    assert.equal(
+      productSharing.productUrlPath(
+        'https://alimar.vercel.app/?foo=1',
+        'topper-torta',
+      ),
+      '/?foo=1&producto=topper-torta',
+    )
+    assert.equal(
+      productSharing.productUrlPath(
+        'https://alimar.vercel.app/?producto=topper-torta&foo=1',
+        null,
+      ),
+      '/?foo=1',
+    )
+    assert.equal(
+      productSharing.productShareUrl(
+        'https://alimar.vercel.app/?foo=1#catalogo',
+        'topper-torta',
+      ),
+      'https://alimar.vercel.app/?producto=topper-torta',
+    )
+    assert.equal(productSharing.productShareText('Topper'), 'Mirá Topper en Alimar')
   })
 
   test('fecha necesaria valida calendario y no acepta fechas pasadas', () => {

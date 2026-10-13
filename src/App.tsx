@@ -47,6 +47,12 @@ import {
   productGalleryLabel,
   productLeadTimeLabel,
 } from './storefront/productDetails'
+import {
+  findCatalogProductBySlug,
+  productShareText,
+  productShareUrl,
+  productUrlPath,
+} from './storefront/productSharing'
 import { bundleToCartItem } from './storefront/bundles'
 import {
   DIRECT_CUSTOM_REQUEST_KEY,
@@ -146,6 +152,7 @@ function StorefrontApp() {
     Record<string, string>
   >({})
   const [selectedCustomizationMessage, setSelectedCustomizationMessage] = useState('')
+  const [productShareMessage, setProductShareMessage] = useState('')
   const [productImages, setProductImages] = useState<CatalogImage[]>([])
   const [selectedProductImageUrl, setSelectedProductImageUrl] = useState('')
   const [cart, setCart] = useState<CartItem[]>(() => loadStoredCart())
@@ -204,6 +211,28 @@ function StorefrontApp() {
     loadCatalog()
     return () => controller.abort()
   }, [])
+
+  useEffect(() => {
+    if (catalogState !== 'ready') return
+
+    const slug = new URLSearchParams(window.location.search)
+      .get('producto')
+      ?.trim() ?? ''
+    if (!slug) return
+
+    const product = findCatalogProductBySlug(catalog, slug)
+    if (!product) return
+
+    setSelectedProduct((current) =>
+      current?.id === product.id ? current : product,
+    )
+    setSelectedVariantId(
+      product.variants.length === 1 ? product.variants[0].id : '',
+    )
+    setSelectedCustomizationValues({})
+    setSelectedCustomizationMessage('')
+    setProductShareMessage('')
+  }, [catalog, catalogState])
 
   useEffect(() => {
     try {
@@ -276,10 +305,55 @@ function StorefrontApp() {
   )
 
   function openProduct(product: CatalogProduct) {
+    window.history.replaceState(
+      window.history.state,
+      '',
+      productUrlPath(window.location.href, product.slug),
+    )
     setSelectedProduct(product)
     setSelectedVariantId(product.variants.length === 1 ? product.variants[0].id : '')
     setSelectedCustomizationValues({})
     setSelectedCustomizationMessage('')
+    setProductShareMessage('')
+  }
+
+  function closeProduct() {
+    window.history.replaceState(
+      window.history.state,
+      '',
+      productUrlPath(window.location.href, null),
+    )
+    setSelectedProduct(null)
+    setSelectedVariantId('')
+    setSelectedCustomizationValues({})
+    setSelectedCustomizationMessage('')
+    setProductShareMessage('')
+  }
+
+  async function shareProduct(product: CatalogProduct) {
+    const url = productShareUrl(window.location.href, product.slug)
+    const shareData = {
+      title: `${product.name} | Alimar`,
+      text: productShareText(product.name),
+      url,
+    }
+
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share(shareData)
+        setProductShareMessage('Producto compartido.')
+        return
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url)
+      setProductShareMessage('Enlace copiado. Ya podés pegarlo donde quieras.')
+    } catch {
+      setProductShareMessage(`Copiá este enlace: ${url}`)
+    }
   }
 
   function addToCart(product: CatalogProduct, variantId: string) {
@@ -346,10 +420,7 @@ function StorefrontApp() {
       return [...current, nextItem]
     })
 
-    setSelectedProduct(null)
-    setSelectedVariantId('')
-    setSelectedCustomizationValues({})
-    setSelectedCustomizationMessage('')
+    closeProduct()
     setCartOpen(true)
   }
 
@@ -1510,7 +1581,7 @@ function StorefrontApp() {
             className="product-dialog-backdrop"
             role="presentation"
             onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setSelectedProduct(null)
+              if (event.target === event.currentTarget) closeProduct()
             }}
           >
             <section
@@ -1523,7 +1594,7 @@ function StorefrontApp() {
                 type="button"
                 className="product-dialog-close"
                 aria-label="Cerrar detalle"
-                onClick={() => setSelectedProduct(null)}
+                onClick={closeProduct}
               >
                 ×
               </button>
@@ -1743,7 +1814,22 @@ function StorefrontApp() {
                       Consultar
                       <span aria-hidden="true">↗</span>
                     </a>
+
+                    <button
+                      type="button"
+                      className="button button-secondary product-dialog-cta product-dialog-share"
+                      onClick={() => void shareProduct(selectedProduct)}
+                    >
+                      Compartir producto
+                      <span aria-hidden="true">↗</span>
+                    </button>
                   </div>
+
+                  {productShareMessage && (
+                    <p className="product-share-message" role="status">
+                      {productShareMessage}
+                    </p>
+                  )}
 
                   <p className="product-dialog-purchase-note">
                     El pedido queda registrado y después continuamos la coordinación

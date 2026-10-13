@@ -6369,3 +6369,41 @@
   }
 }
 
+/* ALIMAR 1SHOP.16 - SHARE PRODUCTS */
+
+.product-dialog-share {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.product-share-message {
+  width: 100%;
+  margin: 0 !important;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: var(--blue-dark) !important;
+  background: rgba(100,175,198,.08);
+  font-size: .62rem !important;
+  line-height: 1.4 !important;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 701px) {
+  .product-dialog-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .product-dialog-actions .product-dialog-share {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 700px) {
+  .product-dialog-share {
+    width: 100%;
+  }
+}
+
