@@ -11,6 +11,29 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1SHOP.15",
+    "date": "2026-10-12",
+    "title": "Entrega y retiro",
+    "summary": "Permite elegir retiro o entrega en el checkout y conserva la preferencia en pedido WhatsApp y administracion.",
+    "commit": "bccf7ffe2d09a4bfda87f9314f7c01dd561964af",
+    "files": [
+      "src/CheckoutForm.tsx",
+      "src/shared/orderFulfillment.ts",
+      "api/orders.ts",
+      "api/admin/orders.ts",
+      "src/admin/orders/types.ts",
+      "src/AdminOrdersPanel.tsx",
+      "db/migrations/038_order_fulfillment.sql"
+    ],
+    "changes": [
+      "El checkout permite elegir Retiro a coordinar o Entrega/envio a coordinar.",
+      "Para entrega se puede indicar zona o localidad sin calcular costos automaticamente.",
+      "El servidor valida la modalidad y descarta zona cuando el pedido es retiro.",
+      "WhatsApp incluye modalidad y zona cuando corresponde.",
+      "El admin separa Prometido de Entrega y mantiene pedidos historicos como A coordinar."
+    ]
+  },
+  {
     "code": "1OPS.10",
     "date": "2026-10-12",
     "title": "Tipos Node en Vercel",
