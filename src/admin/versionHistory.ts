@@ -11,6 +11,26 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1UI.20",
+    "date": "2026-10-14",
+    "title": "Rediseno integral del admin",
+    "summary": "Moderniza navegacion, superficies, pedidos, formularios, metricas, modales y responsive del administrador.",
+    "commit": "415eee47b84e0c0f86d310b16bbbcdfa5073bd32",
+    "files": [
+      "src/AdminApp.tsx",
+      "src/styles/admin/admin.css",
+      "scripts/test-structural.mjs"
+    ],
+    "changes": [
+      "El menu rapido queda reorganizado por tareas y marca la seccion activa durante el scroll.",
+      "Se moderniza el sistema visual completo manteniendo la identidad pastel de Alimar.",
+      "PED, metricas y centro de trabajo ganan jerarquia y legibilidad.",
+      "Inputs botones tarjetas y estados usan un lenguaje visual consistente.",
+      "Los popups y herramientas comerciales se convierten en espacios de trabajo mas limpios.",
+      "Responsive reforzado para notebook tablet y telefono."
+    ]
+  },
+  {
     "code": "1UI.19",
     "date": "2026-10-13",
     "title": "Menu rapido admin mas comodo",
