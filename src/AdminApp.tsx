@@ -55,6 +55,7 @@ export default function AdminApp() {
   const [adminSettingsMessage, setAdminSettingsMessage] = useState('')
   const [workspaceDialog, setWorkspaceDialog] = useState<'quotes' | 'requests' | null>(null)
   const [notificationRequestId, setNotificationRequestId] = useState<string | null>(null)
+  const [activeQuickSection, setActiveQuickSection] = useState('today')
 
   const [createPricingMode, setCreatePricingMode] =
     useState<'fixed' | 'from' | 'quote'>('fixed')
@@ -158,6 +159,64 @@ export default function AdminApp() {
   }, [])
 
   useModalLifecycle(Boolean(workspaceDialog), () => setWorkspaceDialog(null))
+
+  useEffect(() => {
+    const sections = [
+      ['today', '.admin-work-center'],
+      ['summary', '.admin-business-dashboard'],
+      ['versions', '.admin-version-control'],
+      ['clients', '.admin-customers'],
+      ['inspiration', '.admin-custom-examples'],
+      ['orders', '.admin-orders-panel'],
+      ['catalog', '.admin-grid'],
+      ['quality', '.admin-catalog-quality'],
+      ['combos', '.admin-combos'],
+    ] as const
+
+    let frame = 0
+
+    function updateActiveQuickSection() {
+      if (frame) return
+
+      frame = window.requestAnimationFrame(() => {
+        frame = 0
+        const marker = 150
+        let nextSection = 'today'
+
+        for (const [key, selector] of sections) {
+          const element = document.querySelector<HTMLElement>(selector)
+          if (!element) continue
+
+          const rect = element.getBoundingClientRect()
+          if (rect.top <= marker) {
+            nextSection = key
+            continue
+          }
+
+          break
+        }
+
+        setActiveQuickSection((current) =>
+          current === nextSection ? current : nextSection,
+        )
+      })
+    }
+
+    updateActiveQuickSection()
+    window.addEventListener('scroll', updateActiveQuickSection, { passive: true })
+    window.addEventListener('resize', updateActiveQuickSection)
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', updateActiveQuickSection)
+      window.removeEventListener('resize', updateActiveQuickSection)
+    }
+  }, [])
+
+  function openQuickSection(key: string, selector: string) {
+    setActiveQuickSection(key)
+    scrollAdminSection(selector)
+  }
 
   async function refreshCatalogAfterMutation(successMessage: string) {
     try {
@@ -812,67 +871,98 @@ export default function AdminApp() {
         >
           <button
             type="button"
-            onClick={() => scrollAdminSection('.admin-work-center')}
+            className={activeQuickSection === 'today' ? 'is-active' : ''}
+            aria-current={activeQuickSection === 'today' ? 'location' : undefined}
+            onClick={() => openQuickSection('today', '.admin-work-center')}
           >
             Hoy
           </button>
           <button
             type="button"
-            onClick={() => scrollAdminSection('.admin-business-dashboard')}
+            className={activeQuickSection === 'orders' ? 'is-active' : ''}
+            aria-current={activeQuickSection === 'orders' ? 'location' : undefined}
+            onClick={() => openQuickSection('orders', '.admin-orders-panel')}
           >
-            Resumen
+            Pedidos
           </button>
           <button
             type="button"
-            onClick={() => scrollAdminSection('.admin-customers')}
-          >
-            Clientes
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollAdminSection('.admin-custom-examples')}
-          >
-            Inspiración
-          </button>
-          <button
-            type="button"
-            onClick={() => openWorkspace('quotes')}
-          >
-            Presupuestos
-          </button>
-          <button
-            type="button"
+            className={workspaceDialog === 'requests' ? 'is-active' : ''}
+            aria-pressed={workspaceDialog === 'requests'}
             onClick={() => openWorkspace('requests')}
           >
             Solicitudes
           </button>
           <button
             type="button"
-            onClick={() => scrollAdminSection('.admin-orders-panel')}
+            className={workspaceDialog === 'quotes' ? 'is-active' : ''}
+            aria-pressed={workspaceDialog === 'quotes'}
+            onClick={() => openWorkspace('quotes')}
           >
-            Pedidos
+            Presupuestos
+          </button>
+
+          <span className="admin-quick-nav-divider" aria-hidden="true" />
+
+          <button
+            type="button"
+            className={activeQuickSection === 'summary' ? 'is-active' : ''}
+            aria-current={activeQuickSection === 'summary' ? 'location' : undefined}
+            onClick={() => openQuickSection('summary', '.admin-business-dashboard')}
+          >
+            Resumen
           </button>
           <button
             type="button"
-            onClick={() => scrollAdminSection('.admin-combos')}
+            className={activeQuickSection === 'clients' ? 'is-active' : ''}
+            aria-current={activeQuickSection === 'clients' ? 'location' : undefined}
+            onClick={() => openQuickSection('clients', '.admin-customers')}
           >
-            Combos
+            Clientes
           </button>
+
+          <span className="admin-quick-nav-divider" aria-hidden="true" />
+
           <button
             type="button"
-            onClick={() => scrollAdminSection('.admin-catalog-quality')}
-          >
-            Calidad
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollAdminSection('.admin-grid')}
+            className={activeQuickSection === 'catalog' ? 'is-active' : ''}
+            aria-current={activeQuickSection === 'catalog' ? 'location' : undefined}
+            onClick={() => openQuickSection('catalog', '.admin-grid')}
           >
             Catálogo
           </button>
           <button
             type="button"
-            onClick={() => scrollAdminSection('.admin-version-control')}
+            className={activeQuickSection === 'combos' ? 'is-active' : ''}
+            aria-current={activeQuickSection === 'combos' ? 'location' : undefined}
+            onClick={() => openQuickSection('combos', '.admin-combos')}
+          >
+            Combos
+          </button>
+          <button
+            type="button"
+            className={activeQuickSection === 'inspiration' ? 'is-active' : ''}
+            aria-current={activeQuickSection === 'inspiration' ? 'location' : undefined}
+            onClick={() => openQuickSection('inspiration', '.admin-custom-examples')}
+          >
+            Inspiración
+          </button>
+          <button
+            type="button"
+            className={activeQuickSection === 'quality' ? 'is-active' : ''}
+            aria-current={activeQuickSection === 'quality' ? 'location' : undefined}
+            onClick={() => openQuickSection('quality', '.admin-catalog-quality')}
+          >
+            Calidad
+          </button>
+
+          <span className="admin-quick-nav-divider" aria-hidden="true" />
+
+          <button
+            type="button"
+            className={activeQuickSection === 'versions' ? 'is-active' : ''}
+            aria-current={activeQuickSection === 'versions' ? 'location' : undefined}
+            onClick={() => openQuickSection('versions', '.admin-version-control')}
           >
             Versiones
           </button>

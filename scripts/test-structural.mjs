@@ -727,6 +727,20 @@ try {
     )
   })
 
+  test('admin moderno mantiene navegación activa y sistema visual', () => {
+    const adminAppSource = readFileSync('src/AdminApp.tsx', 'utf8')
+    const adminCssSource = readFileSync('src/styles/admin/admin.css', 'utf8')
+
+    assert.match(adminAppSource, /activeQuickSection/)
+    assert.match(adminAppSource, /openQuickSection/)
+    assert.match(adminAppSource, /admin-quick-nav-divider/)
+    assert.match(adminAppSource, /aria-current=/)
+    assert.match(adminCssSource, /ALIMAR 1UI\.20 - ADMIN MODERN REFRESH/)
+    assert.match(adminCssSource, /--admin-shadow-soft/)
+    assert.match(adminCssSource, /\.admin-order-card\.is-popup/)
+    assert.match(adminCssSource, /\.admin-quick-nav button\.is-active/)
+  })
+
   test('control de versiones mantiene módulos identificables y únicos', () => {
     assert.ok(Array.isArray(versions.versionHistory))
     assert.ok(versions.versionHistory.length >= 10)
