@@ -11,6 +11,27 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1CAT.23",
+    "date": "2026-10-15",
+    "title": "Galeria numerada y catalogo claro",
+    "summary": "Numera las imagenes de los productos y devuelve el catalogo principal al fondo claro natural de Alimar.",
+    "commit": "1c46420b8eaf4ec451bc8dbf570b4a8724c5e604",
+    "files": [
+      "src/App.tsx",
+      "src/styles/public/storefront.css",
+      "scripts/test-structural.mjs"
+    ],
+    "changes": [
+      "Agrega contador de imagen actual sobre la foto grande del producto.",
+      "Numera cada miniatura para identificar disenos por numero.",
+      "La numeracion respeta el orden real de la galeria.",
+      "Quita el fondo oscuro del catalogo principal.",
+      "Adapta buscador filtros combos estados vacios y CTA al fondo claro.",
+      "Mantiene fichas carrito checkout y links compartibles sin cambios.",
+      "No modifica backend Neon precios ni datos de productos."
+    ]
+  },
+  {
     "code": "1HOME.12",
     "date": "2026-10-14",
     "title": "Catalogo unico y primero",
