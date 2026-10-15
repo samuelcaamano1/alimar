@@ -11,6 +11,25 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1QA.12",
+    "date": "2026-10-15",
+    "title": "Correccion robusta UTF-8 del admin",
+    "summary": "Corrige textos visibles con mojibake y valida que no queden secuencias corruptas en src.",
+    "commit": "b232c7374bee02d3ad5b1eeace59c997dd6d7cf5",
+    "files": [
+      "src/AdminCatalogQuality.tsx",
+      "src/admin/catalogQuality.ts",
+      "src/admin/versionHistory.ts"
+    ],
+    "changes": [
+      "Repara textos corruptos del panel Calidad del catalogo.",
+      "Corrige acentos y signos visibles en el admin.",
+      "Corrige etiquetas de descripcion y personalizacion si estuvieran afectadas.",
+      "Escanea src para detectar secuencias tipicas de mojibake.",
+      "No modifica Neon pedidos precios ni logica comercial."
+    ]
+  },
+  {
     "code": "1HOME.13",
     "date": "2026-10-15",
     "title": "Animaciones de scroll y WhatsApp flotante",
