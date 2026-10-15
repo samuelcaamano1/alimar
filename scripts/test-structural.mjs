@@ -784,6 +784,20 @@ try {
     assert.match(storefrontCssSource, /\.catalog-first-custom-cta/)
   })
 
+  test('galeria numera disenos y catalogo principal usa fondo claro', () => {
+    const appSource = readFileSync('src/App.tsx', 'utf8')
+    const storefrontCssSource = readFileSync('src/styles/public/storefront.css', 'utf8')
+
+    assert.match(appSource, /ALIMAR 1CAT\.23 - NUMBERED PRODUCT GALLERY/)
+    assert.match(appSource, /product-dialog-image-counter/)
+    assert.match(appSource, /product-dialog-thumbnail-number/)
+    assert.match(appSource, /productImages\.findIndex/)
+    assert.match(storefrontCssSource, /ALIMAR 1CAT\.23 - NUMBERED GALLERY \/ LIGHT CATALOG/)
+    assert.match(storefrontCssSource, /\.catalog-first-section \{[\s\S]*?background: transparent;/)
+    assert.match(storefrontCssSource, /\.product-dialog-image-counter/)
+    assert.match(storefrontCssSource, /\.product-dialog-thumbnail-number/)
+  })
+
   test('control de versiones mantiene módulos identificables y únicos', () => {
     assert.ok(Array.isArray(versions.versionHistory))
     assert.ok(versions.versionHistory.length >= 10)

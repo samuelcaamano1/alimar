@@ -6587,3 +6587,186 @@
     padding: 18px;
   }
 }
+
+/* ALIMAR 1CAT.23 - NUMBERED GALLERY / LIGHT CATALOG */
+
+/* El catalogo principal vuelve al fondo natural claro de Alimar. */
+.catalog-first-section {
+  background: transparent;
+}
+
+.catalog-first-section .eyebrow {
+  color: var(--blue-dark);
+}
+
+.catalog-first-section .section-heading h2,
+.catalog-first-section .home-combos-heading strong,
+.catalog-first-custom-cta strong,
+.catalog-first-section .catalog-empty h3,
+.catalog-first-section .catalog-message strong {
+  color: var(--ink);
+}
+
+.catalog-first-section .section-heading > p,
+.catalog-first-section .home-combos-heading span,
+.catalog-first-custom-cta span,
+.catalog-first-section .catalog-results-summary,
+.catalog-first-section .catalog-search-meta {
+  color: var(--muted);
+}
+
+.catalog-first-section .catalog-search-box {
+  width: min(720px, 100%);
+}
+
+.catalog-first-section .catalog-search-control {
+  border-color: rgba(63, 120, 138, 0.19);
+  background: rgba(255, 253, 248, 0.78);
+  box-shadow: 0 8px 24px rgba(35, 48, 52, 0.045);
+}
+
+.catalog-first-section .catalog-search-control:focus-within {
+  border-color: rgba(63, 120, 138, 0.48);
+  box-shadow:
+    0 8px 24px rgba(35, 48, 52, 0.05),
+    0 0 0 3px rgba(100, 175, 198, 0.1);
+}
+
+.catalog-first-section .catalog-search-control input {
+  color: var(--ink);
+}
+
+.catalog-first-section .catalog-search-control input::placeholder {
+  color: rgba(80, 74, 73, 0.6);
+}
+
+.catalog-first-section .catalog-search-icon,
+.catalog-first-section .catalog-search-meta strong,
+.catalog-first-section .catalog-search-clear,
+.catalog-first-section .catalog-empty-label,
+.catalog-first-section .catalog-message span {
+  color: var(--blue-dark);
+}
+
+.catalog-first-section .catalog-search-submit {
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.catalog-first-section .catalog-filters button {
+  border-color: rgba(49, 39, 40, 0.14);
+  color: var(--muted);
+  background: rgba(255, 253, 248, 0.72);
+}
+
+.catalog-first-section .catalog-filters button:hover,
+.catalog-first-section .catalog-filters button:focus-visible,
+.catalog-first-section .catalog-filters button.is-active {
+  color: var(--ink);
+  border-color: rgba(63, 120, 138, 0.3);
+  background: rgba(100, 175, 198, 0.16);
+}
+
+.catalog-first-section .catalog-results-summary strong {
+  color: var(--ink);
+}
+
+.catalog-first-combos {
+  border-top-color: var(--line);
+}
+
+.catalog-first-custom-cta {
+  border-color: rgba(49, 39, 40, 0.12);
+  background: rgba(255, 253, 248, 0.58);
+  box-shadow: 0 12px 30px rgba(35, 48, 52, 0.045);
+}
+
+.catalog-first-custom-cta .button-secondary {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.catalog-first-custom-cta .button-secondary:hover,
+.catalog-first-custom-cta .button-secondary:focus-visible {
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.catalog-first-section .catalog-message,
+.catalog-first-section .catalog-empty {
+  border-color: var(--line);
+  background: rgba(255, 253, 248, 0.5);
+}
+
+.catalog-first-section .product-card-skeleton {
+  background: linear-gradient(110deg, #efe6d6 8%, #f8f0df 18%, #efe6d6 33%);
+  background-size: 200% 100%;
+}
+
+/* Numeracion estable para que cada diseno pueda pedirse por numero. */
+.product-dialog-image-numbered {
+  position: relative;
+}
+
+.product-dialog-image-counter {
+  position: absolute;
+  z-index: 3;
+  top: 12px;
+  right: 12px;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  color: #fffdf8;
+  background: rgba(12, 16, 20, 0.72);
+  box-shadow: 0 5px 16px rgba(12, 16, 20, 0.16);
+  backdrop-filter: blur(7px);
+  font-family: var(--sans);
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.product-dialog-thumbnails button {
+  position: relative;
+}
+
+.product-dialog-thumbnail-number {
+  position: absolute;
+  z-index: 2;
+  top: 3px;
+  right: 3px;
+  min-width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  color: #fffdf8;
+  background: rgba(12, 16, 20, 0.78);
+  box-shadow: 0 2px 7px rgba(12, 16, 20, 0.18);
+  font-family: var(--sans);
+  font-size: 0.56rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.product-dialog-thumbnails button.is-active .product-dialog-thumbnail-number {
+  color: var(--ink);
+  background: var(--blue);
+}
+
+@media (max-width: 620px) {
+  .product-dialog-image-counter {
+    top: 10px;
+    right: 10px;
+  }
+}

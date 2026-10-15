@@ -1449,11 +1449,32 @@ function StorefrontApp() {
               </button>
 
               <div className="product-dialog-gallery">
-                <div className="product-dialog-image">
+                {/* ALIMAR 1CAT.23 - NUMBERED PRODUCT GALLERY */}
+                <div className="product-dialog-image product-dialog-image-numbered">
                   {selectedProductImageUrl ? (
                     <img src={selectedProductImageUrl} alt={selectedProduct.name} />
                   ) : (
                     <span>Alimar</span>
+                  )}
+
+                  {productImages.length > 1 && (
+                    <span
+                      className="product-dialog-image-counter"
+                      aria-label={`Imagen ${Math.max(
+                        productImages.findIndex(
+                          (image) => image.url === selectedProductImageUrl,
+                        ) + 1,
+                        1,
+                      )} de ${productImages.length}`}
+                    >
+                      {Math.max(
+                        productImages.findIndex(
+                          (image) => image.url === selectedProductImageUrl,
+                        ) + 1,
+                        1,
+                      )}{' / '}
+                      {productImages.length}
+                    </span>
                   )}
                 </div>
 
@@ -1471,6 +1492,12 @@ function StorefrontApp() {
                           src={image.url}
                           alt={image.alt_text ?? `${selectedProduct.name}, imagen ${index + 1}`}
                         />
+                        <span
+                          className="product-dialog-thumbnail-number"
+                          aria-hidden="true"
+                        >
+                          {index + 1}
+                        </span>
                       </button>
                     ))}
                   </div>
