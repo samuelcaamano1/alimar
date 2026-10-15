@@ -137,6 +137,89 @@ function CatalogProductCard({ product, onOpen }: CatalogProductCardProps) {
 }
 
 function StorefrontApp() {
+  /* ALIMAR 1HOME.13 - SCROLL REVEAL */
+  useEffect(() => {
+    const root = document.getElementById('inicio')
+    if (!root) return
+    const revealRoot = root
+
+    const revealSelector = [
+      '.catalog-first-heading',
+      '.catalog-search-box',
+      '.catalog-filters',
+      '.catalog-results-summary',
+      '.product-card-button',
+      '.home-combos-heading',
+      '.combo-card',
+      '.catalog-first-custom-cta',
+      '.home-hero-compact .hero-copy',
+      '.home-hero-compact .hero-art',
+      '.manifesto-strip',
+      '.services-section .section-heading',
+      '.catalog-custom-order',
+      '.service-card',
+      '.process-intro',
+      '.process-list li',
+    ].join(', ')
+
+    const reducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+
+    const revealObserver =
+      !reducedMotion && 'IntersectionObserver' in window
+        ? new IntersectionObserver(
+            (entries) => {
+              for (const entry of entries) {
+                if (!entry.isIntersecting) continue
+
+                entry.target.classList.add('is-revealed')
+                revealObserver?.unobserve(entry.target)
+              }
+            },
+            {
+              threshold: 0.12,
+              rootMargin: '0px 0px -7% 0px',
+            },
+          )
+        : null
+
+    function prepareRevealElements() {
+      const elements = Array.from(
+        revealRoot.querySelectorAll<HTMLElement>(revealSelector),
+      )
+
+      elements.forEach((element, index) => {
+        if (!element.classList.contains('storefront-reveal')) {
+          element.classList.add('storefront-reveal')
+          element.style.setProperty(
+            '--reveal-delay',
+            String(Math.min(index % 6, 5) * 55) + 'ms',
+          )
+        }
+
+        if (!revealObserver) {
+          element.classList.add('is-revealed')
+          return
+        }
+
+        if (!element.classList.contains('is-revealed')) {
+          revealObserver.observe(element)
+        }
+      })
+    }
+
+    prepareRevealElements()
+
+    const mutationObserver = new MutationObserver(prepareRevealElements)
+    mutationObserver.observe(revealRoot, { childList: true, subtree: true })
+
+    return () => {
+      mutationObserver.disconnect()
+      revealObserver?.disconnect()
+    }
+  }, [])
+
   const [catalog, setCatalog] = useState<CatalogCategory[]>([])
   const [bundles, setBundles] = useState<CatalogBundle[]>([])
   const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -1717,6 +1800,31 @@ function StorefrontApp() {
           </div>
         )}
       </main>
+
+      {/* ALIMAR 1HOME.13 - FLOATING WHATSAPP */}
+      <a
+        className="whatsapp-fab"
+        href={site.whatsappUrl}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Hablar con Alimar por WhatsApp"
+        title="Hablar por WhatsApp"
+      >
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 3.2a8.6 8.6 0 0 0-7.35 13.07L4 20.8l4.4-1.2A8.6 8.6 0 1 0 12 3.2Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M8.45 8.05c.23-.5.47-.52.7-.53h.6c.18 0 .38.07.5.36l.75 1.78c.1.24.05.43-.08.63l-.53.68c-.14.18-.1.34.04.53.58.8 1.3 1.47 2.13 1.98.2.12.37.1.53-.08l.73-.84c.17-.2.38-.23.62-.13l1.7.8c.27.13.4.29.4.48 0 .25-.12 1.08-.76 1.58-.55.43-1.28.66-2.03.52-1.1-.2-2.53-.83-3.9-2.05-1.14-1.02-1.9-2.25-2.14-3.2-.2-.78-.06-1.8.34-2.5Z"
+            fill="currentColor"
+          />
+        </svg>
+        <span className="whatsapp-fab-label">WhatsApp</span>
+      </a>
 
       {recoveredOrder && (
         <aside className="order-recovery" aria-label="Último pedido registrado">

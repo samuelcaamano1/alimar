@@ -6770,3 +6770,131 @@
     right: 10px;
   }
 }
+
+/* ALIMAR 1HOME.13 - SCROLL REVEAL / FLOATING WHATSAPP */
+.storefront-reveal {
+  opacity: 0;
+  transform: translate3d(0, 26px, 0) scale(0.992);
+  filter: blur(2px);
+  transition:
+    opacity 560ms cubic-bezier(0.2, 0.72, 0.2, 1),
+    transform 680ms cubic-bezier(0.2, 0.72, 0.2, 1),
+    filter 520ms ease;
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.storefront-reveal.is-revealed {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  filter: none;
+}
+
+.whatsapp-fab {
+  position: fixed;
+  z-index: 69;
+  right: 20px;
+  bottom: 84px;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  color: #fff;
+  background: #25d366;
+  box-shadow:
+    0 16px 38px rgba(18, 93, 54, 0.24),
+    0 3px 10px rgba(12, 16, 20, 0.12);
+  text-decoration: none;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.whatsapp-fab svg {
+  width: 27px;
+  height: 27px;
+  display: block;
+}
+
+.whatsapp-fab-label {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: var(--cream);
+  background: rgba(12, 16, 20, 0.92);
+  box-shadow: 0 8px 22px rgba(12, 16, 20, 0.16);
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(6px, -50%);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+@media (hover: hover) {
+  .whatsapp-fab:hover {
+    transform: translateY(-3px) scale(1.035);
+    box-shadow:
+      0 20px 46px rgba(18, 93, 54, 0.29),
+      0 4px 12px rgba(12, 16, 20, 0.14);
+    filter: saturate(1.05);
+  }
+
+  .whatsapp-fab:hover .whatsapp-fab-label {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+.whatsapp-fab:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 4px;
+}
+
+/* Deja espacio para carrito + WhatsApp cuando reaparece un pedido registrado. */
+.order-recovery {
+  bottom: 150px;
+}
+
+@media (max-width: 700px) {
+  .whatsapp-fab {
+    right: 14px;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    width: 52px;
+    height: 52px;
+  }
+
+  .whatsapp-fab-label {
+    display: none;
+  }
+
+  .order-recovery {
+    bottom: calc(148px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storefront-reveal,
+  .storefront-reveal.is-revealed {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
+
+  .whatsapp-fab,
+  .whatsapp-fab-label {
+    transition: none !important;
+  }
+}

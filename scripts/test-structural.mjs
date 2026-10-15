@@ -798,6 +798,23 @@ try {
     assert.match(storefrontCssSource, /\.product-dialog-thumbnail-number/)
   })
 
+  test('home anima contenido al hacer scroll y mantiene WhatsApp flotante', () => {
+    const appSource = readFileSync('src/App.tsx', 'utf8')
+    const storefrontCssSource = readFileSync('src/styles/public/storefront.css', 'utf8')
+
+    assert.match(appSource, /ALIMAR 1HOME\.13 - SCROLL REVEAL/)
+    assert.match(appSource, /IntersectionObserver/)
+    assert.match(appSource, /MutationObserver/)
+    assert.match(appSource, /storefront-reveal/)
+    assert.match(appSource, /className="whatsapp-fab"/)
+    assert.match(appSource, /href=\{site\.whatsappUrl\}/)
+    assert.match(appSource, /Hablar con Alimar por WhatsApp/)
+    assert.match(storefrontCssSource, /ALIMAR 1HOME\.13 - SCROLL REVEAL \/ FLOATING WHATSAPP/)
+    assert.match(storefrontCssSource, /\.storefront-reveal\.is-revealed/)
+    assert.match(storefrontCssSource, /\.whatsapp-fab/)
+    assert.match(storefrontCssSource, /prefers-reduced-motion: reduce/)
+  })
+
   test('control de versiones mantiene módulos identificables y únicos', () => {
     assert.ok(Array.isArray(versions.versionHistory))
     assert.ok(versions.versionHistory.length >= 10)
