@@ -11,6 +11,27 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1UI.22",
+    "date": "2026-10-14",
+    "title": "Pulido visual final del admin",
+    "summary": "Cierra la tanda visual con mejor jerarquia, estados de controles, tablas, badges, dialogos y responsive antes del deploy.",
+    "commit": "b106600514c4fdcbb57e2034536bf9c50fb15f73",
+    "files": [
+      "src/styles/admin/admin.css",
+      "scripts/test-structural.mjs"
+    ],
+    "changes": [
+      "Labels ayudas y encabezados ganan jerarquia y ritmo consistentes.",
+      "Checkboxes radios focus y estados active quedan integrados al sistema visual.",
+      "Tablas tienen bordes fondos hover y cierre de filas mas limpios.",
+      "Botones peligrosos y filtros activos comunican mejor su estado.",
+      "Badges y textos largos resisten mejor sin romper el layout.",
+      "Dialogos headers y acciones mantienen su espacio sin compresiones.",
+      "Tablet y mobile reciben un ultimo ajuste de paddings ancho y wrapping.",
+      "Se respeta prefers-reduced-motion para una experiencia mas accesible."
+    ]
+  },
+  {
     "code": "1UI.21",
     "date": "2026-10-14",
     "title": "Pulido visual y ergonomia del admin",
