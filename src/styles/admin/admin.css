@@ -13807,3 +13807,439 @@
   .admin-secondary,
   .admin-edit { transition: none; }
 }
+
+/* ALIMAR 1UI.21 - ADMIN POLISH / CONTROLS / SCROLL */
+
+/* Evita desbordes accidentales sin recortar los popups de trabajo. */
+.admin-shell,
+.admin-main,
+.admin-panel,
+.admin-orders-panel,
+.admin-order-card,
+.admin-workspace-dialog,
+.admin-dialog {
+  min-width: 0;
+}
+
+.admin-shell {
+  overflow-x: clip;
+}
+
+.admin-shell *,
+.admin-shell *::before,
+.admin-shell *::after,
+.admin-login-shell *,
+.admin-login-shell *::before,
+.admin-login-shell *::after {
+  box-sizing: border-box;
+}
+
+/* Scrollbars discretas: visibles donde ayudan y ocultas en navegación horizontal. */
+.admin-workspace-dialog-body,
+.admin-dialog,
+.admin-order-card.is-popup,
+.admin-order-items,
+.admin-order-history,
+.admin-production-queue {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(53,111,128,.34) transparent;
+}
+
+.admin-workspace-dialog-body::-webkit-scrollbar,
+.admin-dialog::-webkit-scrollbar,
+.admin-order-card.is-popup::-webkit-scrollbar,
+.admin-order-items::-webkit-scrollbar,
+.admin-order-history::-webkit-scrollbar,
+.admin-production-queue::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.admin-workspace-dialog-body::-webkit-scrollbar-track,
+.admin-dialog::-webkit-scrollbar-track,
+.admin-order-card.is-popup::-webkit-scrollbar-track,
+.admin-order-items::-webkit-scrollbar-track,
+.admin-order-history::-webkit-scrollbar-track,
+.admin-production-queue::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-workspace-dialog-body::-webkit-scrollbar-thumb,
+.admin-dialog::-webkit-scrollbar-thumb,
+.admin-order-card.is-popup::-webkit-scrollbar-thumb,
+.admin-order-items::-webkit-scrollbar-thumb,
+.admin-order-history::-webkit-scrollbar-thumb,
+.admin-production-queue::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(53,111,128,.28);
+  background-clip: padding-box;
+}
+
+.admin-workspace-dialog-body::-webkit-scrollbar-thumb:hover,
+.admin-dialog::-webkit-scrollbar-thumb:hover,
+.admin-order-card.is-popup::-webkit-scrollbar-thumb:hover,
+.admin-order-items::-webkit-scrollbar-thumb:hover,
+.admin-order-history::-webkit-scrollbar-thumb:hover,
+.admin-production-queue::-webkit-scrollbar-thumb:hover {
+  background: rgba(53,111,128,.42);
+  background-clip: padding-box;
+}
+
+.admin-quick-nav {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-quick-nav::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.admin-quick-nav button,
+.admin-quick-nav-divider {
+  flex: 0 0 auto;
+}
+
+/* Controles: misma altura, alineación y lectura en todo el admin. */
+.admin-login-card input:not([type='checkbox']):not([type='radio']),
+.admin-form input:not([type='checkbox']):not([type='radio']):not([type='file']),
+.admin-form select,
+.admin-orders-toolbar select,
+.admin-order-search input,
+.admin-order-workflow select,
+.admin-order-workflow input:not([type='checkbox']):not([type='radio']),
+.admin-category-edit-form input:not([type='checkbox']):not([type='radio']):not([type='file']) {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  line-height: 1.25;
+  font: inherit;
+  color: var(--admin-ink);
+}
+
+.admin-form select,
+.admin-orders-toolbar select,
+.admin-order-workflow select {
+  padding-right: 34px;
+  cursor: pointer;
+}
+
+.admin-form textarea,
+.admin-category-edit-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 108px;
+  margin: 0;
+  padding: 11px 12px;
+  line-height: 1.5;
+  font: inherit;
+  resize: vertical;
+}
+
+.admin-form input::placeholder,
+.admin-form textarea::placeholder,
+.admin-order-search input::placeholder,
+.admin-category-edit-form input::placeholder,
+.admin-category-edit-form textarea::placeholder {
+  color: #92999d;
+  opacity: 1;
+}
+
+.admin-form label,
+.admin-orders-toolbar label,
+.admin-order-workflow label,
+.admin-category-edit-form label {
+  min-width: 0;
+  gap: 7px;
+}
+
+.admin-form > *,
+.admin-orders-toolbar > *,
+.admin-order-workflow > *,
+.admin-category-edit-form > * {
+  min-width: 0;
+}
+
+.admin-orders-toolbar,
+.admin-order-workflow {
+  align-items: end;
+}
+
+.admin-order-search {
+  min-width: min(100%, 230px);
+}
+
+/* File inputs dejan de verse como un control viejo del navegador. */
+.admin-form input[type='file'],
+.admin-category-edit-form input[type='file'] {
+  width: 100%;
+  min-width: 0;
+  padding: 7px;
+  border: 1px dashed rgba(53,111,128,.2);
+  border-radius: var(--admin-radius-control);
+  background: rgba(255,255,255,.7);
+  color: var(--admin-muted);
+}
+
+.admin-form input[type='file']::file-selector-button,
+.admin-category-edit-form input[type='file']::file-selector-button {
+  min-height: 34px;
+  margin-right: 10px;
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 9px;
+  background: rgba(53,111,128,.1);
+  color: var(--admin-blue-dark);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+/* Botones coherentes y sin saltos por alto diferente. */
+.admin-primary,
+.admin-secondary,
+.admin-edit,
+.admin-danger,
+.admin-text-button,
+.admin-workspace-close,
+.admin-order-popup-close {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  vertical-align: middle;
+}
+
+.admin-primary:focus-visible,
+.admin-secondary:focus-visible,
+.admin-edit:focus-visible,
+.admin-danger:focus-visible,
+.admin-text-button:focus-visible,
+.admin-workspace-close:focus-visible,
+.admin-order-popup-close:focus-visible,
+.admin-quick-nav button:focus-visible,
+.admin-business-dashboard-grid button:focus-visible,
+.admin-order-stats button:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(116,182,200,.18);
+}
+
+button:disabled,
+.admin-primary:disabled,
+.admin-secondary:disabled,
+.admin-edit:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+  transform: none !important;
+  box-shadow: none;
+}
+
+/* Contenido largo: evita romper cards o crear scroll horizontal en toda la página. */
+.admin-order-card,
+.admin-customer-card,
+.admin-category-manager-row,
+.admin-combo-card,
+.admin-catalog-quality-card,
+.admin-version-entry,
+.admin-work-task,
+.admin-production-queue-row {
+  overflow-wrap: anywhere;
+}
+
+.admin-order-top,
+.admin-order-contact,
+.admin-order-compact-summary,
+.admin-order-quick-actions,
+.admin-panel-heading,
+.admin-work-center-heading,
+.admin-business-dashboard-heading,
+.admin-customers-heading {
+  min-width: 0;
+}
+
+.admin-order-top h3,
+.admin-panel h2,
+.admin-work-center-heading h2,
+.admin-business-dashboard-heading h2,
+.admin-customers-heading h2 {
+  text-wrap: balance;
+}
+
+.admin-order-code,
+.admin-order-contact a,
+.admin-version-entry code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Superficies internas más limpias y con respiración consistente. */
+.admin-image-field,
+.admin-combos-form,
+.admin-order-workflow,
+.admin-order-items,
+.admin-order-payments,
+.admin-order-actual-cost,
+.admin-order-history,
+.admin-order-delivery-check {
+  border-color: rgba(32,39,43,.075);
+}
+
+.admin-image-field,
+.admin-combos-form,
+.admin-order-workflow {
+  padding: clamp(12px,1.5vw,16px);
+  border-radius: 16px;
+}
+
+.admin-order-items,
+.admin-order-payments,
+.admin-order-actual-cost,
+.admin-order-history,
+.admin-order-delivery-check {
+  padding: clamp(12px,1.6vw,17px);
+}
+
+.admin-order-quick-actions {
+  flex-wrap: wrap;
+}
+
+.admin-order-quick-actions > * {
+  min-width: 0;
+}
+
+/* Modales: contenido scrolleable, encabezado estable y sin doble scrollbar fea. */
+.admin-dialog,
+.admin-workspace-dialog {
+  max-height: min(92dvh, 960px);
+}
+
+.admin-workspace-dialog {
+  overflow: hidden;
+}
+
+.admin-workspace-dialog-header {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+}
+
+.admin-workspace-dialog-body {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.admin-order-card.is-popup {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+/* Tablas y bloques de datos conservan legibilidad sin forzar ancho del viewport. */
+.admin-shell table,
+.admin-dialog table,
+.admin-workspace-dialog table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-shell th,
+.admin-shell td,
+.admin-dialog th,
+.admin-dialog td,
+.admin-workspace-dialog th,
+.admin-workspace-dialog td {
+  min-width: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(32,39,43,.065);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-shell th,
+.admin-dialog th,
+.admin-workspace-dialog th {
+  color: #596267;
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+/* Desktop chico / notebook: menos sensación de interfaz apretada. */
+@media (max-width:1100px) {
+  .admin-orders-toolbar,
+  .admin-order-workflow {
+    align-items: stretch;
+  }
+
+  .admin-order-search {
+    min-width: 0;
+  }
+}
+
+/* Mobile: controles cómodos, sin zoom accidental y acciones apilables. */
+@media (max-width:760px) {
+  .admin-login-card input,
+  .admin-form input,
+  .admin-form select,
+  .admin-form textarea,
+  .admin-orders-toolbar select,
+  .admin-order-search input,
+  .admin-order-workflow select,
+  .admin-order-workflow input,
+  .admin-category-edit-form input,
+  .admin-category-edit-form textarea {
+    font-size: 16px;
+  }
+
+  .admin-primary,
+  .admin-secondary,
+  .admin-edit,
+  .admin-danger {
+    min-height: 42px;
+  }
+
+  .admin-order-quick-actions > button,
+  .admin-order-quick-actions > a {
+    flex: 1 1 150px;
+  }
+
+  .admin-workspace-dialog-body {
+    scrollbar-gutter: auto;
+  }
+
+  .admin-shell th,
+  .admin-shell td,
+  .admin-dialog th,
+  .admin-dialog td,
+  .admin-workspace-dialog th,
+  .admin-workspace-dialog td {
+    padding: 9px 10px;
+  }
+}
+
+@media (max-width:520px) {
+  .admin-order-quick-actions > button,
+  .admin-order-quick-actions > a {
+    flex-basis: 100%;
+  }
+
+  .admin-form textarea,
+  .admin-category-edit-form textarea {
+    min-height: 122px;
+  }
+}

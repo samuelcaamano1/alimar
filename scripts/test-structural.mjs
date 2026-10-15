@@ -741,6 +741,17 @@ try {
     assert.match(adminCssSource, /\.admin-quick-nav button\.is-active/)
   })
 
+  test('pulido visual del admin mantiene controles y scroll moderno', () => {
+    const adminCssSource = readFileSync('src/styles/admin/admin.css', 'utf8')
+
+    assert.match(adminCssSource, /ALIMAR 1UI\.21 - ADMIN POLISH \/ CONTROLS \/ SCROLL/)
+    assert.match(adminCssSource, /\.admin-quick-nav::-webkit-scrollbar/)
+    assert.match(adminCssSource, /scrollbar-width: none/)
+    assert.match(adminCssSource, /scrollbar-gutter: stable/)
+    assert.match(adminCssSource, /input\[type='file'\]::file-selector-button/)
+    assert.match(adminCssSource, /font-size: 16px/)
+  })
+
   test('control de versiones mantiene módulos identificables y únicos', () => {
     assert.ok(Array.isArray(versions.versionHistory))
     assert.ok(versions.versionHistory.length >= 10)
