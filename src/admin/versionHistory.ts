@@ -11,6 +11,28 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1HOME.12",
+    "date": "2026-10-14",
+    "title": "Catalogo unico y primero",
+    "summary": "Convierte la portada en un unico catalogo completo de productos y elimina la navegacion duplicada entre resumen y catalogo expandido.",
+    "commit": "5b09abf4cb078cb57f52a5c3bf73d865c16eba8b",
+    "files": [
+      "src/App.tsx",
+      "src/styles/public/storefront.css",
+      "scripts/test-structural.mjs"
+    ],
+    "changes": [
+      "El catalogo completo pasa a ser lo primero que ve el cliente al entrar.",
+      "Elimina el estado Ver todo el catalogo y Cerrar catalogo.",
+      "Mantiene buscador y filtros por categoria en una sola experiencia.",
+      "Conserva fichas de producto links compartibles carrito y checkout.",
+      "Mantiene los combos dentro del flujo comercial principal.",
+      "Deja el hero de marca debajo del catalogo para no frenar la compra.",
+      "Pedido personalizado sigue accesible desde catalogo hero y seccion de servicios.",
+      "No modifica backend Neon precios ni datos de productos."
+    ]
+  },
+  {
     "code": "1UI.22",
     "date": "2026-10-14",
     "title": "Pulido visual final del admin",
