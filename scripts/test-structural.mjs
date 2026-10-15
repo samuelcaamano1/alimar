@@ -763,6 +763,27 @@ try {
     assert.match(adminCssSource, /prefers-reduced-motion: reduce/)
   })
 
+  test('home usa un unico catalogo de productos como entrada principal', () => {
+    const appSource = readFileSync('src/App.tsx', 'utf8')
+    const storefrontCssSource = readFileSync('src/styles/public/storefront.css', 'utf8')
+
+    assert.match(appSource, /ALIMAR 1HOME\.12 - CATALOG FIRST \/ SINGLE PRODUCT EXPERIENCE/)
+    assert.match(appSource, /catalog-first-section/)
+    assert.match(appSource, /id="catalogo"/)
+    assert.match(appSource, /visibleCatalogProducts\.map/)
+    assert.match(appSource, /formatAmount\(Number\(bundle\.bundlePrice\)\)/)
+    assert.doesNotMatch(appSource, /catalogExpanded/)
+    assert.doesNotMatch(appSource, /catalogo-completo/)
+    assert.doesNotMatch(appSource, /Ver todo el catálogo/)
+    assert.doesNotMatch(appSource, /Cerrar catálogo/)
+    assert.ok(
+      appSource.indexOf('catalog-first-section') <
+        appSource.indexOf('home-hero-after-catalog'),
+    )
+    assert.match(storefrontCssSource, /ALIMAR 1HOME\.12 - CATALOG FIRST/)
+    assert.match(storefrontCssSource, /\.catalog-first-custom-cta/)
+  })
+
   test('control de versiones mantiene módulos identificables y únicos', () => {
     assert.ok(Array.isArray(versions.versionHistory))
     assert.ok(versions.versionHistory.length >= 10)

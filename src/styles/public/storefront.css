@@ -6447,3 +6447,143 @@
   }
 }
 
+/* ALIMAR 1HOME.12 - CATALOG FIRST */
+
+.catalog-first-section {
+  scroll-margin-top: 18px;
+  padding-top: clamp(38px, 5vw, 62px);
+  padding-bottom: clamp(58px, 7vw, 88px);
+}
+
+.catalog-first-heading {
+  align-items: end;
+  margin-bottom: 26px;
+}
+
+.catalog-first-section .product-grid {
+  margin-top: 2px;
+}
+
+.catalog-first-section .product-card {
+  border-radius: 16px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+}
+
+.catalog-first-section .product-image {
+  aspect-ratio: 1.18 / 1;
+}
+
+.catalog-first-section .catalog-filters {
+  margin-top: -4px;
+}
+
+.catalog-first-combos {
+  margin-top: 42px;
+  padding-top: 30px;
+  border-top-color: rgba(255, 255, 255, 0.16);
+}
+
+.catalog-first-section .home-combos-heading strong {
+  color: var(--paper);
+}
+
+.catalog-first-section .home-combos-heading span {
+  color: rgba(255, 250, 240, 0.68);
+}
+
+.catalog-first-custom-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-top: 42px;
+  padding: 22px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.catalog-first-custom-cta > div {
+  display: grid;
+  gap: 4px;
+}
+
+.catalog-first-custom-cta strong {
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: 1.35rem;
+  line-height: 1.05;
+}
+
+.catalog-first-custom-cta span {
+  color: rgba(255, 250, 240, 0.66);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.catalog-first-custom-cta .button-secondary {
+  flex: 0 0 auto;
+  color: var(--paper);
+  border-color: rgba(255, 255, 255, 0.48);
+}
+
+.catalog-first-custom-cta .button-secondary:hover,
+.catalog-first-custom-cta .button-secondary:focus-visible {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.home-hero-after-catalog {
+  padding-top: clamp(56px, 7vw, 92px);
+  padding-bottom: clamp(54px, 7vw, 82px);
+}
+
+@media (max-width: 760px) {
+  .catalog-first-section {
+    padding-top: 34px;
+  }
+
+  .catalog-first-heading {
+    gap: 14px;
+  }
+
+  .catalog-first-section .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalog-first-custom-cta {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .catalog-first-custom-cta .button-secondary {
+    width: 100%;
+  }
+
+  .home-hero-after-catalog {
+    padding-top: 46px;
+  }
+}
+
+@media (max-width: 620px) {
+  .catalog-first-section {
+    padding-inline: 14px;
+  }
+
+  .catalog-first-section .section-heading h2 {
+    font-size: clamp(2.45rem, 12vw, 3.65rem);
+  }
+
+  .catalog-first-section .product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-first-section .product-image {
+    aspect-ratio: 4 / 3;
+  }
+
+  .catalog-first-custom-cta {
+    margin-top: 30px;
+    padding: 18px;
+  }
+}
