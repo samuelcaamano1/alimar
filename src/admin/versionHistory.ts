@@ -11,6 +11,27 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1HOME.13",
+    "date": "2026-10-15",
+    "title": "Animaciones de scroll y WhatsApp flotante",
+    "summary": "Da movimiento suave a la tienda mientras se recorre y suma un acceso directo permanente a WhatsApp.",
+    "commit": "a03db72c841cfbec4978a8f9864ca82bdaff9471",
+    "files": [
+      "src/App.tsx",
+      "src/styles/public/storefront.css",
+      "scripts/test-structural.mjs"
+    ],
+    "changes": [
+      "Agrega aparicion progresiva al entrar elementos en pantalla.",
+      "Escalona las tarjetas de productos combos servicios y pasos para una sensacion mas dinamica.",
+      "Usa IntersectionObserver y soporta contenido cargado dinamicamente.",
+      "Agrega boton flotante de WhatsApp usando la configuracion central de Alimar.",
+      "Ordena el espacio con el boton flotante del carrito y el aviso de pedido recuperado.",
+      "Respeta prefers-reduced-motion para accesibilidad.",
+      "No modifica backend Neon carrito precios ni pedidos."
+    ]
+  },
+  {
     "code": "1CAT.23",
     "date": "2026-10-15",
     "title": "Galeria numerada y catalogo claro",
