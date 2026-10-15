@@ -828,7 +828,7 @@ export default function AdminApp() {
           </span>
         </a>
 
-        <nav className="admin-header-actions" aria-label="MenÃº de administraciÃ³n">
+        <nav className="admin-header-actions" aria-label="Menú de administración">
           <AdminNotifications
             onOpenOrder={openNotificationOrder}
             onOpenRequest={openNotificationRequest}

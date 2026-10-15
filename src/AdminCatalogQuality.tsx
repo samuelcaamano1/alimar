@@ -36,11 +36,11 @@ export default function AdminCatalogQuality({ catalog, onEdit }: Props) {
     <section className="admin-panel admin-catalog-quality">
       <div className="admin-catalog-quality-heading">
         <div>
-          <span className="admin-kicker">Calidad del catÃ¡logo</span>
-          <h2>Â¿QuÃ© falta completar?</h2>
+          <span className="admin-kicker">Calidad del catálogo</span>
+          <h2>¿Qué falta completar?</h2>
           <p>
-            RevisÃ¡ rÃ¡pidamente quÃ© productos estÃ¡n listos para vender y cuÃ¡les
-            necesitan atenciÃ³n antes de mostrarlos como destacados.
+            Revisá rápidamente qué productos están listos para vender y cuáles
+            necesitan atención antes de mostrarlos como destacados.
           </p>
         </div>
 
@@ -51,10 +51,10 @@ export default function AdminCatalogQuality({ catalog, onEdit }: Props) {
         >
           <strong>
             {summary.total === 0
-              ? 'â€”'
+              ? '—'
               : `${Math.round((summary.complete / summary.total) * 100)}%`}
           </strong>
-          <span>catÃ¡logo completo</span>
+          <span>catálogo completo</span>
         </div>
       </div>
 
@@ -81,16 +81,16 @@ export default function AdminCatalogQuality({ catalog, onEdit }: Props) {
           }
         >
           <strong>{summary.customizationPending}</strong>
-          <span>PersonalizaciÃ³n pendiente</span>
+          <span>Personalización pendiente</span>
         </article>
       </div>
 
       {summary.total > 0 && summary.featured === 0 && (
         <div className="admin-catalog-quality-note">
-          <strong>No hay productos destacados todavÃ­a.</strong>
+          <strong>No hay productos destacados todavía.</strong>
           <span>
-            La portada usa un fallback automÃ¡tico, pero podÃ©s elegir tus productos
-            principales desde â€œEditar â†’ Destacar productoâ€.
+            La portada usa un fallback automático, pero podés elegir tus productos
+            principales desde “Editar → Destacar producto”.
           </span>
         </div>
       )}
@@ -98,12 +98,12 @@ export default function AdminCatalogQuality({ catalog, onEdit }: Props) {
       {productsToReview.length === 0 ? (
         <div className="admin-catalog-quality-empty">
           <strong>Todo en orden.</strong>
-          <span>Las fichas activas cumplen los controles bÃ¡sicos del catÃ¡logo.</span>
+          <span>Las fichas activas cumplen los controles básicos del catálogo.</span>
         </div>
       ) : (
         <div className="admin-catalog-quality-list">
           <div className="admin-catalog-quality-list-heading">
-            <strong>Productos que necesitan atenciÃ³n</strong>
+            <strong>Productos que necesitan atención</strong>
             <span>{productsToReview.length} pendientes</span>
           </div>
 
@@ -151,7 +151,7 @@ export default function AdminCatalogQuality({ catalog, onEdit }: Props) {
       {(summary.withoutDescription > 0 || summary.withoutImage > 0) && (
         <div className="admin-catalog-quality-footnote">
           <span>
-            Prioridad sugerida: completÃ¡ primero fotos y descripciones breves;
+            Prioridad sugerida: completá primero fotos y descripciones breves;
             son lo primero que ve el cliente en la tienda.
           </span>
         </div>

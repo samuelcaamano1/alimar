@@ -361,7 +361,7 @@ export const versionHistory: VersionHistoryEntry[] = [
     "code": "1SHOP.11",
     "date": "2026-10-11",
     "title": "Badges comerciales",
-    "summary": "Reemplaza etiquetas genericas por seÃ±ales comerciales basadas en datos reales de cada producto.",
+    "summary": "Reemplaza etiquetas genericas por señales comerciales basadas en datos reales de cada producto.",
     "commit": "ec02654119a779e26731be798d7e64439bbf01e8",
     "files": [
       "src/App.tsx",
