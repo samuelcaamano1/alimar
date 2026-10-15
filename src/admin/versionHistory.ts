@@ -11,6 +11,25 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1UI.21",
+    "date": "2026-10-14",
+    "title": "Pulido visual y ergonomia del admin",
+    "summary": "Refina scrollbars, controles, formularios, desbordes, modales y responsive para una interfaz mas limpia y consistente.",
+    "commit": "943385d4b309a1b4a45df9bb429e8203c67129a7",
+    "files": [
+      "src/styles/admin/admin.css",
+      "scripts/test-structural.mjs"
+    ],
+    "changes": [
+      "Las barras de desplazamiento internas quedan mas finas y discretas.",
+      "La navegacion horizontal conserva scroll tactil pero oculta la barra visual.",
+      "Inputs selects textareas y archivos quedan alineados con alturas y espaciados consistentes.",
+      "Se reducen desbordes horizontales provocados por textos controles y tarjetas.",
+      "Modales y PED manejan mejor su scroll interno sin dobles barras molestas.",
+      "En movil los campos usan 16px para evitar zoom y las acciones se acomodan mejor."
+    ]
+  },
+  {
     "code": "1UI.20",
     "date": "2026-10-14",
     "title": "Rediseno integral del admin",
