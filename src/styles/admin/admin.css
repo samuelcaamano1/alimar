@@ -14243,3 +14243,291 @@ button:disabled,
     min-height: 122px;
   }
 }
+
+/* ALIMAR 1UI.22 - FINAL VISUAL POLISH */
+
+/* Tipografia y ritmo: pequeños ajustes para que el admin se sienta mas estable. */
+.admin-shell,
+.admin-login-shell {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.admin-panel h2,
+.admin-orders-heading h2,
+.admin-work-center-heading h2,
+.admin-business-dashboard-heading h2,
+.admin-customers-heading h2 {
+  line-height: 1.08;
+  letter-spacing: -.025em;
+}
+
+.admin-panel-heading,
+.admin-orders-heading,
+.admin-work-center-heading,
+.admin-business-dashboard-heading,
+.admin-customers-heading {
+  gap: 12px;
+}
+
+/* Labels y ayudas mas legibles, sin competir con el contenido principal. */
+.admin-form label,
+.admin-orders-toolbar label,
+.admin-order-workflow label,
+.admin-category-edit-form label {
+  color: #4f595e;
+  font-size: .78rem;
+  font-weight: 720;
+  line-height: 1.3;
+}
+
+.admin-form small,
+.admin-orders-toolbar small,
+.admin-order-workflow small,
+.admin-category-edit-form small {
+  color: var(--admin-muted);
+  line-height: 1.45;
+}
+
+/* Controles nativos: checkbox/radio integrados al sistema visual. */
+.admin-shell input[type='checkbox'],
+.admin-shell input[type='radio'],
+.admin-login-shell input[type='checkbox'],
+.admin-login-shell input[type='radio'] {
+  accent-color: var(--admin-blue-dark);
+}
+
+.admin-form input[type='checkbox'],
+.admin-order-workflow input[type='checkbox'],
+.admin-category-edit-form input[type='checkbox'] {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  vertical-align: middle;
+}
+
+/* Focus consistente tambien para enlaces y controles que no son inputs. */
+.admin-shell a:focus-visible,
+.admin-login-shell a:focus-visible,
+.admin-dialog-close:focus-visible,
+.admin-order-payment-filters button:focus-visible,
+.admin-workspace-launcher:focus-visible {
+  outline: 0;
+  border-color: rgba(53,111,128,.3);
+  box-shadow: 0 0 0 4px rgba(116,182,200,.18);
+}
+
+/* Feedback tactil sin animaciones exageradas. */
+.admin-primary:not(:disabled):active,
+.admin-secondary:not(:disabled):active,
+.admin-edit:not(:disabled):active,
+.admin-danger:not(:disabled):active,
+.admin-text-button:not(:disabled):active,
+.admin-quick-nav button:not(:disabled):active,
+.admin-order-stats button:not(:disabled):active,
+.admin-business-dashboard-grid button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+/* Botones secundarios y peligrosos ganan jerarquia clara y coherente. */
+.admin-danger {
+  border-color: rgba(181,82,82,.16);
+  color: var(--admin-danger);
+  background: rgba(181,82,82,.055);
+}
+
+@media (hover:hover) and (pointer:fine) {
+  .admin-danger:not(:disabled):hover {
+    border-color: rgba(181,82,82,.25);
+    background: rgba(181,82,82,.09);
+    box-shadow: 0 6px 18px rgba(181,82,82,.07);
+  }
+}
+
+/* Tablas: lectura mas rapida, filas menos pesadas y ultimo borde limpio. */
+.admin-shell table,
+.admin-dialog table,
+.admin-workspace-dialog table {
+  border: 1px solid rgba(32,39,43,.065);
+  border-radius: 14px;
+  background: rgba(255,255,255,.54);
+}
+
+.admin-shell thead th,
+.admin-dialog thead th,
+.admin-workspace-dialog thead th {
+  background: rgba(248,247,243,.86);
+}
+
+.admin-shell tbody tr,
+.admin-dialog tbody tr,
+.admin-workspace-dialog tbody tr {
+  transition: background .14s ease;
+}
+
+.admin-shell tbody tr:last-child td,
+.admin-dialog tbody tr:last-child td,
+.admin-workspace-dialog tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (hover:hover) and (pointer:fine) {
+  .admin-shell tbody tr:hover,
+  .admin-dialog tbody tr:hover,
+  .admin-workspace-dialog tbody tr:hover {
+    background: rgba(116,182,200,.045);
+  }
+}
+
+/* Cards y bloques internos: borde y sombra apenas mas definidos para separar niveles. */
+.admin-customer-card,
+.admin-category-manager-row,
+.admin-combo-card,
+.admin-catalog-quality-card,
+.admin-version-entry,
+.admin-production-queue-row {
+  box-shadow: 0 4px 14px rgba(35,43,47,.025);
+}
+
+.admin-order-items,
+.admin-order-payments,
+.admin-order-actual-cost,
+.admin-order-history,
+.admin-order-delivery-check {
+  background: rgba(255,255,255,.42);
+}
+
+/* Badges y estados mantienen forma cuando el texto crece. */
+.admin-order-status,
+.admin-order-priority {
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+}
+
+/* Dialogos: evita que header, cerrar y contenido peleen por espacio. */
+.admin-dialog,
+.admin-workspace-dialog,
+.admin-order-card.is-popup {
+  overscroll-behavior: contain;
+}
+
+.admin-workspace-dialog-header,
+.admin-orders-heading,
+.admin-order-top {
+  min-width: 0;
+}
+
+.admin-workspace-dialog-header > *,
+.admin-orders-heading > *,
+.admin-order-top > * {
+  min-width: 0;
+}
+
+.admin-workspace-close,
+.admin-order-popup-close,
+.admin-dialog-close {
+  flex: 0 0 auto;
+}
+
+/* Navegacion y filtros: estados activos mas evidentes sin saturar. */
+.admin-order-payment-filters button,
+.admin-quick-nav button {
+  transition: background .14s ease,border-color .14s ease,color .14s ease,box-shadow .14s ease,transform .14s ease;
+}
+
+.admin-order-payment-filters button[aria-pressed='true'],
+.admin-order-payment-filters button.is-active {
+  border-color: rgba(53,111,128,.22);
+  color: var(--admin-blue-dark);
+  background: rgba(225,243,246,.9);
+  box-shadow: 0 4px 12px rgba(53,111,128,.07);
+}
+
+/* Notebook y tablet: el contenido gana aire antes de llegar a mobile. */
+@media (max-width:1100px) {
+  .admin-main {
+    padding-bottom: 84px;
+  }
+
+  .admin-workspace-dialog-body {
+    padding: 16px;
+  }
+}
+
+/* Mobile final: header, toolbars y dialogos sin compresion innecesaria. */
+@media (max-width:760px) {
+  .admin-header {
+    gap: 10px;
+  }
+
+  .admin-brand,
+  .admin-header-actions {
+    min-width: 0;
+  }
+
+  .admin-header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .admin-orders-toolbar,
+  .admin-order-workflow {
+    gap: 12px;
+  }
+
+  .admin-workspace-dialog-header {
+    gap: 10px;
+    padding-inline: 14px;
+  }
+
+  .admin-workspace-dialog-body {
+    padding: 12px;
+  }
+
+  .admin-order-card {
+    padding: 16px;
+  }
+
+  .admin-shell table,
+  .admin-dialog table,
+  .admin-workspace-dialog table {
+    border-radius: 12px;
+  }
+}
+
+@media (max-width:520px) {
+  .admin-main {
+    width: calc(100% - 16px);
+  }
+
+  .admin-header {
+    width: calc(100% - 18px);
+  }
+
+  .admin-panel,
+  .admin-orders-panel {
+    padding: 15px;
+  }
+
+  .admin-order-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .admin-workspace-dialog-header {
+    min-height: 68px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell tbody tr,
+  .admin-order-payment-filters button,
+  .admin-quick-nav button {
+    transition: none;
+  }
+}

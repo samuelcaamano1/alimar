@@ -752,6 +752,17 @@ try {
     assert.match(adminCssSource, /font-size: 16px/)
   })
 
+  test('pulido visual final mantiene estados, tablas y responsive del admin', () => {
+    const adminCssSource = readFileSync('src/styles/admin/admin.css', 'utf8')
+
+    assert.match(adminCssSource, /ALIMAR 1UI\.22 - FINAL VISUAL POLISH/)
+    assert.match(adminCssSource, /accent-color: var\(--admin-blue-dark\)/)
+    assert.match(adminCssSource, /tbody tr:last-child td/)
+    assert.match(adminCssSource, /admin-danger:not\(:disabled\):hover/)
+    assert.match(adminCssSource, /admin-order-payment-filters button\[aria-pressed='true'\]/)
+    assert.match(adminCssSource, /prefers-reduced-motion: reduce/)
+  })
+
   test('control de versiones mantiene módulos identificables y únicos', () => {
     assert.ok(Array.isArray(versions.versionHistory))
     assert.ok(versions.versionHistory.length >= 10)
