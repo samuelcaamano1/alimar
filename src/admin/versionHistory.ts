@@ -11,6 +11,28 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1QA.13",
+    "date": "2026-10-16",
+    "title": "Idempotencia consistente de pedidos",
+    "summary": "Evita que reintentos con datos modificados reutilicen un pedido anterior y mantiene WhatsApp sincronizado con lo guardado.",
+    "commit": "d764793208100c03c87e6a65c7e1e263d591aaef",
+    "files": [
+      "src/shared/requestIdentity.ts",
+      "src/CheckoutForm.tsx",
+      "src/App.tsx",
+      "api/_lib/custom-requests.ts",
+      "scripts/test-structural.mjs"
+    ],
+    "changes": [
+      "Reutiliza el identificador solo cuando el payload es identico.",
+      "Genera un identificador nuevo si cambian personalizaciones fecha entrega notas o datos de la solicitud.",
+      "Mantiene la proteccion contra doble envio en reintentos iguales.",
+      "Las solicitudes duplicadas reconstruyen WhatsApp desde los datos almacenados.",
+      "Agrega pruebas de regresion.",
+      "No modifica esquema de Neon precios ni catalogo."
+    ]
+  },
+  {
     "code": "1UI.23",
     "date": "2026-10-15",
     "title": "Admin sin scroll horizontal",
