@@ -14531,3 +14531,93 @@ button:disabled,
     transition: none;
   }
 }
+
+
+/* ALIMAR 1UI.23 - ADMIN HORIZONTAL OVERFLOW FIX */
+
+/*
+ * El admin puede contener grids, botones y textos largos.
+ * Ninguno debe ampliar el documento completo: solo los controles que
+ * explicitamente tienen overflow interno pueden desplazarse.
+ */
+html.admin-page-active,
+body.admin-page-active {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body.admin-page-active #root,
+.admin-shell {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.admin-header,
+.admin-main {
+  min-width: 0;
+  max-width: calc(100vw - 40px);
+}
+
+.admin-main > *,
+.admin-panel,
+.admin-grid,
+.admin-list-panel,
+.admin-category-list,
+.admin-category-group,
+.admin-product-list,
+.admin-product-row,
+.admin-combos,
+.admin-combos-form,
+.admin-combos-form-grid,
+.admin-combo-products,
+.admin-combo-product-grid,
+.admin-combo-product,
+.admin-combo-list,
+.admin-combo-row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-combos-form,
+.admin-combo-products,
+.admin-combo-product-grid,
+.admin-combo-list,
+.admin-category-list,
+.admin-product-list {
+  width: 100%;
+}
+
+.admin-combo-row > div:first-child,
+.admin-product-info {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-combo-row > div:first-child > small,
+.admin-product-info small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.admin-row-actions {
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-quick-nav {
+  width: 100%;
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+}
+
+@media (max-width: 620px) {
+  .admin-header,
+  .admin-main {
+    max-width: calc(100vw - 24px);
+  }
+}

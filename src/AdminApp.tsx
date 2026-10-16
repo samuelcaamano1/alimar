@@ -45,6 +45,16 @@ import {
 import { useModalLifecycle } from './admin/shared/useModalLifecycle'
 
 export default function AdminApp() {
+  useEffect(() => {
+    document.documentElement.classList.add('admin-page-active')
+    document.body.classList.add('admin-page-active')
+
+    return () => {
+      document.documentElement.classList.remove('admin-page-active')
+      document.body.classList.remove('admin-page-active')
+    }
+  }, [])
+
   const [quoteSource, setQuoteSource] = useState<CustomRequest | null>(null)
   const [customRequestRefreshToken, setCustomRequestRefreshToken] = useState(0)
   const [session, setSession] = useState<SessionResponse | null>(null)

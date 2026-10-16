@@ -815,6 +815,18 @@ try {
     assert.match(storefrontCssSource, /prefers-reduced-motion: reduce/)
   })
 
+  test('admin no genera scroll horizontal de pagina', () => {
+    const adminAppSource = readFileSync('src/AdminApp.tsx', 'utf8')
+    const adminCssSource = readFileSync('src/styles/admin/admin.css', 'utf8')
+
+    assert.match(adminAppSource, /admin-page-active/)
+    assert.match(adminCssSource, /ALIMAR 1UI\.23 - ADMIN HORIZONTAL OVERFLOW FIX/)
+    assert.match(adminCssSource, /html\.admin-page-active/)
+    assert.match(adminCssSource, /body\.admin-page-active #root/)
+    assert.match(adminCssSource, /\.admin-combo-product-grid[\s\S]*?max-width: 100%/)
+    assert.match(adminCssSource, /\.admin-quick-nav[\s\S]*?max-width: 100%/)
+  })
+
   test('control de versiones mantiene módulos identificables y únicos', () => {
     assert.ok(Array.isArray(versions.versionHistory))
     assert.ok(versions.versionHistory.length >= 10)
