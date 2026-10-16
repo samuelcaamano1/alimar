@@ -2,6 +2,7 @@ import {
   lazy,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -20,6 +21,10 @@ import {
   type RecoveredOrder,
 } from './orderRecovery'
 import { compressImageFile } from './imageDataUrl'
+import {
+  requestIdentityForPayload,
+  type RequestIdentity,
+} from './shared/requestIdentity'
 import {
   CART_STORAGE_KEY,
   cartItemKey,
@@ -240,7 +245,7 @@ function StorefrontApp() {
     loadRecoveredOrder(),
   )
   const [customRequestOpen, setCustomRequestOpen] = useState(false)
-  const [customRequestId, setCustomRequestId] = useState('')
+  const customRequestIdentity = useRef<RequestIdentity | null>(null)
   const [customRequestBusy, setCustomRequestBusy] = useState(false)
   const [customRequestMessage, setCustomRequestMessage] = useState('')
   const [customRequestSuccess, setCustomRequestSuccess] =
@@ -624,7 +629,7 @@ function StorefrontApp() {
       return
     }
 
-    setCustomRequestId(crypto.randomUUID())
+    customRequestIdentity.current = null
     setCustomRequestMessage('')
     setCustomRequestSuccess(null)
     setSelectedCustomRequestExampleKey(null)
@@ -681,26 +686,37 @@ function StorefrontApp() {
     setCustomRequestBusy(true)
     setCustomRequestMessage('')
 
+    const requestPayload = {
+      customerName: String(form.get('customerName') ?? ''),
+      customerPhone: String(form.get('customerPhone') ?? ''),
+      requestType: String(
+        selectedExample?.requestType ?? form.get('requestType') ?? '',
+      ),
+      exampleId: isDirectCustomRequest ? null : selectedExample?.id ?? null,
+      exampleTitle: isDirectCustomRequest
+        ? null
+        : selectedExample?.title ?? null,
+      quantity: String(form.get('quantity') ?? ''),
+      neededDate: String(form.get('neededDate') ?? ''),
+      dimensions: String(form.get('dimensions') ?? ''),
+      theme: String(form.get('theme') ?? ''),
+      description: requestDescription,
+      referenceUrl: String(form.get('referenceUrl') ?? ''),
+      referenceImageUrl: customReferenceImageUrl || null,
+    }
+    const identity = requestIdentityForPayload(
+      customRequestIdentity.current,
+      requestPayload,
+    )
+    customRequestIdentity.current = identity
+
     try {
       const response = await fetch('/api/orders?action=custom-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          requestId: customRequestId || crypto.randomUUID(),
-          customerName: form.get('customerName'),
-          customerPhone: form.get('customerPhone'),
-          requestType: selectedExample?.requestType ?? form.get('requestType'),
-          exampleId: isDirectCustomRequest ? null : selectedExample?.id ?? null,
-          exampleTitle: isDirectCustomRequest
-            ? null
-            : selectedExample?.title ?? null,
-          quantity: form.get('quantity'),
-          neededDate: form.get('neededDate'),
-          dimensions: form.get('dimensions'),
-          theme: form.get('theme'),
-          description: requestDescription,
-          referenceUrl: form.get('referenceUrl'),
-          referenceImageUrl: customReferenceImageUrl || null,
+          requestId: identity.id,
+          ...requestPayload,
         }),
       })
 

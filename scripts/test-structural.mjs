@@ -65,6 +65,9 @@ try {
   const checkoutAuth = await server.ssrLoadModule(
     '/src/storefront/checkoutAuth.ts',
   )
+  const requestIdentity = await server.ssrLoadModule(
+    '/src/shared/requestIdentity.ts',
+  )
   const orderDates = await server.ssrLoadModule('/src/shared/orderDates.ts')
   const orderFulfillment = await server.ssrLoadModule(
     '/src/shared/orderFulfillment.ts',
@@ -568,6 +571,66 @@ try {
     assert.equal(orderDates.validRequestedDate('2026-10-12', now), true)
     assert.equal(orderDates.validRequestedDate('2026-10-20', now), true)
     assert.equal(orderDates.isValidDateOnly('2026-02-30'), false)
+  })
+
+  test('idempotencia cambia solo cuando cambia el pedido', () => {
+    const basePayload = {
+      customer: {
+        requestedFor: '2026-10-30',
+        fulfillmentMethod: 'pickup',
+        deliveryArea: '',
+        notes: '',
+      },
+      items: [
+        {
+          id: 'p1',
+          variantId: null,
+          quantity: 1,
+          note: '',
+          customizations: [{ fieldId: 'f1', value: 'Miku' }],
+        },
+      ],
+    }
+
+    const first = requestIdentity.requestIdentityForPayload(null, basePayload, () => 'req-1')
+    const retry = requestIdentity.requestIdentityForPayload(first, basePayload, () => 'req-2')
+    assert.equal(retry.id, 'req-1')
+
+    const changedCustomization = requestIdentity.requestIdentityForPayload(
+      first,
+      {
+        ...basePayload,
+        items: [{
+          ...basePayload.items[0],
+          customizations: [{ fieldId: 'f1', value: 'Cinnamoroll' }],
+        }],
+      },
+      () => 'req-2',
+    )
+    assert.equal(changedCustomization.id, 'req-2')
+
+    const changedDelivery = requestIdentity.requestIdentityForPayload(
+      first,
+      {
+        ...basePayload,
+        customer: {
+          ...basePayload.customer,
+          fulfillmentMethod: 'delivery',
+          deliveryArea: 'General Belgrano',
+        },
+      },
+      () => 'req-3',
+    )
+    assert.equal(changedDelivery.id, 'req-3')
+  })
+
+  test('solicitud duplicada reconstruye WhatsApp desde lo guardado', () => {
+    const source = readFileSync('api/_lib/custom-requests.ts', 'utf8')
+
+    assert.match(source, /customer_name,[\s\S]*request_type,[\s\S]*description,[\s\S]*reference_image_url/)
+    assert.match(source, /name: String\(existing\[0\]\.customer_name/)
+    assert.match(source, /requestType: String\(existing\[0\]\.request_type/)
+    assert.match(source, /description: String\(existing\[0\]\.description/)
   })
 
   test('checkout directo arma login y registro sin salir del carrito', () => {

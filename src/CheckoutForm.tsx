@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { saveRecoveredOrder, type RecoveredOrder } from './orderRecovery'
 import type { CustomerSession } from './customerAccount'
 import { site } from './site'
 import { todayOrderDate } from './shared/orderDates'
 import type { FulfillmentMethod } from './shared/orderFulfillment'
+import {
+  requestIdentityForPayload,
+  type RequestIdentity,
+} from './shared/requestIdentity'
 import {
   checkoutAuthEndpoint,
   checkoutAuthPayload,
@@ -61,17 +65,7 @@ export default function CheckoutForm({
   const [authMessage, setAuthMessage] = useState('')
   const [fulfillmentMethod, setFulfillmentMethod] =
     useState<FulfillmentMethod>('pickup')
-  const requestId = useRef(crypto.randomUUID())
-  const cartSignature = items
-    .map(
-      (item) =>
-        `${item.bundleId ? `bundle:${item.bundleId}` : `product:${item.id}`}:${item.variantId ?? 'base'}:${item.quantity}:${item.note}`,
-    )
-    .join('|')
-
-  useEffect(() => {
-    requestId.current = crypto.randomUUID()
-  }, [cartSignature])
+  const requestIdentity = useRef<RequestIdentity | null>(null)
 
   function changeAuthMode(mode: CheckoutAuthMode) {
     setAuthMode(mode)
@@ -143,8 +137,7 @@ export default function CheckoutForm({
     setMessage('')
 
     const form = new FormData(event.currentTarget)
-    const payload = {
-      requestId: requestId.current,
+    const requestPayload = {
       customer: {
         requestedFor: String(form.get('requestedFor') ?? '').trim(),
         fulfillmentMethod,
@@ -152,6 +145,15 @@ export default function CheckoutForm({
         notes: String(form.get('notes') ?? '').trim(),
       },
       items,
+    }
+    const identity = requestIdentityForPayload(
+      requestIdentity.current,
+      requestPayload,
+    )
+    requestIdentity.current = identity
+    const payload = {
+      requestId: identity.id,
+      ...requestPayload,
     }
 
     try {

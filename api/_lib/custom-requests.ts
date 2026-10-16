@@ -247,7 +247,16 @@ export async function createPublicCustomRequest(request: Request) {
     }
 
     const existing = await sql`
-      SELECT request_number, customer_account_id::text
+      SELECT
+        request_number,
+        customer_account_id::text,
+        customer_name,
+        request_type,
+        quantity,
+        needed_date::text,
+        description,
+        example_title,
+        reference_image_url
       FROM custom_requests
       WHERE request_id = ${requestId}::uuid
       LIMIT 1
@@ -268,13 +277,20 @@ export async function createPublicCustomRequest(request: Request) {
           existing: true,
           whatsappMessage: buildWhatsappMessage({
             code,
-            name: customerName,
-            exampleTitle: resolvedExampleTitle,
-            hasReferenceImage: Boolean(referenceImageUrl),
-            requestType: resolvedRequestType,
-            quantity: quantity ?? null,
-            neededDate: neededDate ?? null,
-            description,
+            name: String(existing[0].customer_name ?? customerName),
+            exampleTitle: existing[0].example_title
+              ? String(existing[0].example_title)
+              : null,
+            hasReferenceImage: Boolean(existing[0].reference_image_url),
+            requestType: String(existing[0].request_type ?? ''),
+            quantity:
+              existing[0].quantity === null || existing[0].quantity === undefined
+                ? null
+                : Number(existing[0].quantity),
+            neededDate: existing[0].needed_date
+              ? String(existing[0].needed_date).slice(0, 10)
+              : null,
+            description: String(existing[0].description ?? ''),
           }),
         },
         { headers: { 'Cache-Control': 'no-store' } },
