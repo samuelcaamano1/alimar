@@ -11,6 +11,26 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1UI.23",
+    "date": "2026-10-15",
+    "title": "Admin sin scroll horizontal",
+    "summary": "Evita que grids, combos y filas del catalogo amplien el viewport y elimina el scroll horizontal global del admin.",
+    "commit": "86b64980811e4a2821420c99ef673226cb3eb73c",
+    "files": [
+      "src/AdminApp.tsx",
+      "src/styles/admin/admin.css",
+      "scripts/test-structural.mjs"
+    ],
+    "changes": [
+      "Marca html y body mientras el admin esta montado.",
+      "Impide overflow horizontal global en la pagina de administracion.",
+      "Permite que grids de combos y catalogo se contraigan correctamente.",
+      "Conserva el scroll horizontal interno de la navegacion rapida.",
+      "Ajusta textos largos y acciones para que no ensanchen el documento.",
+      "No modifica backend Neon productos pedidos ni precios."
+    ]
+  },
+  {
     "code": "1QA.12",
     "date": "2026-10-15",
     "title": "Correccion robusta UTF-8 del admin",
