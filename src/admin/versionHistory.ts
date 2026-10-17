@@ -11,6 +11,33 @@ export type VersionHistoryEntry = {
 export const versionHistory: VersionHistoryEntry[] = [
   // VERSION_HISTORY_ENTRIES
   {
+    "code": "1LAUNCH.01",
+    "date": "2026-10-17",
+    "title": "Preparacion para lanzamiento",
+    "summary": "Prepara Alimar para compartir la tienda con una identidad consistente en navegadores redes y buscadores.",
+    "commit": "bb1a38cafedabacf6c0a3ebf696d06b9f759019e",
+    "files": [
+      "index.html",
+      "vercel.json",
+      "public/og-alimar.png",
+      "public/favicon.svg",
+      "public/favicon.ico",
+      "public/apple-touch-icon.png",
+      "public/icon-192.png",
+      "public/icon-512.png",
+      "public/robots.txt",
+      "public/sitemap.xml",
+      "public/site.webmanifest"
+    ],
+    "changes": [
+      "Agrega preview social Open Graph y Twitter Card.",
+      "Agrega favicon iconos para celular y manifest.",
+      "Agrega canonical robots y sitemap con productos activos.",
+      "Evita indexar administracion y Mi cuenta.",
+      "No modifica precios pedidos ni esquema de Neon."
+    ]
+  },
+  {
     "code": "1QA.13",
     "date": "2026-10-16",
     "title": "Idempotencia consistente de pedidos",
