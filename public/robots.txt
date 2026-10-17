@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /cuenta
+
+Sitemap: https://alimar.vercel.app/sitemap.xml
